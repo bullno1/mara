@@ -6,6 +6,7 @@
 
 #define TEST_SUITE(X) \
     X(context) \
+    X(strpool) \
 
 #define DECLARE_SUITE(S) extern MunitSuite S;
 #define IMPORT_SUITE(S) S,

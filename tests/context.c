@@ -6,9 +6,6 @@
 static MunitResult
 create(const MunitParameter params[], void* fixture)
 {
-    (void)params;
-	(void)fixture;
-
 	mara_ctx_config_t config = {
 		.allocator = bk_default_allocator
 	};

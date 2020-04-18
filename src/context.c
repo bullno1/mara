@@ -1,5 +1,6 @@
 #define UGC_IMPLEMENTATION
 #include "internal.h"
+#include "strpool.h"
 
 
 static void
@@ -39,11 +40,11 @@ mara_realloc(bk_allocator_t* allocator, void* ptr, size_t size)
 	{
 		if(ctx->gc.state == UGC_SWEEP) { ugc_collect(&ctx->gc); }
 		ugc_collect(&ctx->gc);
-	}
 
-	// Retry
-	result = bk_unsafe_realloc(ctx->config.allocator, ptr, size);
-	MARA_ASSERT(ctx, size == 0 || result != NULL, "Out of memory");
+		// Retry
+		result = bk_unsafe_realloc(ctx->config.allocator, ptr, size);
+		MARA_ASSERT(ctx, size == 0 || result != NULL, "Out of memory");
+	}
 
 	return result;
 }
@@ -65,6 +66,7 @@ mara_create_ctx(const mara_ctx_config_t* config)
 		.config = *config,
 	};
 
+	mara_strpool_init(ctx, &ctx->strpool);
 	ugc_init(&ctx->gc, mara_gc_scan, mara_gc_release);
 
 	return ctx;
@@ -74,6 +76,7 @@ void
 mara_destroy_ctx(mara_ctx_t* ctx)
 {
 	ugc_release_all(&ctx->gc);
+	mara_strpool_cleanup(ctx, &ctx->strpool);
 	bk_free(ctx->config.allocator, ctx);
 }
 

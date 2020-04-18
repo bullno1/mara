@@ -40,9 +40,6 @@ target_link_options(mara PUBLIC $<$<CONFIG:Debug>:${SANITIZE_FLAGS}>)
 
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
     include(CTest)
-endif()
-
-if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING)
 	enable_testing()
     add_subdirectory(tests)
 endif()
