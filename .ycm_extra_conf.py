@@ -143,7 +143,12 @@ def FlagsForFile( filename, **kwargs ):
     # python list, but a "list-like" StringVec object
     compilation_info = GetCompilationInfoForFile( filename )
     if not compilation_info:
-      return None
+      relative_to = DirectoryOfThisScript()
+      final_flags = MakeRelativePathsInFlagsAbsolute( flags, relative_to )
+      return {
+        'flags': final_flags,
+        'do_cache': False
+      }
 
     final_flags = MakeRelativePathsInFlagsAbsolute(
       compilation_info.compiler_flags_,
@@ -155,5 +160,5 @@ def FlagsForFile( filename, **kwargs ):
 
   return {
     'flags': final_flags,
-    'do_cache': True
+    'do_cache': False
   }
