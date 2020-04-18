@@ -6,9 +6,9 @@
 #define XXH_INLINE_ALL
 #include <xxHash/xxhash.h>
 
-#define mara_strpool_setvalue(u, index, key, val) u->strings[index] = value
+#define mara_strpool_setvalue(u, index, key, val) u->strings[index] = val
 #define mara_strpool_setnil(u, index) u->strings[index] = NULL;
-#define mara_strpool_nilvalue(u) NULL
+#define mara_strpool_nilvalue(u) NULL;
 #define mara_strpool_getvalue(u, index) u->strings[index]
 #define mara_strpool_getkey(u, index) mara_strpool_key(u->strings[index])
 #define mara_strpool_keysequal(u, key1, key2) mara_strpool_key_cmp(key1, key2)
@@ -42,8 +42,7 @@ mara_strpool_getbucket(
 static inline bool
 mara_strpool_key_cmp(mara_strpool_key_t key1, mara_strpool_key_t key2)
 {
-	return key1.ref.length == key2.ref.length
-		&& memcmp(key1.ref.ptr, key2.ref.ptr, key1.ref.length) == 0;
+	return mara_string_ref_equal(key1.ref, key2.ref);
 }
 
 
@@ -66,11 +65,16 @@ mara_strpool_create(mara_ctx_t* ctx, size_t capacity)
 	mara_string_t** strings = mara_malloc(ctx, malloc_size);
 	memset(strings, 0, malloc_size);
 
-	return (mara_strpool_t){
+
+	mara_strpool_t strpool = {
 		.strings = strings,
 		.size = 0,
 		.capacity = capacity
 	};
+
+	ROBINHOOD_HASH_CLEAR(mara_strpool, (&strpool));
+
+	return strpool;
 }
 
 
@@ -88,6 +92,7 @@ mara_free_string(mara_ctx_t* ctx, mara_gc_header_t* header)
 	mara_strpool_key_t key = mara_strpool_key(string);
 	ROBINHOOD_HASH_DEL(mara_strpool, (&ctx->strpool), key);
 	mara_free(ctx, string);
+	--(ctx->strpool.size);
 }
 
 
@@ -101,7 +106,6 @@ void
 mara_strpool_init(mara_ctx_t* ctx, mara_strpool_t* strpool)
 {
 	*strpool = mara_strpool_create(ctx, MARA_HASH_INITIAL_CAPACITY);
-	ROBINHOOD_HASH_CLEAR(mara_strpool, strpool);
 }
 
 void
@@ -137,9 +141,9 @@ mara_strpool_alloc(
 		for(size_t i = 0; i < capacity + 1; ++i)
 		{
 			mara_string_t* string = strpool->strings[i];
-			mara_strpool_key_t key = mara_strpool_key(string);
 			if(string != NULL)
 			{
+				mara_strpool_key_t key = mara_strpool_key(string);
 				ROBINHOOD_HASH_SET(mara_strpool, (&new_strpool), key, string);
 			}
 		}
@@ -156,7 +160,8 @@ mara_strpool_alloc(
 	memcpy(pooled_string->data, string.ptr, string.length);
 	pooled_string->data[string.length] = '\0';
 
-	ROBINHOOD_HASH_SET(mara_strpool, strpool, key, string);
+	ROBINHOOD_HASH_SET(mara_strpool, strpool, key, pooled_string);
+	++strpool->size;
 
 	return pooled_string;
 }

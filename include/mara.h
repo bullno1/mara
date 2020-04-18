@@ -5,6 +5,7 @@
 #include <inttypes.h>
 #include <stdarg.h>
 #include <stdbool.h>
+#include <string.h>
 #include <bk/macro.h>
 
 #if MARA_DYNAMIC == 1
@@ -28,11 +29,6 @@
 #define MARA_INT_FMT "%" PRId64
 #define MARA_STR_TO_INT strtoll
 #endif
-
-#define MARA_STRING_REF(S) (mara_string_ref_t) { \
-	.ptr = S, \
-	.len = strlen(S), \
-}
 
 struct bk_allocator_s;
 struct bk_file_s;
@@ -166,5 +162,21 @@ mara_list_insert(mara_ctx_t* ctx, mara_int_t list);
 
 MARA_DECL void
 mara_list_delete(mara_ctx_t* ctx, mara_int_t list);
+
+static inline mara_string_ref_t
+mara_string_ref(const char* string)
+{
+	return (mara_string_ref_t) {
+		.ptr = string,
+		.length = strlen(string),
+	};
+}
+
+static inline bool
+mara_string_ref_equal(mara_string_ref_t lhs, mara_string_ref_t rhs)
+{
+	return lhs.length == rhs.length
+		&& memcmp(lhs.ptr, rhs.ptr, lhs.length) == 0;
+}
 
 #endif
