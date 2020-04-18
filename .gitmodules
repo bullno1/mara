@@ -4,9 +4,6 @@
 [submodule "deps/ugc"]
 	path = deps/ugc
 	url = https://github.com/bullno1/ugc.git
-[submodule "deps/robinhoodhash"]
-	path = deps/robinhoodhash
-	url = https://github.com/vi/macro_robinhood_hash
 [submodule "deps/xxhash"]
 	path = deps/xxHash
 	url = https://github.com/Cyan4973/xxHash

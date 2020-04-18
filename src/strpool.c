@@ -2,7 +2,7 @@
 #include <string.h>
 #include <bk/allocator.h>
 #include <bk/assert.h>
-#include <robinhoodhash/robinhoodhash.h>
+#include "vendor/robinhoodhash.h"
 #define XXH_INLINE_ALL
 #include <xxHash/xxhash.h>
 
@@ -14,6 +14,7 @@
 #define mara_strpool_keysequal(u, key1, key2) mara_strpool_key_cmp(key1, key2)
 #define mara_strpool_isnil(u, index) (u->strings[index] == NULL)
 #define mara_strpool_n_elem(u) u->capacity + 1
+#define mara_strpool_size(u) u->size
 #define mara_strpool_overflow(u) MARA_ASSERT(ctx, 0, "Hash overflow")
 #define mara_strpool_removefailed(u,key)
 #define mara_strpool_swap(u, index1, index2) \
@@ -92,7 +93,6 @@ mara_free_string(mara_ctx_t* ctx, mara_gc_header_t* header)
 	mara_strpool_key_t key = mara_strpool_key(string);
 	ROBINHOOD_HASH_DEL(mara_strpool, (&ctx->strpool), key);
 	mara_free(ctx, string);
-	--(ctx->strpool.size);
 }
 
 
@@ -131,21 +131,20 @@ mara_strpool_alloc(
 
 	if(value != NULL) { return value; }
 
-	// Resize if we are at capacity
+	// Resize if we are at capacity.
+	// This must be done before allocating the new string.
+	// This is because emergency GC can kick in and collect the new string
 	size_t capacity = strpool->capacity;
 	size_t max_size = (size_t)((double)capacity * MARA_HASH_LOAD_FACTOR);
 	if(strpool->size >= max_size)
 	{
 		mara_strpool_t new_strpool = mara_strpool_create(ctx, capacity * 2);
 
-		for(size_t i = 0; i < capacity + 1; ++i)
+		ROBINHOOD_HASH_FOREACH(mara_strpool, strpool, i)
 		{
 			mara_string_t* string = strpool->strings[i];
-			if(string != NULL)
-			{
-				mara_strpool_key_t key = mara_strpool_key(string);
-				ROBINHOOD_HASH_SET(mara_strpool, (&new_strpool), key, string);
-			}
+			mara_strpool_key_t key = mara_strpool_key(string);
+			ROBINHOOD_HASH_SET(mara_strpool, (&new_strpool), key, string);
 		}
 
 		mara_strpool_cleanup(ctx, strpool);
@@ -161,7 +160,6 @@ mara_strpool_alloc(
 	pooled_string->data[string.length] = '\0';
 
 	ROBINHOOD_HASH_SET(mara_strpool, strpool, key, pooled_string);
-	++strpool->size;
 
 	return pooled_string;
 }
