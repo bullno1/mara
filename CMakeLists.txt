@@ -13,33 +13,10 @@ add_library(munit STATIC
 )
 target_include_directories(munit PUBLIC deps)
 
-add_library(mara
-	src/context.c
-	src/strpool.c
-)
-target_include_directories(mara PUBLIC
-	include
-	deps
-)
-target_link_libraries(mara PUBLIC bk)
-set(STRICT_FLAGS
-	-Wall
-	-Wextra
-	-Werror
-	-pedantic
-	-Wno-missing-field-initializers
-)
-set(SANITIZE_FLAGS
-	-fsanitize=undefined
-	-fsanitize=address
-)
-set(CLANG_FAMILY $<OR:$<C_COMPILER_ID:GNU>,$<C_COMPILER_ID:Clang>,$<C_COMPILER_ID:AppleClang>>)
-target_compile_options(mara PRIVATE $<${CLANG_FAMILY}:${STRICT_FLAGS}>)
-target_compile_options(mara PUBLIC $<$<CONFIG:Debug>:${SANITIZE_FLAGS}>)
-target_link_options(mara PUBLIC $<$<CONFIG:Debug>:${SANITIZE_FLAGS}>)
+add_subdirectory(src)
 
-if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
-    include(CTest)
+if((CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME OR MODERN_CMAKE_BUILD_TESTING) AND BUILD_TESTING)
+	include(CTest)
 	enable_testing()
-    add_subdirectory(tests)
+	add_subdirectory(tests)
 endif()
