@@ -60,7 +60,7 @@ mara_strpool_key(mara_string_t* string)
 }
 
 static mara_strpool_t
-mara_strpool_create(mara_ctx_t* ctx, size_t capacity)
+mara_strpool_create(mara_context_t* ctx, size_t capacity)
 {
 	size_t malloc_size = (capacity + 1) * sizeof(mara_string_t*);
 	mara_string_t** strings = mara_malloc(ctx, malloc_size);
@@ -80,14 +80,14 @@ mara_strpool_create(mara_ctx_t* ctx, size_t capacity)
 
 
 static void
-mara_mark_string(mara_ctx_t* ctx, mara_gc_header_t* header)
+mara_mark_string(mara_context_t* ctx, mara_gc_header_t* header)
 {
 	(void)ctx;
 	(void)header;
 }
 
 static void
-mara_free_string(mara_ctx_t* ctx, mara_gc_header_t* header)
+mara_free_string(mara_context_t* ctx, mara_gc_header_t* header)
 {
 	mara_string_t* string = BK_CONTAINER_OF(header, mara_string_t, gc_header);
 	mara_strpool_key_t key = mara_strpool_key(string);
@@ -103,20 +103,20 @@ static mara_gc_info_t mara_string_gc_info = {
 
 
 void
-mara_strpool_init(mara_ctx_t* ctx, mara_strpool_t* strpool)
+mara_strpool_init(mara_context_t* ctx, mara_strpool_t* strpool)
 {
 	*strpool = mara_strpool_create(ctx, MARA_HASH_INITIAL_CAPACITY);
 }
 
 void
-mara_strpool_cleanup(mara_ctx_t* ctx, mara_strpool_t* strpool)
+mara_strpool_cleanup(mara_context_t* ctx, mara_strpool_t* strpool)
 {
 	mara_free(ctx, strpool->strings);
 }
 
 mara_string_t*
 mara_strpool_alloc(
-	mara_ctx_t* ctx,
+	mara_context_t* ctx,
 	mara_strpool_t* strpool,
 	mara_string_ref_t string
 )

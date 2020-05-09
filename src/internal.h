@@ -41,7 +41,7 @@ typedef struct mara_gc_info_s mara_gc_info_t;
 typedef struct mara_source_coord_s mara_source_coord_t;
 typedef struct mara_source_range_s mara_source_range_t;
 typedef struct mara_strpool_s mara_strpool_t;
-typedef void(*mara_gc_visit_fn_t)(mara_ctx_t* ctx, mara_gc_header_t* header);
+typedef void(*mara_gc_visit_fn_t)(mara_context_t* ctx, mara_gc_header_t* header);
 
 struct mara_source_coord_s
 {
@@ -62,10 +62,10 @@ struct mara_strpool_s
 	size_t capacity;
 };
 
-struct mara_ctx_s
+struct mara_context_s
 {
 	bk_allocator_t allocator;
-	mara_ctx_config_t config;
+	mara_context_config_t config;
 	ugc_t gc;
 	mara_strpool_t strpool;
 };
@@ -92,20 +92,20 @@ struct mara_string_s
 
 
 void*
-mara_gc_malloc(mara_ctx_t* ctx, mara_gc_info_t* gc_info, size_t size);
+mara_gc_malloc(mara_context_t* ctx, mara_gc_info_t* gc_info, size_t size);
 
 void
-mara_gc_mark(mara_ctx_t* ctx, mara_gc_header_t* header);
+mara_gc_mark(mara_context_t* ctx, mara_gc_header_t* header);
 
 
 static inline void*
-mara_malloc(mara_ctx_t* ctx, size_t size)
+mara_malloc(mara_context_t* ctx, size_t size)
 {
 	return bk_malloc(&ctx->allocator, size);
 }
 
 static inline void
-mara_free(mara_ctx_t* ctx, void* ptr)
+mara_free(mara_context_t* ctx, void* ptr)
 {
 	bk_free(&ctx->allocator, ptr);
 }

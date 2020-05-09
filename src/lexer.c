@@ -202,7 +202,7 @@ mara_lexer_scan_symbol(mara_lexer_t* lexer, mara_token_t* token)
 }
 
 void
-mara_lexer_init(mara_ctx_t* ctx, mara_lexer_t* lexer)
+mara_lexer_init(mara_context_t* ctx, mara_lexer_t* lexer)
 {
 	*lexer = (mara_lexer_t) {
 		.capture_buff = bk_array_create(&ctx->allocator, char, 8),

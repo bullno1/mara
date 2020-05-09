@@ -9,19 +9,19 @@
 
 typedef struct fixture_s
 {
-	mara_ctx_t* ctx;
+	mara_context_t* ctx;
 	mara_lexer_t lexer;
 } fixture_t;
 
 
 static void*
 setup(const MunitParameter params[], void* user_data) {
-	mara_ctx_config_t config = {
+	mara_context_config_t config = {
 		.allocator = bk_default_allocator
 	};
 
 	fixture_t* fixture = BK_NEW(bk_default_allocator, fixture_t);
-	fixture->ctx = mara_create_ctx(&config);
+	fixture->ctx = mara_create_context(&config);
 	mara_lexer_init(fixture->ctx, &fixture->lexer);
 
 	return fixture;
@@ -31,7 +31,7 @@ static void
 tear_down(void* fixturep) {
 	fixture_t* fixture = fixturep;
 	mara_lexer_cleanup(&fixture->lexer);
-	mara_destroy_ctx(fixture->ctx);
+	mara_destroy_context(fixture->ctx);
 	bk_free(bk_default_allocator, fixture);
 }
 

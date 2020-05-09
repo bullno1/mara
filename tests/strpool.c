@@ -8,23 +8,23 @@
 
 static void*
 setup(const MunitParameter params[], void* user_data) {
-	mara_ctx_config_t config = {
+	mara_context_config_t config = {
 		.allocator = bk_default_allocator
 	};
 
-	return mara_create_ctx(&config);
+	return mara_create_context(&config);
 }
 
 static void
 tear_down(void* fixture) {
-	mara_destroy_ctx(fixture);
+	mara_destroy_context(fixture);
 }
 
 
 static MunitResult
 test(const MunitParameter params[], void* fixture)
 {
-	mara_ctx_t* ctx = fixture;
+	mara_context_t* ctx = fixture;
 
 	mara_string_t* foo = mara_strpool_alloc(ctx, &ctx->strpool, mara_string_ref("foo"));
 	mara_string_t* bar = mara_strpool_alloc(ctx, &ctx->strpool, mara_string_ref("bar"));

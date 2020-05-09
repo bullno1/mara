@@ -5,14 +5,14 @@
 
 
 void
-mara_strpool_init(mara_ctx_t* ctx, mara_strpool_t* strpool);
+mara_strpool_init(mara_context_t* ctx, mara_strpool_t* strpool);
 
 void
-mara_strpool_cleanup(mara_ctx_t* ctx, mara_strpool_t* strpool);
+mara_strpool_cleanup(mara_context_t* ctx, mara_strpool_t* strpool);
 
 mara_string_t*
 mara_strpool_alloc(
-	mara_ctx_t* ctx,
+	mara_context_t* ctx,
 	mara_strpool_t* strpool,
 	mara_string_ref_t string
 );

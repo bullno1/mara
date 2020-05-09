@@ -49,7 +49,7 @@ struct mara_lexer_s
 
 
 void
-mara_lexer_init(mara_ctx_t* ctx, mara_lexer_t* lexer);
+mara_lexer_init(mara_context_t* ctx, mara_lexer_t* lexer);
 
 void
 mara_lexer_cleanup(mara_lexer_t* lexer);
