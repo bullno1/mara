@@ -17,4 +17,32 @@
 		} \
 	} while (0)
 
+#define mara_assert_enum(ENUM_TYPE, EXPECTED, OP, ACTUAL) \
+	do { \
+		unsigned int expected = (EXPECTED); \
+		unsigned int actual = (ACTUAL); \
+		if(!(expected OP actual)) { \
+			munit_errorf( \
+				"assert failed: " #EXPECTED " " #OP " " #ACTUAL " (%s " #OP " %s)", \
+				ENUM_TYPE##_to_str(expected), ENUM_TYPE##_to_str(actual) \
+			); \
+		} \
+	} while (0)
+
+#define mara_assert_source_coord_equal(EXPECTED, ACTUAL) \
+	do { \
+		mara_source_coord_t loc_expected = (EXPECTED); \
+		mara_source_coord_t loc_actual = (ACTUAL); \
+		munit_assert_uint(loc_expected.column, ==, loc_actual.column); \
+		munit_assert_uint(loc_expected.line, ==, loc_actual.line); \
+	} while (0)
+
+#define mara_assert_source_range_equal(EXPECTED, ACTUAL) \
+	do { \
+		mara_source_range_t loc_range_expected = (EXPECTED); \
+		mara_source_range_t loc_range_actual = (ACTUAL); \
+		mara_assert_source_coord_equal(loc_range_expected.start, loc_range_actual.start); \
+		mara_assert_source_coord_equal(loc_range_expected.end, loc_range_actual.end); \
+	} while(0)
+
 #endif

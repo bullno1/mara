@@ -39,7 +39,7 @@ typedef struct mara_string_s mara_string_t;
 typedef struct mara_gc_header_s mara_gc_header_t;
 typedef struct mara_gc_info_s mara_gc_info_t;
 typedef struct mara_source_coord_s mara_source_coord_t;
-typedef struct mara_source_location_s mara_source_location_t;
+typedef struct mara_source_range_s mara_source_range_t;
 typedef struct mara_strpool_s mara_strpool_t;
 typedef void(*mara_gc_visit_fn_t)(mara_ctx_t* ctx, mara_gc_header_t* header);
 
@@ -49,9 +49,8 @@ struct mara_source_coord_s
 	mara_source_addr_t column;
 };
 
-struct mara_source_location_s
+struct mara_source_range_s
 {
-	mara_string_t* file;
 	mara_source_coord_t start;
 	mara_source_coord_t end;
 };

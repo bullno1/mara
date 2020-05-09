@@ -47,7 +47,7 @@ typedef void(*mara_panic_fn_t)(mara_ctx_t* ctx, const char* message);
 	X(MARA_VAL_INT) \
 	X(MARA_VAL_REAL) \
 	X(MARA_VAL_STRING) \
-	X(MARA_VAL_ATOM) \
+	X(MARA_VAL_SYMBOL) \
 	X(MARA_VAL_LIST) \
 	X(MARA_VAL_FUNCTION)
 

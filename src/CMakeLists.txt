@@ -1,6 +1,7 @@
 add_library(mara
 	context.c
 	strpool.c
+	lexer.c
 )
 target_include_directories(mara PUBLIC
 	../include

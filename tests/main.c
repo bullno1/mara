@@ -1,12 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <munit/munit.h>
-#define BK_IMPLEMENTATION
-#include <bk/default_allocator.h>
 
 #define TEST_SUITE(X) \
     X(context) \
     X(strpool) \
+    X(lexer) \
 
 #define DECLARE_SUITE(S) extern MunitSuite S;
 #define IMPORT_SUITE(S) S,

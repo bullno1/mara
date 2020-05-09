@@ -3,8 +3,13 @@ project(mara VERSION 1.0
              LANGUAGES C)
 set(CMAKE_C_STANDARD 99)
 
-add_library(bk INTERFACE)
-target_include_directories(bk INTERFACE
+add_library(bk
+	deps/bk/src/array.c
+	deps/bk/src/default_allocator.c
+	deps/bk/src/fs/crt.c
+	deps/bk/src/fs/mem.c
+)
+target_include_directories(bk PUBLIC
 	deps/bk/include
 )
 
