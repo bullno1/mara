@@ -184,10 +184,62 @@ normal(const MunitParameter params[], void* fixture)
 	return MUNIT_OK;
 }
 
+static void
+mara_assert_bad_string(
+	mara_lexer_t* lexer,
+	char* string,
+	mara_source_addr_t start_line,
+	mara_source_addr_t start_col,
+	mara_source_addr_t end_line,
+	mara_source_addr_t end_col
+)
+{
+	bk_mem_file_t file;
+	bk_file_t* input = bk_mem_fs_wrap_fixed(
+		&file, string, strlen(string)
+	);
+	mara_lexer_reset(lexer, input);
+	mara_token_t token;
+	mara_assert_enum(
+		mara_lexer_status_t,
+		MARA_LEXER_BAD_STRING, ==, mara_lexer_next_token(lexer, &token)
+	);
+	mara_source_range_t source_range = {
+		.start = {
+			.line = start_line,
+			.column = start_col,
+		},
+		.end = {
+			.line = end_line,
+			.column = end_col,
+		},
+	};
+	mara_assert_source_range_equal(source_range, token.location);
+}
+
+static MunitResult
+bad_string(const MunitParameter params[], void* fixture)
+{
+	(void)params;
+	mara_lexer_t* lexer = &((fixture_t*)fixture)->lexer;
+
+	mara_assert_bad_string(lexer, " \"ha", 1, 2, 1, 4);
+	mara_assert_bad_string(lexer, " \" \n\"", 1, 2, 1, 3);
+	mara_assert_bad_string(lexer, " \"  \r\"", 1, 2, 1, 4);
+
+	return MUNIT_OK;
+}
+
 static MunitTest tests[] = {
 	{
 		.name = "/normal",
 		.test = normal,
+		.setup = setup,
+		.tear_down = tear_down
+	},
+	{
+		.name = "/bad_string",
+		.test = bad_string,
 		.setup = setup,
 		.tear_down = tear_down
 	},
