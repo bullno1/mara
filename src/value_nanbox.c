@@ -61,26 +61,48 @@ mara_value_type_check(mara_value_t value, mara_value_type_t type)
 }
 
 void*
-mara_value_as_ptr(mara_value_t value);
+mara_value_as_ptr(mara_value_t value)
+{
+	return (void*)(value.u64 & MARA_NANBOX_POINTER_MASK);
+}
 
 mara_number_t
-mara_value_as_number(mara_value_t value);
+mara_value_as_number(mara_value_t value)
+{
+	return value.d64;
+}
 
 bool
-mara_value_as_bool(mara_value_t value);
+mara_value_as_bool(mara_value_t value)
+{
+	return value.u64 == MARA_NANBOX_TRUE;
+}
 
 void
-mara_value_set_null(mara_value_t* value);
+mara_value_set_null(mara_value_t* value)
+{
+	value->u64 = MARA_NANBOX_NULL;
+}
 
 void
-mara_value_set_number(mara_value_t* value, mara_number_t num);
+mara_value_set_number(mara_value_t* value, mara_number_t num)
+{
+	value->d64 = num;
+}
 
 void
-mara_value_set_bool(mara_value_t* value, bool boolean);
+mara_value_set_bool(mara_value_t* value, bool boolean)
+{
+	value->u64 = MARA_MAKE_NANBOX(MARA_NANBOX_BOOL_TAG, boolean);
+}
 
 void
 mara_value_set_ptr(
 	mara_value_t* value, mara_value_type_t type, mara_gc_header_t* ptr
-);
+)
+{
+	(void)type;
+	value->u64 = MARA_MAKE_NANBOX(MARA_NANBOX_POINTER_TAG, ((uint64_t)ptr >> 1));
+}
 
 #endif
