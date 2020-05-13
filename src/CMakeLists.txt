@@ -2,6 +2,9 @@ add_library(mara
 	context.c
 	strpool.c
 	lexer.c
+	value_nanbox.c
+	value_union.c
+	gc.c
 )
 target_include_directories(mara PUBLIC
 	../include

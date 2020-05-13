@@ -1,33 +1,7 @@
-#define UGC_IMPLEMENTATION
 #include "internal.h"
+#include "gc.h"
 #include "strpool.h"
 
-
-static void
-mara_gc_scan(ugc_t* gc, ugc_header_t* obj)
-{
-	mara_context_t* ctx = BK_CONTAINER_OF(gc, mara_context_t, gc);
-	if(obj == NULL)
-	{
-	}
-	else
-	{
-		mara_gc_header_t* header = BK_CONTAINER_OF(
-			obj, mara_gc_header_t, ugc_header
-		);
-		header->gc_info->mark_fn(ctx, header);
-	}
-}
-
-static void
-mara_gc_release(ugc_t* gc, ugc_header_t* obj)
-{
-	mara_context_t* ctx = BK_CONTAINER_OF(gc, mara_context_t, gc);
-	mara_gc_header_t* header = BK_CONTAINER_OF(
-		obj, mara_gc_header_t, ugc_header
-	);
-	header->gc_info->free_fn(ctx, header);
-}
 
 static void*
 mara_realloc(bk_allocator_t* allocator, void* ptr, size_t size)
@@ -66,8 +40,8 @@ mara_create_context(const mara_context_config_t* config)
 		.config = *config,
 	};
 
-	mara_strpool_init(ctx, &ctx->strpool);
-	ugc_init(&ctx->gc, mara_gc_scan, mara_gc_release);
+	mara_strpool_init(ctx, &ctx->symtab);
+	mara_gc_init(ctx);
 
 	return ctx;
 }
@@ -75,25 +49,7 @@ mara_create_context(const mara_context_config_t* config)
 void
 mara_destroy_context(mara_context_t* ctx)
 {
-	ugc_release_all(&ctx->gc);
-	mara_strpool_cleanup(ctx, &ctx->strpool);
+	mara_gc_cleanup(ctx);
+	mara_strpool_cleanup(ctx, &ctx->symtab);
 	bk_free(ctx->config.allocator, ctx);
-}
-
-void*
-mara_gc_malloc(mara_context_t* ctx, mara_gc_info_t* gc_info, size_t size)
-{
-	MARA_ASSERT(ctx, size > sizeof(mara_gc_header_t), "Invalid mara_gc_malloc");
-
-	mara_gc_header_t* obj = mara_malloc(ctx, size);
-	obj->gc_info = gc_info;
-	ugc_register(&ctx->gc, &obj->ugc_header);
-
-	return obj;
-}
-
-void
-mara_gc_mark(mara_context_t* ctx, mara_gc_header_t* header)
-{
-	ugc_visit(&ctx->gc, &header->ugc_header);
 }

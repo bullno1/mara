@@ -17,4 +17,11 @@ mara_strpool_alloc(
 	mara_string_ref_t string
 );
 
+void
+mara_strpool_release(
+	mara_context_t* ctx,
+	mara_strpool_t* strpool,
+	mara_string_t* string
+);
+
 #endif

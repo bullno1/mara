@@ -16,7 +16,7 @@
 #define mara_strpool_n_elem(u) u->capacity + 1
 #define mara_strpool_size(u) u->size
 #define mara_strpool_overflow(u) MARA_ASSERT(ctx, 0, "Hash overflow")
-#define mara_strpool_removefailed(u,key)
+#define mara_strpool_removefailed(u,key) removed = 0;
 #define mara_strpool_swap(u, index1, index2) \
 	do { \
 		mara_string_t* tmp = u->strings[index1]; \
@@ -70,36 +70,13 @@ mara_strpool_create(mara_context_t* ctx, size_t capacity)
 	mara_strpool_t strpool = {
 		.strings = strings,
 		.size = 0,
-		.capacity = capacity
+		.capacity = capacity,
 	};
 
 	ROBINHOOD_HASH_CLEAR(mara_strpool, (&strpool));
 
 	return strpool;
 }
-
-
-static void
-mara_mark_string(mara_context_t* ctx, mara_gc_header_t* header)
-{
-	(void)ctx;
-	(void)header;
-}
-
-static void
-mara_free_string(mara_context_t* ctx, mara_gc_header_t* header)
-{
-	mara_string_t* string = BK_CONTAINER_OF(header, mara_string_t, gc_header);
-	mara_strpool_key_t key = mara_strpool_key(string);
-	ROBINHOOD_HASH_DEL(mara_strpool, (&ctx->strpool), key);
-	mara_free(ctx, string);
-}
-
-
-static mara_gc_info_t mara_string_gc_info = {
-	.mark_fn = mara_mark_string,
-	.free_fn = mara_free_string,
-};
 
 
 void
@@ -151,8 +128,8 @@ mara_strpool_alloc(
 		*strpool = new_strpool;
 	}
 
-	mara_string_t* pooled_string = mara_gc_malloc(
-		ctx, &mara_string_gc_info, sizeof(mara_string_t) + string.length + 1
+	mara_string_t* pooled_string = mara_malloc(
+		ctx, sizeof(mara_string_t) + string.length + 1
 	);
 	pooled_string->hash = hash;
 	pooled_string->length = string.length;
@@ -162,4 +139,19 @@ mara_strpool_alloc(
 	ROBINHOOD_HASH_SET(mara_strpool, strpool, key, pooled_string);
 
 	return pooled_string;
+}
+
+void
+mara_strpool_release(
+	mara_context_t* ctx,
+	mara_strpool_t* strpool,
+	mara_string_t* string
+)
+{
+	int removed = 1;
+
+	mara_strpool_key_t key = mara_strpool_key(string);
+	ROBINHOOD_HASH_DEL(mara_strpool, strpool, key);
+	MARA_ASSERT(ctx, removed, "Invalid mara_strpool_release");
+	mara_free(ctx, string);
 }

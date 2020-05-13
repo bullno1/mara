@@ -26,9 +26,9 @@ test(const MunitParameter params[], void* fixture)
 {
 	mara_context_t* ctx = fixture;
 
-	mara_string_t* foo = mara_strpool_alloc(ctx, &ctx->strpool, mara_string_ref("foo"));
-	mara_string_t* bar = mara_strpool_alloc(ctx, &ctx->strpool, mara_string_ref("bar"));
-	mara_string_t* foo2 = mara_strpool_alloc(ctx, &ctx->strpool, mara_string_ref("foo"));
+	mara_string_t* foo = mara_strpool_alloc(ctx, &ctx->symtab, mara_string_ref("foo"));
+	mara_string_t* bar = mara_strpool_alloc(ctx, &ctx->symtab, mara_string_ref("bar"));
+	mara_string_t* foo2 = mara_strpool_alloc(ctx, &ctx->symtab, mara_string_ref("foo"));
 
 	munit_assert_ptr_equal(foo, foo2);
 	munit_assert_ptr_not_equal(foo, bar);
@@ -46,15 +46,15 @@ test(const MunitParameter params[], void* fixture)
 	mara_assert_string_ref_equal(mara_string_ref("bar"), pooled_bar_ref);
 
 	// Force resize
-	mara_string_t* quux = mara_strpool_alloc(ctx, &ctx->strpool, mara_string_ref("quux"));
-	mara_string_t* quuux = mara_strpool_alloc(ctx, &ctx->strpool, mara_string_ref("quuux"));
-	mara_string_t* quuuux = mara_strpool_alloc(ctx, &ctx->strpool, mara_string_ref("quuuux"));
-	mara_string_t* quux2 = mara_strpool_alloc(ctx, &ctx->strpool, mara_string_ref("quux"));
-	mara_string_t* quuuux2 = mara_strpool_alloc(ctx, &ctx->strpool, mara_string_ref("quuuux"));
+	mara_string_t* quux = mara_strpool_alloc(ctx, &ctx->symtab, mara_string_ref("quux"));
+	mara_string_t* quuux = mara_strpool_alloc(ctx, &ctx->symtab, mara_string_ref("quuux"));
+	mara_string_t* quuuux = mara_strpool_alloc(ctx, &ctx->symtab, mara_string_ref("quuuux"));
+	mara_string_t* quux2 = mara_strpool_alloc(ctx, &ctx->symtab, mara_string_ref("quux"));
+	mara_string_t* quuuux2 = mara_strpool_alloc(ctx, &ctx->symtab, mara_string_ref("quuuux"));
 
-	foo = mara_strpool_alloc(ctx, &ctx->strpool, mara_string_ref("foo"));
-	bar = mara_strpool_alloc(ctx, &ctx->strpool, mara_string_ref("bar"));
-	foo2 = mara_strpool_alloc(ctx, &ctx->strpool, mara_string_ref("foo"));
+	foo = mara_strpool_alloc(ctx, &ctx->symtab, mara_string_ref("foo"));
+	bar = mara_strpool_alloc(ctx, &ctx->symtab, mara_string_ref("bar"));
+	foo2 = mara_strpool_alloc(ctx, &ctx->symtab, mara_string_ref("foo"));
 
 	munit_assert_ptr_equal(foo, foo2);
 	munit_assert_ptr_equal(quux, quux2);

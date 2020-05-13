@@ -1,0 +1,5 @@
+#!/bin/sh -e
+
+export GTEST_COLOR=1
+export CTEST_OUTPUT_ON_FAILURE=1
+exec ctest --build-and-test . .build --build-noclean --build-generator "Ninja Multi-Config" --build-config Debug --test-command tests/tests
