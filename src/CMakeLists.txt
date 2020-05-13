@@ -5,6 +5,8 @@ add_library(mara
 	value_nanbox.c
 	value_union.c
 	gc.c
+	string.c
+	thread.c
 )
 target_include_directories(mara PUBLIC
 	../include

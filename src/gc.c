@@ -1,6 +1,8 @@
 #define UGC_IMPLEMENTATION
 #include "internal.h"
 #include "strpool.h"
+#include "string.h"
+#include "thread.h"
 
 
 static void
@@ -10,6 +12,8 @@ mara_gc_scan(ugc_t* gc, ugc_header_t* obj)
 
 	if(obj == NULL)
 	{
+		mara_gc_mark_thread(ctx, ctx->main_thread);
+		mara_gc_mark_thread(ctx, ctx->current_thread);
 	}
 	else
 	{
@@ -19,7 +23,13 @@ mara_gc_scan(ugc_t* gc, ugc_header_t* obj)
 
 		switch(header->obj_type)
 		{
+			case MARA_GC_THREAD:
+				mara_gc_mark_thread(
+					ctx, BK_CONTAINER_OF(header, mara_thread_t, gc_header)
+				);
+				break;
 			case MARA_GC_STRING:
+			case MARA_GC_SYMBOL:
 				break;
 			default:
 				MARA_ASSERT(ctx, false, "Unknown object type");
@@ -39,10 +49,21 @@ mara_gc_release(ugc_t* gc, ugc_header_t* obj)
 	switch(header->obj_type)
 	{
 		case MARA_GC_SYMBOL:
-			mara_strpool_release(ctx, &ctx->symtab, (mara_string_t*)header);
+			mara_strpool_release(
+				ctx,
+				&ctx->symtab,
+				BK_CONTAINER_OF(header, mara_string_t, gc_header)
+			);
 			break;
 		case MARA_GC_STRING:
-			mara_free(ctx, header);
+			mara_release_string(
+				ctx, BK_CONTAINER_OF(header, mara_string_t, gc_header)
+			);
+			break;
+		case MARA_GC_THREAD:
+			mara_release_thread(
+				ctx, BK_CONTAINER_OF(header, mara_thread_t, gc_header)
+			);
 			break;
 		default:
 			MARA_ASSERT(ctx, false, "Unknown object type");
@@ -66,5 +87,5 @@ mara_gc_cleanup(mara_context_t* ctx)
 void
 mara_gc_mark(mara_context_t* ctx, mara_gc_header_t* header)
 {
-	ugc_visit(&ctx->gc, &header->ugc_header);
+	if(header != NULL) { ugc_visit(&ctx->gc, &header->ugc_header); }
 }

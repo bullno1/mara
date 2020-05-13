@@ -9,7 +9,7 @@ mara_value_type_check(mara_value_t value, mara_value_type_t type)
 }
 
 mara_gc_header_t*
-mara_value_as_ptr(mara_value_t value)
+mara_value_as_gc_obj(mara_value_t value)
 {
 	return value.data.ptr;
 }
@@ -48,7 +48,7 @@ mara_value_set_bool(mara_value_t* value, bool boolean)
 }
 
 void
-mara_value_set_ptr(
+mara_value_set_gc_obj(
 	mara_value_t* value, mara_value_type_t type, mara_gc_header_t* ptr
 )
 {

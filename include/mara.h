@@ -89,8 +89,8 @@ struct mara_string_ref_s
 
 struct mara_thread_config_s
 {
-	uint16_t operand_stack_size;
-	uint16_t call_stack_size;
+	size_t stack_size;
+	mara_string_ref_t name;
 };
 
 struct mara_context_config_s

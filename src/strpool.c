@@ -1,5 +1,5 @@
 #include "strpool.h"
-#include <string.h>
+#include "string.h"
 #include <bk/allocator.h>
 #include <bk/assert.h>
 #include "vendor/robinhoodhash.h"
@@ -98,7 +98,7 @@ mara_strpool_alloc(
 	mara_string_ref_t string
 )
 {
-	mara_hash_t hash = MARA_HASH(string.ptr, string.length, (uintptr_t)strpool);
+	mara_hash_t hash = MARA_HASH(ctx, string.ptr, string.length);
 	mara_string_t* value;
 	mara_strpool_key_t key = {
 		.hash = hash,
@@ -128,14 +128,7 @@ mara_strpool_alloc(
 		*strpool = new_strpool;
 	}
 
-	mara_string_t* pooled_string = mara_malloc(
-		ctx, sizeof(mara_string_t) + string.length + 1
-	);
-	pooled_string->hash = hash;
-	pooled_string->length = string.length;
-	memcpy(pooled_string->data, string.ptr, string.length);
-	pooled_string->data[string.length] = '\0';
-
+	mara_string_t* pooled_string = mara_alloc_string_hashed(ctx, string, hash);
 	ROBINHOOD_HASH_SET(mara_strpool, strpool, key, pooled_string);
 
 	return pooled_string;
@@ -153,5 +146,5 @@ mara_strpool_release(
 	mara_strpool_key_t key = mara_strpool_key(string);
 	ROBINHOOD_HASH_DEL(mara_strpool, strpool, key);
 	MARA_ASSERT(ctx, removed, "Invalid mara_strpool_release");
-	mara_free(ctx, string);
+	mara_release_string(ctx, string);
 }

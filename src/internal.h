@@ -17,8 +17,10 @@
 #define MARA_PP_CONCAT2(A, B) MARA_PP_CONCAT3(A, B)
 #define MARA_PP_CONCAT3(A, B) A##B
 
-#define MARA_HASH MARA_PP_CONCAT(XXH, MARA_HASH_BITS)
-#define MARA_HASH_TYPE MARA_PP_CONCAT(MARA_PP_CONCAT(uint, MARA_HASH_BITS), _t)
+#define MARA_HASH(CTX, DATA, SIZE) \
+	MARA_PP_CONCAT(XXH, MARA_HASH_BITS)((DATA), (SIZE), (uintptr_t)(CTX))
+#define MARA_HASH_TYPE \
+	MARA_PP_CONCAT(MARA_PP_CONCAT(uint, MARA_HASH_BITS), _t)
 
 #define MARA_ASSERT(ctx, condition, message) \
 	do { \
@@ -41,12 +43,7 @@ BK_ENUM(mara_gc_obj_type_t, MARA_GC_OBJ_TYPE)
 	X(MARA_VAL_NULL) \
 	X(MARA_VAL_BOOL) \
 	X(MARA_VAL_NUMBER) \
-	X(MARA_VAL_STRING) \
-	X(MARA_VAL_SYMBOL) \
-	X(MARA_VAL_LIST) \
-	X(MARA_VAL_THREAD) \
-	X(MARA_VAL_FUNCTION) \
-	X(MARA_VAL_HANDLE)
+	X(MARA_VAL_GC_OBJ)
 
 BK_ENUM(mara_value_type_t, MARA_VAL)
 
@@ -95,9 +92,11 @@ struct mara_context_s
 {
 	bk_allocator_t allocator;
 	mara_context_config_t config;
-	ugc_t gc;
 
+	ugc_t gc;
 	mara_strpool_t symtab;
+	mara_thread_t* main_thread;
+	mara_thread_t* current_thread;
 };
 
 struct mara_gc_header_s
@@ -146,38 +145,47 @@ struct mara_function_closure_s
 struct mara_stack_frame_s
 {
 	mara_value_t* base_pointer;
-	mara_instruction_t* instruction_pointer;
-	mara_function_closure_t* closure;
+	mara_value_t* stack_pointer;
 
-	uint8_t num_args;
+	bool is_native;
+
+	union
+	{
+		struct {
+			mara_instruction_t* instruction_pointer;
+			mara_function_closure_t* closure;
+		} script;
+
+		struct {
+			mara_string_ref_t filename;
+			unsigned int line;
+		} native;
+	} data;
 };
 
 struct mara_thread_s
 {
 	mara_gc_header_t gc_header;
-	mara_thread_config_t config;
 
-	mara_value_t* operand_stack;
-	mara_stack_frame_t* call_stack;
-
+	mara_string_t* name;
 	mara_stack_frame_t* frame_pointer;
+
+	mara_stack_frame_t* frame_pointer_min;
+	mara_value_t* stack_pointer_max;
+	size_t stack_size;
+	char stack[];
 };
 
 
 void
 mara_gc_mark(mara_context_t* ctx, mara_gc_header_t* header);
 
-bool
-mara_value_type_check(mara_value_t value, mara_value_type_t type);
-
-mara_gc_header_t*
-mara_value_as_ptr(mara_value_t value);
-
-mara_number_t
-mara_value_as_number(mara_value_t value);
-
-bool
-mara_value_as_bool(mara_value_t value);
+void
+mara_gc_write_barrier(
+	mara_context_t* ctx,
+	mara_gc_header_t* container,
+	mara_gc_header_t* obj
+);
 
 void
 mara_value_set_null(mara_value_t* value);
@@ -189,9 +197,19 @@ void
 mara_value_set_bool(mara_value_t* value, bool boolean);
 
 void
-mara_value_set_ptr(
-	mara_value_t* value, mara_value_type_t type, mara_gc_header_t* ptr
-);
+mara_value_set_gc_obj(mara_value_t* value, mara_gc_header_t* obj);
+
+bool
+mara_value_type_check(mara_value_t* value, mara_value_type_t type);
+
+mara_number_t
+mara_value_as_number(mara_value_t* value);
+
+bool
+mara_value_as_bool(mara_value_t* value);
+
+mara_gc_header_t*
+mara_value_as_gc_obj(mara_value_t* value);
 
 
 static inline void*
