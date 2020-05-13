@@ -9,7 +9,7 @@ struct mara_value_s
 	{
 		bool boolean;
 		mara_number_t number;
-		void* ptr;
+		void* gc_obj;
 	} data;
 };
 

@@ -2,31 +2,6 @@
 
 #if !MARA_NANBOX
 
-bool
-mara_value_type_check(mara_value_t value, mara_value_type_t type)
-{
-	return value.type == type;
-}
-
-mara_gc_header_t*
-mara_value_as_gc_obj(mara_value_t value)
-{
-	return value.data.ptr;
-}
-
-mara_number_t
-mara_value_as_number(mara_value_t value)
-{
-	return value.data.number;
-}
-
-bool
-mara_value_as_bool(mara_value_t value)
-{
-	return value.data.boolean;
-}
-
-
 void
 mara_value_set_null(mara_value_t* value)
 {
@@ -48,12 +23,34 @@ mara_value_set_bool(mara_value_t* value, bool boolean)
 }
 
 void
-mara_value_set_gc_obj(
-	mara_value_t* value, mara_value_type_t type, mara_gc_header_t* ptr
-)
+mara_value_set_gc_obj(mara_value_t* value, mara_gc_header_t* obj)
 {
-	value->type = type;
-	value->data.ptr = ptr;
+	value->type = MARA_VAL_GC_OBJ;
+	value->data.gc_obj = obj;
+}
+
+bool
+mara_value_type_check(mara_value_t* value, mara_value_type_t type)
+{
+	return value->type == type;
+}
+
+mara_number_t
+mara_value_as_number(mara_value_t* value)
+{
+	return value->data.number;
+}
+
+bool
+mara_value_as_bool(mara_value_t* value)
+{
+	return value->data.boolean;
+}
+
+mara_gc_header_t*
+mara_value_as_gc_obj(mara_value_t* value)
+{
+	return value->data.gc_obj;
 }
 
 #endif
