@@ -8,6 +8,13 @@ mara_alloc_thread(
 	const mara_thread_config_t* config
 )
 {
+	MARA_ASSERT(
+		ctx,
+		config->stack_size >= sizeof(mara_stack_frame_t)
+		&& config->stack_size >= sizeof(mara_value_t),
+		"Insufficient stack space"
+	);
+
 	mara_thread_t* thread = mara_malloc(
 		ctx, sizeof(mara_thread_t) + config->stack_size
 	);

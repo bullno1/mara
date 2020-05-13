@@ -24,7 +24,9 @@
 
 #define MARA_ASSERT(ctx, condition, message) \
 	do { \
-		if(!(condition)) { ctx->config.panic_handler(ctx, message); } \
+		if(!(condition)) { \
+			ctx->config.panic_handler(ctx, message, __FILE__, __LINE__); \
+		} \
 	} while(0);
 
 #define MARA_GC_OBJ_TYPE(X) \

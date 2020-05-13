@@ -16,11 +16,8 @@ typedef struct fixture_s
 
 static void*
 setup(const MunitParameter params[], void* user_data) {
-	mara_context_config_t config = {
-		.allocator = bk_default_allocator
-	};
-
 	fixture_t* fixture = BK_NEW(bk_default_allocator, fixture_t);
+	mara_context_config_t config = mara_default_context_config();
 	fixture->ctx = mara_create_context(&config);
 	mara_lexer_init(fixture->ctx, &fixture->lexer);
 

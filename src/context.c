@@ -1,6 +1,7 @@
 #include "internal.h"
 #include "gc.h"
 #include "strpool.h"
+#include "thread.h"
 
 
 static void*
@@ -30,7 +31,7 @@ mara_create_context(const mara_context_config_t* config)
 	mara_context_t* ctx = BK_UNSAFE_NEW(config->allocator, mara_context_t);
 	if(ctx == NULL)
 	{
-		config->panic_handler(NULL, "Out of memory");
+		config->panic_handler(NULL, "Out of memory", __FILE__, __LINE__);
 	}
 
 	*ctx = (mara_context_t) {
@@ -41,6 +42,10 @@ mara_create_context(const mara_context_config_t* config)
 	};
 
 	mara_strpool_init(ctx, &ctx->symtab);
+
+	ctx->current_thread = ctx->main_thread =
+		mara_alloc_thread(ctx, &config->main_thread_config);
+
 	mara_gc_init(ctx);
 
 	return ctx;
@@ -50,6 +55,7 @@ void
 mara_destroy_context(mara_context_t* ctx)
 {
 	mara_gc_cleanup(ctx);
+	mara_release_thread(ctx, ctx->main_thread);
 	mara_strpool_cleanup(ctx, &ctx->symtab);
 	bk_free(ctx->config.allocator, ctx);
 }

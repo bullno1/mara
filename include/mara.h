@@ -61,7 +61,12 @@ typedef struct mara_context_config_s mara_context_config_t;
 typedef struct mara_thread_config_s mara_thread_config_t;
 typedef struct mara_thread_s mara_thread_t;
 typedef struct mara_handle_desc_s mara_handle_desc_t;
-typedef void(*mara_panic_fn_t)(mara_context_t* ctx, const char* message);
+typedef void(*mara_panic_fn_t)(
+	mara_context_t* ctx,
+	const char* message,
+	const char* file,
+	unsigned int line
+);
 typedef void(*mara_finalizer_fn_t)(mara_context_t* ctx, void* obj);
 
 #define MARA_EXEC(X) \

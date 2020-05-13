@@ -1,5 +1,6 @@
 add_executable(tests
 	main.c
+	helpers.c
 	context.c
 	strpool.c
 	lexer.c

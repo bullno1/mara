@@ -8,10 +8,7 @@
 
 static void*
 setup(const MunitParameter params[], void* user_data) {
-	mara_context_config_t config = {
-		.allocator = bk_default_allocator
-	};
-
+	mara_context_config_t config = mara_default_context_config();
 	return mara_create_context(&config);
 }
 
