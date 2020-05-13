@@ -8,7 +8,7 @@ mara_value_type_check(mara_value_t value, mara_value_type_t type)
 	return value.type == type;
 }
 
-void*
+mara_gc_header_t*
 mara_value_as_ptr(mara_value_t value)
 {
 	return value.data.ptr;

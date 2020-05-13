@@ -170,7 +170,7 @@ mara_gc_mark(mara_context_t* ctx, mara_gc_header_t* header);
 bool
 mara_value_type_check(mara_value_t value, mara_value_type_t type);
 
-void*
+mara_gc_header_t*
 mara_value_as_ptr(mara_value_t value);
 
 mara_number_t

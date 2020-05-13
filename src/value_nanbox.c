@@ -60,7 +60,7 @@ mara_value_type_check(mara_value_t value, mara_value_type_t type)
 	return false;
 }
 
-void*
+mara_gc_header_t*
 mara_value_as_ptr(mara_value_t value)
 {
 	return (void*)(value.u64 & MARA_NANBOX_POINTER_MASK);
