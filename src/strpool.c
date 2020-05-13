@@ -88,6 +88,18 @@ mara_strpool_init(mara_context_t* ctx, mara_strpool_t* strpool)
 void
 mara_strpool_cleanup(mara_context_t* ctx, mara_strpool_t* strpool)
 {
+	// For testability and symmetry sake, we loop over and release all strings
+	// In practice, the pool should be empty due to GC
+	while(strpool->size > 0)
+	{
+		ROBINHOOD_HASH_FOREACH(mara_strpool, strpool, i)
+		{
+			mara_string_t* string = strpool->strings[i];
+			mara_strpool_release(ctx, strpool, string);
+			break;
+		}
+	}
+
 	mara_free(ctx, strpool->strings);
 }
 
@@ -108,9 +120,6 @@ mara_strpool_alloc(
 
 	if(value != NULL) { return value; }
 
-	// Resize if we are at capacity.
-	// This must be done before allocating the new string.
-	// This is because emergency GC can kick in and collect the new string
 	size_t capacity = strpool->capacity;
 	size_t max_size = (size_t)((double)capacity * MARA_HASH_LOAD_FACTOR);
 	if(strpool->size >= max_size)
@@ -124,7 +133,7 @@ mara_strpool_alloc(
 			ROBINHOOD_HASH_SET(mara_strpool, (&new_strpool), key, string);
 		}
 
-		mara_strpool_cleanup(ctx, strpool);
+		mara_free(ctx, strpool->strings);
 		*strpool = new_strpool;
 	}
 
