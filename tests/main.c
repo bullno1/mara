@@ -6,6 +6,7 @@
     X(context) \
     X(strpool) \
     X(lexer) \
+    X(value) \
 
 #define DECLARE_SUITE(S) extern MunitSuite S;
 #define IMPORT_SUITE(S) S,

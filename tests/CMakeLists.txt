@@ -4,6 +4,7 @@ add_executable(tests
 	context.c
 	strpool.c
 	lexer.c
+	value.c
 )
 target_link_libraries(tests PRIVATE munit mara)
 
