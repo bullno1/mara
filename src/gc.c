@@ -5,6 +5,25 @@
 #include "thread.h"
 
 
+static size_t
+mara_sizeof_gc_obj(mara_gc_header_t* header)
+{
+	switch(header->obj_type)
+	{
+		case MARA_GC_STRING:
+		case MARA_GC_SYMBOL:
+			return mara_sizeof_string(
+				BK_CONTAINER_OF(header, mara_string_t, gc_header)
+			);
+		case MARA_GC_THREAD:
+			return mara_sizeof_thread(
+				BK_CONTAINER_OF(header, mara_thread_t, gc_header)
+			);
+		default:
+			return 0;
+	}
+}
+
 static void
 mara_gc_scan(ugc_t* gc, ugc_header_t* obj)
 {
@@ -69,6 +88,8 @@ mara_gc_release(ugc_t* gc, ugc_header_t* obj)
 			MARA_ASSERT(ctx, false, "Unknown object type");
 			break;
 	}
+
+	ctx->gc_mem -= mara_sizeof_gc_obj(header);
 }
 
 
@@ -88,4 +109,18 @@ void
 mara_gc_mark(mara_context_t* ctx, mara_gc_header_t* header)
 {
 	if(header != NULL) { ugc_visit(&ctx->gc, &header->ugc_header); }
+}
+
+void
+mara_gc_register(mara_context_t* ctx, mara_gc_header_t* header)
+{
+	ugc_register(&ctx->gc, &header->ugc_header);
+
+	ctx->gc_mem += mara_sizeof_gc_obj(header);
+}
+
+void
+mara_gc_tick(mara_context_t* ctx)
+{
+	(void)ctx;
 }

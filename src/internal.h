@@ -96,6 +96,8 @@ struct mara_context_s
 	mara_context_config_t config;
 
 	ugc_t gc;
+	size_t gc_mem;
+
 	mara_strpool_t symtab;
 	mara_thread_t* main_thread;
 	mara_thread_t* current_thread;
@@ -188,6 +190,9 @@ mara_gc_write_barrier(
 	mara_gc_header_t* container,
 	mara_gc_header_t* obj
 );
+
+void
+mara_gc_register(mara_context_t* ctx, mara_gc_header_t* header);
 
 void
 mara_value_set_null(mara_value_t* value);

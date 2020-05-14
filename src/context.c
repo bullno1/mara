@@ -21,6 +21,8 @@ mara_realloc(bk_allocator_t* allocator, void* ptr, size_t size)
 		MARA_ASSERT(ctx, size == 0 || result != NULL, "Out of memory");
 	}
 
+	mara_gc_tick(ctx);
+
 	return result;
 }
 

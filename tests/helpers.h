@@ -45,6 +45,7 @@
 		mara_assert_source_coord_equal(loc_range_expected.end, loc_range_actual.end); \
 	} while(0)
 
-mara_context_config_t mara_default_context_config();
+mara_context_config_t
+mara_default_context_config();
 
 #endif

@@ -10,4 +10,7 @@ mara_gc_init(mara_context_t* ctx);
 void
 mara_gc_cleanup(mara_context_t* ctx);
 
+void
+mara_gc_tick(mara_context_t* ctx);
+
 #endif

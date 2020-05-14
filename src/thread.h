@@ -13,6 +13,12 @@ mara_gc_mark_thread(
 	mara_thread_t* thread
 );
 
+static inline size_t
+mara_sizeof_thread(mara_thread_t* thread)
+{
+	return sizeof(*thread) + thread->stack_size;
+}
+
 static inline void
 mara_release_thread(mara_context_t* ctx, mara_thread_t* thread)
 {
