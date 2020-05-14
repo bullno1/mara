@@ -39,11 +39,17 @@ mara_lexer_peek_char(mara_lexer_t* lexer, char* ch)
 }
 
 static void
-mara_lexer_consume_char(mara_lexer_t* lexer)
+mara_lexer_discard_char(mara_lexer_t* lexer)
 {
 	lexer->buffered = false;
-	bk_array_push(lexer->capture_buff, lexer->read_buff);
 	++lexer->location.column;
+}
+
+static void
+mara_lexer_capture_char(mara_lexer_t* lexer)
+{
+	bk_array_push(lexer->capture_buff, lexer->read_buff);
+	mara_lexer_discard_char(lexer);
 }
 
 static void
@@ -99,9 +105,8 @@ mara_lexer_scan_string(mara_lexer_t* lexer, mara_token_t* token)
 		}
 		else if(ch == '"' && previous_char != '\\')
 		{
-			mara_lexer_consume_char(lexer);
+			mara_lexer_discard_char(lexer);
 			mara_lexer_make_token(lexer, token, MARA_TOKEN_STRING);
-			--token->lexeme.length; // Exclude the ending quote '"'
 			return MARA_LEXER_OK;
 		}
 		else if(ch == '\n' || ch == '\r')
@@ -112,7 +117,7 @@ mara_lexer_scan_string(mara_lexer_t* lexer, mara_token_t* token)
 		}
 		else
 		{
-			mara_lexer_consume_char(lexer);
+			mara_lexer_capture_char(lexer);
 		}
 
 		if(ch == '\\' && previous_char == '\\')
@@ -147,7 +152,7 @@ mara_lexer_scan_number(mara_lexer_t* lexer, mara_token_t* token)
 		}
 		else if(ch == '.')
 		{
-			mara_lexer_consume_char(lexer);
+			mara_lexer_capture_char(lexer);
 
 			if(found_point)
 			{
@@ -163,7 +168,7 @@ mara_lexer_scan_number(mara_lexer_t* lexer, mara_token_t* token)
 		}
 		else if(isdigit(ch))
 		{
-			mara_lexer_consume_char(lexer);
+			mara_lexer_capture_char(lexer);
 			continue;
 		}
 		else
@@ -194,7 +199,7 @@ mara_lexer_scan_symbol(mara_lexer_t* lexer, mara_token_t* token)
 		}
 		else
 		{
-			mara_lexer_consume_char(lexer);
+			mara_lexer_capture_char(lexer);
 		}
 	}
 
@@ -236,7 +241,7 @@ mara_lexer_next_token(mara_lexer_t* lexer, mara_token_t* token)
 		if(status != MARA_LEXER_OK) { return status; }
 
 		token->location.start = lexer->location;
-		mara_lexer_consume_char(lexer);
+		mara_lexer_capture_char(lexer);
 
 		switch(ch)
 		{
@@ -254,7 +259,7 @@ mara_lexer_next_token(mara_lexer_t* lexer, mara_token_t* token)
 
 				if(ch == '\n')
 				{
-					mara_lexer_consume_char(lexer);
+					mara_lexer_discard_char(lexer);
 				}
 				continue;
 			case '\n':
@@ -287,7 +292,7 @@ mara_lexer_next_token(mara_lexer_t* lexer, mara_token_t* token)
 				}
 				else if(ch == '@')
 				{
-					mara_lexer_consume_char(lexer);
+					mara_lexer_capture_char(lexer);
 					return mara_lexer_make_token(
 						lexer, token, MARA_TOKEN_UNQUOTE_SPLICING
 					);
@@ -310,7 +315,7 @@ mara_lexer_next_token(mara_lexer_t* lexer, mara_token_t* token)
 					}
 					else
 					{
-						mara_lexer_consume_char(lexer);
+						mara_lexer_discard_char(lexer);
 					}
 				}
 				continue;
