@@ -150,6 +150,10 @@ mara_lexer_scan_number(mara_lexer_t* lexer, mara_token_t* token)
 		{
 			return mara_lexer_make_token(lexer, token, MARA_TOKEN_NUMBER);
 		}
+		else if(ch == '_')
+		{
+			mara_lexer_discard_char(lexer);
+		}
 		else if(ch == '.')
 		{
 			mara_lexer_capture_char(lexer);

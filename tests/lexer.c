@@ -55,7 +55,7 @@ normal(const MunitParameter params[], void* fixture)
 		"test-23 -3 -ve -\r\n"
 		"\n"
 		" \"f \\\"\"\n"
-		"  \" \\\\\""
+		"  \" \\\\\" 3_3.3"
 	);
 	bk_mem_file_t mem_file;
 	bk_file_t* file = bk_mem_fs_wrap_fixed(
@@ -143,6 +143,14 @@ normal(const MunitParameter params[], void* fixture)
 			.location = {
 				.start = {.line = 9, .column = 3},
 				.end = {.line = 9, .column = 7}
+			}
+		},
+		{
+			.type = MARA_TOKEN_NUMBER,
+			.lexeme = mara_string_ref("33.3"),
+			.location = {
+				.start = {.line = 9, .column = 9},
+				.end = {.line = 9, .column = 13}
 			}
 		},
 	};
