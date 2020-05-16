@@ -69,7 +69,15 @@ test_numeric_assignment(double number)
 	munit_assert_false(mara_value_type_check(&value, MARA_VAL_BOOL));
 	munit_assert_true(mara_value_type_check(&value, MARA_VAL_NUMBER));
 	munit_assert_false(mara_value_type_check(&value, MARA_VAL_GC_OBJ));
-	munit_assert_double(number, ==, mara_value_as_number(&value));
+
+	if(!isnan(number))
+	{
+		munit_assert_double(number, ==, mara_value_as_number(&value));
+	}
+	else
+	{
+		munit_assert_memory_equal(sizeof(double), &number, &value);
+	}
 }
 
 static MunitResult
@@ -95,7 +103,7 @@ static MunitTest tests[] = {
     },
     {
         .name = "/numeric_assginment",
-        .test = nanbox_assignment,
+        .test = numeric_assignment,
     },
     { .test = NULL }
 };
