@@ -170,6 +170,28 @@ mara_replace(mara_context_t* ctx, mara_index_t index)
 	mara_pop(ctx, 1);
 }
 
+void
+mara_restore_stack(mara_context_t* ctx, mara_index_t n)
+{
+	MARA_ASSERT(
+		ctx,
+		0 <= n && n <= mara_stack_len(ctx),
+		"Invalid stack length"
+	);
+
+	mara_stack_frame_t* current_frame = ctx->current_thread->frame_pointer;
+	current_frame->stack_pointer = current_frame->base_pointer - n;
+}
+
+bool
+mara_check_stack(mara_context_t* ctx, mara_index_t n)
+{
+	mara_stack_frame_t* current_frame = ctx->current_thread->frame_pointer;
+	mara_index_t stack_len = mara_stack_len(ctx);
+	return stack_len + n <= MARA_STACK_MAX
+		&& (uintptr_t)(current_frame->stack_pointer - n + 1) >= (uintptr_t)(current_frame + 1);
+}
+
 mara_index_t
 mara_obj_len(mara_context_t* ctx, mara_index_t index);
 
