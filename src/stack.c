@@ -108,9 +108,9 @@ mara_push_string(mara_context_t* ctx, mara_string_ref_t str)
 }
 
 void
-mara_make_symbol(mara_context_t* ctx, mara_index_t index)
+mara_make_symbol(mara_context_t* ctx)
 {
-	mara_value_t* value = mara_stack_addr(ctx, index);
+	mara_value_t* value = mara_stack_addr(ctx, -1);
 
 	MARA_ASSERT(
 		ctx,
@@ -128,7 +128,7 @@ mara_make_symbol(mara_context_t* ctx, mara_index_t index)
 
 	if(header->obj_type == MARA_GC_SYMBOL)
 	{
-		*mara_stack_alloc(ctx) = *value;
+		return;
 	}
 	else
 	{
@@ -141,7 +141,7 @@ mara_make_symbol(mara_context_t* ctx, mara_index_t index)
 		symbol->gc_header.obj_type = MARA_GC_SYMBOL;
 		mara_gc_register(ctx, &symbol->gc_header);
 
-		mara_push_gc_obj(ctx, &symbol->gc_header);
+		mara_value_set_gc_obj(value, &symbol->gc_header);
 	}
 }
 

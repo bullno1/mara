@@ -182,7 +182,7 @@ MARA_DECL void
 mara_push_stringfv(mara_context_t* ctx, const char* fmt, va_list arg);
 
 MARA_DECL void
-mara_make_symbol(mara_context_t* ctx, mara_index_t index);
+mara_make_symbol(mara_context_t* ctx);
 
 MARA_DECL void
 mara_dup(mara_context_t* ctx, mara_index_t index);
@@ -333,7 +333,7 @@ static inline void
 mara_push_symbol(mara_context_t* ctx, mara_string_ref_t string)
 {
 	mara_push_string(ctx, string);
-	mara_make_symbol(ctx, -1);
+	mara_make_symbol(ctx);
 }
 
 #endif
