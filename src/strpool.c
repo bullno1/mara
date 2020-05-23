@@ -64,8 +64,6 @@ mara_strpool_init_internal(
 {
 	size_t malloc_size = (capacity + 1) * sizeof(mara_string_t*);
 	strpool->strings = mara_malloc(ctx, malloc_size);
-	memset(strpool->strings, 0, malloc_size);
-
 	strpool->size = 0;
 	strpool->capacity = capacity;
 
