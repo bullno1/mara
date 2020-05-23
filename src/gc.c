@@ -33,6 +33,8 @@ mara_gc_scan(ugc_t* gc, ugc_header_t* obj)
 	{
 		mara_gc_mark_thread(ctx, ctx->main_thread);
 		mara_gc_mark_thread(ctx, ctx->current_thread);
+		// TODO: scan the list of activated threads since they don't have write
+		// barriers
 	}
 	else
 	{
@@ -65,6 +67,8 @@ mara_gc_release(ugc_t* gc, ugc_header_t* obj)
 		obj, mara_gc_header_t, ugc_header
 	);
 
+	ctx->gc_mem -= mara_sizeof_gc_obj(header);
+
 	switch(header->obj_type)
 	{
 		case MARA_GC_SYMBOL:
@@ -88,8 +92,6 @@ mara_gc_release(ugc_t* gc, ugc_header_t* obj)
 			MARA_ASSERT(ctx, false, "Unknown object type");
 			break;
 	}
-
-	ctx->gc_mem -= mara_sizeof_gc_obj(header);
 }
 
 
@@ -123,4 +125,36 @@ void
 mara_gc_tick(mara_context_t* ctx)
 {
 	(void)ctx;
+}
+
+void
+mara_gc_write_barrier(
+	mara_context_t* ctx,
+	mara_gc_header_t* parent,
+	mara_gc_header_t* child
+)
+{
+	if(child == NULL) { return; }
+
+	switch(parent->obj_type)
+	{
+		case MARA_GC_UPVALUE:
+			ugc_write_barrier(
+				&ctx->gc,
+				UGC_BARRIER_FORWARD,
+				&parent->ugc_header, &parent->ugc_header
+			);
+			break;
+		case MARA_GC_THREAD:
+		case MARA_GC_LIST:
+			ugc_write_barrier(
+				&ctx->gc,
+				UGC_BARRIER_BACKWARD,
+				&parent->ugc_header, &parent->ugc_header
+			);
+			break;
+		default:
+			MARA_ASSERT(ctx, false, "Invalid write barrier");
+			break;
+	}
 }

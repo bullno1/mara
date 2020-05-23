@@ -61,6 +61,10 @@ typedef struct mara_context_config_s mara_context_config_t;
 typedef struct mara_thread_config_s mara_thread_config_t;
 typedef struct mara_thread_s mara_thread_t;
 typedef struct mara_handle_desc_s mara_handle_desc_t;
+typedef struct mara_record_decl_s mara_record_decl_t;
+typedef struct mara_source_coord_s mara_source_coord_t;
+typedef struct mara_source_range_s mara_source_range_t;
+typedef uint32_t mara_source_addr_t;
 typedef void(*mara_panic_fn_t)(
 	mara_context_t* ctx,
 	const char* message,
@@ -83,6 +87,9 @@ BK_ENUM(mara_exec_t, MARA_EXEC)
 	X(MARA_ERROR)
 
 BK_ENUM(mara_thread_state_t, MARA_THREAD)
+
+#define MARA_STRING_REF(STR) { .ptr = STR, .length = sizeof(STR) - 1 }
+#define MARA_RECORD_ATTR_END { .ptr = 0, .length = 0 }
 
 typedef mara_exec_t (*mara_native_fn_t)(mara_context_t* context);
 
@@ -111,6 +118,24 @@ struct mara_handle_desc_s
 	mara_finalizer_fn_t finalizer;
 };
 
+struct mara_record_decl_s
+{
+	mara_string_ref_t name;
+	mara_string_ref_t* attributes;
+};
+
+struct mara_source_coord_s
+{
+	mara_source_addr_t line;
+	mara_source_addr_t column;
+};
+
+struct mara_source_range_s
+{
+	mara_source_coord_t start;
+	mara_source_coord_t end;
+};
+
 // Context
 
 MARA_DECL mara_context_t*
@@ -137,6 +162,12 @@ mara_thread_state(mara_context_t* context, mara_index_t thread);
 
 MARA_DECL mara_index_t
 mara_stack_len(mara_context_t* ctx);
+
+MARA_DECL void
+mara_restore_stack(mara_context_t* ctx, mara_index_t n);
+
+MARA_DECL bool
+mara_check_stack(mara_context_t* ctx, mara_index_t n);
 
 MARA_DECL void
 mara_push_null(mara_context_t* ctx);
@@ -182,6 +213,9 @@ mara_is_string(mara_context_t* ctx, mara_index_t index);
 MARA_DECL bool
 mara_is_number(mara_context_t* ctx, mara_index_t index);
 
+MARA_DECL bool
+mara_is_symbol(mara_context_t* ctx, mara_index_t index);
+
 MARA_DECL mara_string_ref_t
 mara_as_string(mara_context_t* ctx, mara_index_t index);
 
@@ -191,19 +225,39 @@ mara_as_number(mara_context_t* ctx, mara_index_t index);
 MARA_DECL bool
 mara_as_bool(mara_context_t* ctx, mara_index_t index);
 
-// Collection
+// Userdata
+
+void
+mara_set_user_data(mara_context_t* ctx, const void* handle, mara_index_t index);
+
+void
+mara_get_user_data(mara_context_t* ctx, const void* handle);
+
+// Record
+
+MARA_DECL void
+mara_declare_record(mara_context_t* ctx, const mara_record_decl_t* decl);
+
+MARA_DECL void
+mara_new_record(mara_context_t* ctx, const mara_record_decl_t* decl);
+
+MARA_DECL const mara_record_decl_t*
+mara_get_record_decl(mara_context_t* ctx, mara_index_t index);
+
+MARA_DECL void
+mara_push_record_attribute_name(
+	mara_context_t* ctx,
+	const mara_record_decl_t* decl,
+	mara_index_t attribute_index
+);
+
+// List
 
 MARA_DECL bool
 mara_is_list(mara_context_t* ctx, mara_index_t index);
 
-MARA_DECL bool
-mara_is_map(mara_context_t* ctx, mara_index_t index);
-
 MARA_DECL void
 mara_new_list(mara_context_t* ctx, mara_index_t capacity);
-
-MARA_DECL void
-mara_new_map(mara_context_t* ctx, mara_index_t capacity);
 
 MARA_DECL void
 mara_get(mara_context_t* ctx, mara_index_t list);
@@ -219,9 +273,6 @@ mara_append(mara_context_t* ctx, mara_index_t list);
 
 MARA_DECL void
 mara_insert(mara_context_t* ctx, mara_index_t list);
-
-MARA_DECL void
-mara_delete(mara_context_t* ctx, mara_index_t list);
 
 // Native object
 
@@ -276,6 +327,13 @@ mara_push_stringf(mara_context_t* ctx, const char* fmt, ...)
 	va_start(args, fmt);
 	mara_push_stringfv(ctx, fmt, args);
 	va_end(args);
+}
+
+static inline void
+mara_push_symbol(mara_context_t* ctx, mara_string_ref_t string)
+{
+	mara_push_string(ctx, string);
+	mara_make_symbol(ctx, -1);
 }
 
 #endif

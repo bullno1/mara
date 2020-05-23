@@ -7,6 +7,7 @@
     X(strpool) \
     X(lexer) \
     X(value) \
+    X(stack) \
 
 #define DECLARE_SUITE(S) extern MunitSuite S;
 #define IMPORT_SUITE(S) S,

@@ -7,6 +7,7 @@ add_library(mara
 	gc.c
 	string.c
 	thread.c
+	stack.c
 )
 target_include_directories(mara PUBLIC
 	../include

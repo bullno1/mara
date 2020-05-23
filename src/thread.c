@@ -24,6 +24,7 @@ mara_alloc_thread(
 	{
 		thread->name = mara_alloc_string(ctx, config->name);
 		thread->name->gc_header.obj_type = MARA_GC_STRING;
+		mara_gc_register(ctx, &thread->name->gc_header);
 	}
 	else
 	{
@@ -32,8 +33,8 @@ mara_alloc_thread(
 
 	// Operand stack starts from the end of generic stack space
 	const size_t value_alignment = BK_ALIGN_OF(mara_value_t);
-	thread->stack_pointer_max =
-		(void*)((uintptr_t)(thread->stack + config->stack_size) / value_alignment * value_alignment);
+	void* stack_end =
+		(void*)((uintptr_t)(thread->stack + config->stack_size - 1) / value_alignment * value_alignment);
 
 	// Call stack starts from the beginning of generic stack space
 	const size_t stack_frame_alignment = BK_ALIGN_OF(mara_stack_frame_t);
@@ -42,8 +43,8 @@ mara_alloc_thread(
 
 	// First frame is native
 	*thread->frame_pointer = (mara_stack_frame_t) {
-		.base_pointer = thread->stack_pointer_max,
-		.stack_pointer = thread->stack_pointer_max,
+		.base_pointer = stack_end,
+		.stack_pointer = stack_end,
 		.is_native = true,
 	};
 
@@ -55,14 +56,22 @@ mara_gc_mark_thread(mara_context_t* ctx, mara_thread_t* thread)
 {
 	mara_gc_mark(ctx, &thread->name->gc_header);
 	for(
-		mara_value_t* i = thread->frame_pointer->stack_pointer;
-		i < thread->stack_pointer_max;
-		++i
+		mara_stack_frame_t* stack_frame = thread->frame_pointer_min;
+		stack_frame <= thread->frame_pointer;
+		++stack_frame
 	)
 	{
-		if(mara_value_type_check(i, MARA_VAL_GC_OBJ))
+		// TODO: Mark closure
+		for(
+			mara_value_t* value = stack_frame->stack_pointer + 1;
+			value <= stack_frame->base_pointer ;
+			++value
+		)
 		{
-			mara_gc_mark(ctx, mara_value_as_gc_obj(i));
+			if(mara_value_type_check(value, MARA_VAL_GC_OBJ))
+			{
+				mara_gc_mark(ctx, mara_value_as_gc_obj(value));
+			}
 		}
 	}
 }

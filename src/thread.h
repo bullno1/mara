@@ -13,6 +13,7 @@ mara_gc_mark_thread(
 	mara_thread_t* thread
 );
 
+
 static inline size_t
 mara_sizeof_thread(mara_thread_t* thread)
 {

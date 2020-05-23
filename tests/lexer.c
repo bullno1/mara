@@ -15,7 +15,8 @@ typedef struct fixture_s
 
 
 static void*
-setup(const MunitParameter params[], void* user_data) {
+setup(const MunitParameter params[], void* user_data)
+{
 	fixture_t* fixture = BK_NEW(bk_default_allocator, fixture_t);
 	mara_context_config_t config = mara_default_context_config();
 	fixture->ctx = mara_create_context(&config);
@@ -25,7 +26,8 @@ setup(const MunitParameter params[], void* user_data) {
 }
 
 static void
-tear_down(void* fixturep) {
+tear_down(void* fixturep)
+{
 	fixture_t* fixture = fixturep;
 	mara_lexer_cleanup(&fixture->lexer);
 	mara_destroy_context(fixture->ctx);
