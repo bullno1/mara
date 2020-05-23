@@ -18,11 +18,7 @@
 #define mara_strpool_overflow(u) MARA_ASSERT(ctx, 0, "Hash overflow")
 #define mara_strpool_removefailed(u,key) removed = 0;
 #define mara_strpool_swap(u, index1, index2) \
-	do { \
-		mara_string_t* tmp = u->strings[index1]; \
-		u->strings[index1] = u->strings[index2]; \
-		u->strings[index2] = tmp; \
-	} while(0);
+	MARA_HASH_SWAP(mara_string_t*, u->strings, index1, index2)
 
 typedef struct mara_strpool_key_s
 {

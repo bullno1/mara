@@ -17,14 +17,10 @@
 #define MARA_STACK_MAX UINT8_MAX
 #define MARA_RECORD_ATTR_MAX UINT8_MAX
 
-#define MARA_PP_CONCAT(A, B) MARA_PP_CONCAT2(A, B)
-#define MARA_PP_CONCAT2(A, B) MARA_PP_CONCAT3(A, B)
-#define MARA_PP_CONCAT3(A, B) A##B
-
 #define MARA_HASH(CTX, DATA, SIZE) \
-	MARA_PP_CONCAT(XXH, MARA_HASH_BITS)((DATA), (SIZE), (uintptr_t)(CTX))
+	BK_PP_CONCAT(XXH, MARA_HASH_BITS)((DATA), (SIZE), (uintptr_t)(CTX))
 #define MARA_HASH_TYPE \
-	MARA_PP_CONCAT(MARA_PP_CONCAT(uint, MARA_HASH_BITS), _t)
+	BK_PP_CONCAT(BK_PP_CONCAT(uint, MARA_HASH_BITS), _t)
 
 #define MARA_ASSERT(ctx, condition, message) \
 	do { \
@@ -67,6 +63,13 @@ BK_ENUM(mara_value_type_t, MARA_VAL)
 #else
 #include "value_union.h"
 #endif
+
+#define MARA_HASH_SWAP(TYPE, ARRAY, INDEX1, INDEX2) \
+	do { \
+		TYPE tmp = ARRAY[INDEX1]; \
+		ARRAY[INDEX1] = ARRAY[INDEX2]; \
+		ARRAY[INDEX2] = tmp; \
+	} while(0)
 
 typedef MARA_HASH_TYPE mara_hash_t;
 typedef struct mara_gc_header_s mara_gc_header_t;
