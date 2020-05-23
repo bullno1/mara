@@ -55,30 +55,28 @@ mara_strpool_key(mara_string_t* string)
 	};
 }
 
-static mara_strpool_t
-mara_strpool_create(mara_context_t* ctx, size_t capacity)
+static void
+mara_strpool_init_internal(
+	mara_context_t* ctx,
+	mara_strpool_t* strpool,
+	size_t capacity
+)
 {
 	size_t malloc_size = (capacity + 1) * sizeof(mara_string_t*);
-	mara_string_t** strings = mara_malloc(ctx, malloc_size);
-	memset(strings, 0, malloc_size);
+	strpool->strings = mara_malloc(ctx, malloc_size);
+	memset(strpool->strings, 0, malloc_size);
 
+	strpool->size = 0;
+	strpool->capacity = capacity;
 
-	mara_strpool_t strpool = {
-		.strings = strings,
-		.size = 0,
-		.capacity = capacity,
-	};
-
-	ROBINHOOD_HASH_CLEAR(mara_strpool, (&strpool));
-
-	return strpool;
+	ROBINHOOD_HASH_CLEAR(mara_strpool, strpool);
 }
 
 
 void
 mara_strpool_init(mara_context_t* ctx, mara_strpool_t* strpool)
 {
-	*strpool = mara_strpool_create(ctx, MARA_HASH_INITIAL_CAPACITY);
+	mara_strpool_init_internal(ctx, strpool, MARA_HASH_INITIAL_CAPACITY);
 }
 
 void
@@ -120,7 +118,8 @@ mara_strpool_alloc(
 	size_t max_size = (size_t)((double)capacity * MARA_HASH_LOAD_FACTOR);
 	if(strpool->size >= max_size)
 	{
-		mara_strpool_t new_strpool = mara_strpool_create(ctx, capacity * 2);
+		mara_strpool_t new_strpool;
+		mara_strpool_init_internal(ctx, &new_strpool, capacity * 2);
 
 		ROBINHOOD_HASH_FOREACH(mara_strpool, strpool, i)
 		{
