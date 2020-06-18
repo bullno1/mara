@@ -83,12 +83,22 @@ typedef struct mara_function_prototype_s mara_function_prototype_t;
 typedef struct mara_upvalue_s mara_upvalue_t;
 typedef struct mara_strpool_s mara_strpool_t;
 typedef struct mara_stack_frame_s mara_stack_frame_t;
+typedef struct mara_ptr_map_s mara_ptr_map_t;
 typedef uint32_t mara_instruction_t;
 typedef void(*mara_gc_visit_fn_t)(mara_context_t* ctx, mara_gc_header_t* header);
+typedef const void* mara_ptr_map_key_t;
 
 struct mara_strpool_s
 {
 	mara_string_t** strings;
+	size_t size;
+	size_t capacity;
+};
+
+struct mara_ptr_map_s
+{
+	mara_ptr_map_key_t* keys;
+	mara_value_t* values;
 	size_t size;
 	size_t capacity;
 };
@@ -104,6 +114,7 @@ struct mara_context_s
 	mara_strpool_t symtab;
 	mara_thread_t* main_thread;
 	mara_thread_t* current_thread;
+	mara_ptr_map_t record_decls;
 };
 
 struct mara_gc_header_s
@@ -124,13 +135,13 @@ struct mara_string_s
 struct mara_native_location_s
 {
 	const char* file;
-	unsigned int line;
+	mara_index_t line;
 };
 
 struct mara_record_attr_info_s
 {
 	mara_string_t* name;
-	uint8_t slot;
+	mara_index_t slot;
 };
 
 struct mara_record_info_s
@@ -141,7 +152,7 @@ struct mara_record_info_s
 	const mara_record_decl_t* decl;
 
 	mara_string_t* name;
-	uint8_t num_attrs;
+	mara_index_t num_attrs;
 	struct mara_record_attr_info_s attr_infos[];
 };
 

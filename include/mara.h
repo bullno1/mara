@@ -64,6 +64,7 @@ typedef struct mara_handle_desc_s mara_handle_desc_t;
 typedef struct mara_record_decl_s mara_record_decl_t;
 typedef struct mara_source_coord_s mara_source_coord_t;
 typedef struct mara_source_range_s mara_source_range_t;
+typedef struct mara_call_s mara_call_t;
 typedef uint32_t mara_source_addr_t;
 typedef void(*mara_panic_fn_t)(
 	mara_context_t* ctx,
@@ -110,6 +111,11 @@ struct mara_context_config_s
 	struct bk_allocator_s* allocator;
 	mara_panic_fn_t panic_handler;
 	mara_thread_config_t main_thread_config;
+};
+
+struct mara_call_s
+{
+	mara_index_t num_args;
 };
 
 struct mara_handle_desc_s
@@ -196,9 +202,6 @@ mara_pop(mara_context_t* ctx, mara_index_t n);
 MARA_DECL void
 mara_replace(mara_context_t* ctx, mara_index_t index);
 
-MARA_DECL mara_index_t
-mara_obj_len(mara_context_t* ctx, mara_index_t index);
-
 // Primitive type
 
 MARA_DECL bool
@@ -228,10 +231,12 @@ mara_as_bool(mara_context_t* ctx, mara_index_t index);
 // Userdata
 
 void
-mara_set_user_data(mara_context_t* ctx, const void* handle, mara_index_t index);
+mara_set_context_data(
+	mara_context_t* ctx, const void* handle, mara_index_t index
+);
 
 void
-mara_get_user_data(mara_context_t* ctx, const void* handle);
+mara_get_context_data(mara_context_t* ctx, const void* handle);
 
 // Record
 
@@ -244,10 +249,31 @@ mara_new_record(mara_context_t* ctx, const mara_record_decl_t* decl);
 MARA_DECL const mara_record_decl_t*
 mara_get_record_decl(mara_context_t* ctx, mara_index_t index);
 
-MARA_DECL void
-mara_push_record_attribute_name(
+MARA_DECL mara_index_t
+mara_get_attribute_index(
 	mara_context_t* ctx,
 	const mara_record_decl_t* decl,
+	mara_index_t attribute_name
+);
+
+MARA_DECL void
+mara_get_attribute_name(
+	mara_context_t* ctx,
+	const mara_record_decl_t* decl,
+	mara_index_t attribute_index
+);
+
+MARA_DECL void
+mara_record_get(
+	mara_context_t* ctx,
+	mara_index_t record,
+	mara_index_t attribute_index
+);
+
+MARA_DECL void
+mara_record_set(
+	mara_context_t* ctx,
+	mara_index_t record,
 	mara_index_t attribute_index
 );
 
@@ -260,19 +286,19 @@ MARA_DECL void
 mara_new_list(mara_context_t* ctx, mara_index_t capacity);
 
 MARA_DECL void
-mara_get(mara_context_t* ctx, mara_index_t list);
+mara_list_append(mara_context_t* ctx, mara_index_t list);
 
 MARA_DECL void
-mara_set(mara_context_t* ctx, mara_index_t list);
+mara_list_insert(mara_context_t* ctx, mara_index_t list);
 
 MARA_DECL void
-mara_delete(mara_context_t* ctx, mara_index_t list);
+mara_list_get(mara_context_t* ctx, mara_index_t list);
 
 MARA_DECL void
-mara_append(mara_context_t* ctx, mara_index_t list);
+mara_list_set(mara_context_t* ctx, mara_index_t list);
 
 MARA_DECL void
-mara_insert(mara_context_t* ctx, mara_index_t list);
+mara_list_delete(mara_context_t* ctx, mara_index_t list);
 
 // Native object
 
@@ -296,10 +322,7 @@ mara_push_native_function(
 );
 
 MARA_DECL mara_exec_t
-mara_call(
-	mara_context_t* ctx,
-	mara_index_t num_args
-);
+mara_exec(mara_context_t* ctx, const mara_call_t* call);
 
 // Utils
 

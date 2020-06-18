@@ -2,6 +2,7 @@
 #include "internal.h"
 #include "strpool.h"
 #include "string.h"
+#include "ptr_map.h"
 #include "thread.h"
 
 
@@ -25,37 +26,49 @@ mara_sizeof_gc_obj(mara_gc_header_t* header)
 }
 
 static void
+mara_gc_scan_root(mara_context_t* ctx)
+{
+	mara_gc_mark_thread(ctx, ctx->main_thread);
+	mara_gc_mark_thread(ctx, ctx->current_thread);
+	mara_gc_mark_ptr_map(ctx, &ctx->record_decls);
+	// TODO: scan the list of activated threads since they don't have write
+	// barriers
+}
+
+static void
+mara_gc_scan_obj(mara_context_t* ctx, mara_gc_header_t* header)
+{
+	switch(header->obj_type)
+	{
+		case MARA_GC_THREAD:
+			mara_gc_mark_thread(
+				ctx, BK_CONTAINER_OF(header, mara_thread_t, gc_header)
+			);
+			break;
+		case MARA_GC_STRING:
+		case MARA_GC_SYMBOL:
+			break;
+		default:
+			MARA_ASSERT(ctx, false, "Unknown object type");
+			break;
+	}
+}
+
+static void
 mara_gc_scan(ugc_t* gc, ugc_header_t* obj)
 {
 	mara_context_t* ctx = BK_CONTAINER_OF(gc, mara_context_t, gc);
 
 	if(obj == NULL)
 	{
-		mara_gc_mark_thread(ctx, ctx->main_thread);
-		mara_gc_mark_thread(ctx, ctx->current_thread);
-		// TODO: scan the list of activated threads since they don't have write
-		// barriers
+		mara_gc_scan_root(ctx);
 	}
 	else
 	{
 		mara_gc_header_t* header = BK_CONTAINER_OF(
 			obj, mara_gc_header_t, ugc_header
 		);
-
-		switch(header->obj_type)
-		{
-			case MARA_GC_THREAD:
-				mara_gc_mark_thread(
-					ctx, BK_CONTAINER_OF(header, mara_thread_t, gc_header)
-				);
-				break;
-			case MARA_GC_STRING:
-			case MARA_GC_SYMBOL:
-				break;
-			default:
-				MARA_ASSERT(ctx, false, "Unknown object type");
-				break;
-		}
+		mara_gc_scan_obj(ctx, header);
 	}
 }
 

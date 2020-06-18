@@ -1,6 +1,7 @@
 #include "internal.h"
 #include "gc.h"
 #include "strpool.h"
+#include "ptr_map.h"
 #include "thread.h"
 
 
@@ -48,6 +49,8 @@ mara_create_context(const mara_context_config_t* config)
 	ctx->current_thread = ctx->main_thread =
 		mara_alloc_thread(ctx, &config->main_thread_config);
 
+	mara_ptr_map_init(ctx, &ctx->record_decls);
+
 	mara_gc_init(ctx);
 
 	return ctx;
@@ -57,6 +60,7 @@ void
 mara_destroy_context(mara_context_t* ctx)
 {
 	mara_gc_cleanup(ctx);
+	mara_ptr_map_cleanup(ctx, &ctx->record_decls);
 	mara_release_thread(ctx, ctx->main_thread);
 	mara_strpool_cleanup(ctx, &ctx->symtab);
 	bk_free(ctx->config.allocator, ctx);
