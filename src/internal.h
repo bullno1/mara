@@ -95,9 +95,15 @@ typedef struct mara_zone_options_s {
 	const mara_value_t* argv;
 } mara_zone_options_t;
 
+typedef struct mara_zone_bookmark_s {
+	mara_zone_t* previous_zone;
+	struct mara_zone_bookmark_s* previous_bookmark;
+	mara_arena_snapshot_t control_snapshot;
+} mara_zone_bookmark_t;
+
 struct mara_zone_s {
-	mara_zone_t* parent;
 	mara_index_t level;
+	mara_index_t ref_count;
 	mara_finalizer_t* finalizers;
 	mara_arena_t* arena;
 	mara_arena_t* ctx_arenas;
@@ -114,6 +120,7 @@ struct mara_env_s {
 struct mara_exec_ctx_s {
 	mara_env_t* env;
 	mara_zone_t* current_zone;
+	mara_zone_bookmark_t* current_zone_bookmark;
 	mara_arena_t* arenas;
 	mara_arena_t control_arena;
 	mara_error_t last_error;
@@ -142,17 +149,14 @@ mara_arena_restore(mara_exec_ctx_t* ctx, mara_arena_t* arena, mara_arena_snapsho
 
 // Zone
 
-void
-mara_zone_prepare(mara_exec_ctx_t* ctx);
+mara_zone_t*
+mara_zone_new(mara_exec_ctx_t* ctx, mara_zone_options_t options);
 
 void
-mara_zone_enter(mara_exec_ctx_t* ctx, mara_zone_options_t options);
+mara_zone_enter(mara_exec_ctx_t* ctx, mara_zone_t* zone);
 
 void
 mara_zone_exit(mara_exec_ctx_t* ctx);
-
-mara_zone_t*
-mara_zone_switch(mara_exec_ctx_t* ctx, mara_zone_t* zone);
 
 void
 mara_zone_cleanup(mara_exec_ctx_t* ctx, mara_zone_t* zone);

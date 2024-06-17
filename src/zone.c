@@ -1,8 +1,8 @@
 #include "internal.h"
 #include <string.h>
 
-void
-mara_zone_enter(mara_exec_ctx_t* ctx, mara_zone_options_t options) {
+mara_zone_t*
+mara_zone_new(mara_exec_ctx_t* ctx, mara_zone_options_t options) {
 	mara_zone_t* current_zone = ctx->current_zone;
 
 	mara_arena_snapshot_t control_snapshot = mara_arena_snapshot(ctx, &ctx->control_arena);
@@ -48,14 +48,32 @@ mara_zone_enter(mara_exec_ctx_t* ctx, mara_zone_options_t options) {
 	}
 
 	*new_zone = (mara_zone_t){
-		.parent = current_zone,
 		.level = current_zone != NULL ? current_zone->level + 1 : 0,
 		.arena = arena_for_zone,
 		.ctx_arenas = ctx_arenas,
 		.control_snapshot = control_snapshot,
 		.local_snapshot = mara_arena_snapshot(ctx, arena_for_zone),
 	};
-	ctx->current_zone = new_zone;
+
+	return new_zone;
+}
+
+void
+mara_zone_enter(mara_exec_ctx_t* ctx, mara_zone_t* zone) {
+	mara_arena_snapshot_t control_snapshot = mara_arena_snapshot(
+		ctx, &ctx->control_arena
+	);
+	mara_zone_bookmark_t* bookmark = mara_arena_alloc(
+		ctx, &ctx->control_arena, sizeof(mara_zone_bookmark_t)
+	);
+	bookmark->previous_bookmark = ctx->current_zone_bookmark;
+	bookmark->previous_zone = ctx->current_zone;
+	bookmark->control_snapshot = control_snapshot;
+
+	zone->ref_count += 1;
+
+	ctx->current_zone_bookmark = bookmark;
+	ctx->current_zone = zone;
 
 	// Reset error
 	ctx->last_error = (mara_error_t){ 0 };
@@ -66,11 +84,16 @@ void
 mara_zone_exit(mara_exec_ctx_t* ctx) {
 	mara_zone_t* current_zone = ctx->current_zone;
 
-	mara_zone_cleanup(ctx, current_zone);
+	mara_zone_bookmark_t* bookmark = ctx->current_zone_bookmark;
+	ctx->current_zone = bookmark->previous_zone;
+	ctx->current_zone_bookmark = bookmark->previous_bookmark;
+	mara_arena_restore(ctx, &ctx->control_arena, bookmark->control_snapshot);
 
-	ctx->arenas = current_zone->ctx_arenas;
-	ctx->current_zone = current_zone->parent;
-	mara_arena_restore(ctx, &ctx->control_arena, current_zone->control_snapshot);
+	if (--current_zone->ref_count == 0) {
+		mara_zone_cleanup(ctx, current_zone);
+		ctx->arenas = current_zone->ctx_arenas;
+		mara_arena_restore(ctx, &ctx->control_arena, current_zone->control_snapshot);
+	}
 }
 
 mara_zone_t*
@@ -120,8 +143,8 @@ mara_get_local_zone(mara_exec_ctx_t* ctx) {
 
 mara_zone_t*
 mara_get_return_zone(mara_exec_ctx_t* ctx) {
-	mara_zone_t* current_zone = ctx->current_zone;
-	return current_zone->parent != NULL ? current_zone->parent : current_zone;
+	mara_zone_bookmark_t* bookmark = ctx->current_zone_bookmark;
+	return bookmark->previous_zone != NULL ? bookmark->previous_zone : ctx->current_zone;
 }
 
 mara_zone_t*

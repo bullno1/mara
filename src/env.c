@@ -51,10 +51,14 @@ mara_exec(mara_env_t* env, mara_callback_t callback) {
 		.error_zone = {
 			.arena = &(mara_arena_t){ 0 },
 			.level = -1,
+			.ref_count = 1,
 		},
 	};
 
-	mara_zone_enter(&ctx, (mara_zone_options_t){ 0 });
+	mara_zone_enter(
+		&ctx,
+		mara_zone_new(&ctx, (mara_zone_options_t){ 0 })
+	);
 	callback.fn(&ctx, callback.userdata);
 	mara_zone_exit(&ctx);
 
