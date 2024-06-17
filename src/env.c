@@ -48,7 +48,7 @@ void
 mara_exec(mara_env_t* env, mara_callback_t callback) {
 	mara_exec_ctx_t ctx = {
 		.env = env,
-		.context_zone = {
+		.error_zone = {
 			.arena = &(mara_arena_t){ 0 },
 		},
 	};
@@ -57,6 +57,6 @@ mara_exec(mara_env_t* env, mara_callback_t callback) {
 	callback.fn(&ctx, callback.userdata);
 	mara_zone_exit(&ctx);
 
-	mara_zone_cleanup(&ctx, &ctx.context_zone);
+	mara_zone_cleanup(&ctx, &ctx.error_zone);
 	mara_arena_restore(&ctx, &ctx.control_arena, (mara_arena_snapshot_t) { 0 });
 }

@@ -51,6 +51,10 @@ mara_zone_enter(mara_exec_ctx_t* ctx, mara_index_t argc, const mara_value_t* arg
 		.local_snapshot = mara_arena_snapshot(ctx, arena_for_zone),
 	};
 	ctx->current_zone = new_zone;
+
+	// Reset error
+	ctx->last_error = (mara_error_t){ 0 };
+	mara_zone_cleanup(ctx, &ctx->error_zone);
 }
 
 void
@@ -112,8 +116,8 @@ mara_get_return_zone(mara_exec_ctx_t* ctx) {
 }
 
 mara_zone_t*
-mara_get_context_zone(mara_exec_ctx_t* ctx) {
-	return &ctx->context_zone;
+mara_get_error_zone(mara_exec_ctx_t* ctx) {
+	return &ctx->error_zone;
 }
 
 mara_zone_t*

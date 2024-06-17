@@ -81,7 +81,8 @@ struct mara_exec_ctx_s {
 	mara_zone_t* current_zone;
 	mara_arena_t* arenas;
 	mara_arena_t control_arena;
-	mara_zone_t context_zone;
+	mara_error_t last_error;
+	mara_zone_t error_zone;
 };
 
 // Malloc

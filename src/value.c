@@ -1,5 +1,4 @@
 #include "internal.h"
-#include "mara.h"
 #include "mara/utils.h"
 #include "vendor/nanbox.h"
 #include <stdio.h>
@@ -41,7 +40,7 @@ mara_type_error(
 	mara_value_type_t expected,
 	mara_value_t value
 ) {
-	return mara_new_errorf(
+	return mara_errorf(
 		ctx,
 		mara_str_from_cstr("core/type-error"),
 		"Expecting %s got %s",
@@ -197,7 +196,7 @@ mara_value_to_str(mara_exec_ctx_t* ctx, mara_value_t value, mara_str_t* result) 
 		*result = *(mara_str_t*)obj->body;
 		return NULL;
 	} else {
-		return mara_new_errorf(
+		return mara_errorf(
 			ctx,
 			mara_str_from_cstr("core/type-error"),
 			"Expecting %s got %s",
@@ -215,7 +214,7 @@ mara_value_to_ref(mara_exec_ctx_t* ctx, mara_value_t value, void* tag, void** re
 		*result = ((mara_obj_ref_t*)obj->body)->value;
 		return NULL;
 	} else {
-		return mara_new_errorf(
+		return mara_errorf(
 			ctx,
 			mara_str_from_cstr("core/type-error"),
 			"Expecting %s:%p got %s",

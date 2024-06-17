@@ -143,7 +143,7 @@ MARA_API mara_zone_t*
 mara_get_return_zone(mara_exec_ctx_t* ctx);
 
 MARA_API mara_zone_t*
-mara_get_context_zone(mara_exec_ctx_t* ctx);
+mara_get_error_zone(mara_exec_ctx_t* ctx);
 
 MARA_API mara_zone_t*
 mara_get_zone_of(mara_exec_ctx_t* ctx, mara_value_t value);
@@ -189,24 +189,6 @@ mara_value_from_int(mara_index_t value);
 MARA_API mara_value_t
 mara_value_from_real(double value);
 
-MARA_API mara_error_t*
-mara_new_errorf(
-	mara_exec_ctx_t* ctx,
-	mara_str_t type,
-	const char* fmt,
-	mara_value_t extra,
-	...
-) MARA_PRINTF_LIKE(3, 5);
-
-MARA_API mara_error_t*
-mara_new_errorv(
-	mara_exec_ctx_t* ctx,
-	mara_str_t type,
-	const char* fmt,
-	mara_value_t extra,
-	va_list args
-);
-
 MARA_API mara_value_t
 mara_new_str(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_str_t value);
 
@@ -243,6 +225,26 @@ mara_new_ref(mara_exec_ctx_t* ctx, mara_zone_t* zone, void* tag, void* value);
 
 MARA_API mara_value_t
 mara_copy(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_value_t value);
+
+// Error
+
+MARA_API mara_error_t*
+mara_errorf(
+	mara_exec_ctx_t* ctx,
+	mara_str_t type,
+	const char* fmt,
+	mara_value_t extra,
+	...
+) MARA_PRINTF_LIKE(3, 5);
+
+MARA_API mara_error_t*
+mara_errorv(
+	mara_exec_ctx_t* ctx,
+	mara_str_t type,
+	const char* fmt,
+	mara_value_t extra,
+	va_list args
+);
 
 // List
 
