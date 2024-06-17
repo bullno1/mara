@@ -49,6 +49,7 @@ mara_zone_new(mara_exec_ctx_t* ctx, mara_zone_options_t options) {
 
 	*new_zone = (mara_zone_t){
 		.level = current_zone != NULL ? current_zone->level + 1 : 0,
+		.branch = current_zone != NULL ? current_zone->branch : MARA_ZONE_BRANCH_MAIN,
 		.arena = arena_for_zone,
 		.ctx_arenas = ctx_arenas,
 		.control_snapshot = control_snapshot,

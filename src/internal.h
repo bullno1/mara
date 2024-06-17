@@ -101,9 +101,15 @@ typedef struct mara_zone_bookmark_s {
 	mara_arena_snapshot_t control_snapshot;
 } mara_zone_bookmark_t;
 
+typedef enum mara_zone_branch_e {
+	MARA_ZONE_BRANCH_MAIN,
+	MARA_ZONE_BRANCH_ERROR,
+} mara_zone_branch_t;
+
 struct mara_zone_s {
 	mara_index_t level;
 	mara_index_t ref_count;
+	mara_zone_branch_t branch;
 	mara_finalizer_t* finalizers;
 	mara_arena_t* arena;
 	mara_arena_t* ctx_arenas;

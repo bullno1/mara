@@ -50,8 +50,8 @@ mara_exec(mara_env_t* env, mara_callback_t callback) {
 		.env = env,
 		.error_zone = {
 			.arena = &(mara_arena_t){ 0 },
-			.level = -1,
 			.ref_count = 1,
+			.branch = MARA_ZONE_BRANCH_ERROR,
 		},
 	};
 

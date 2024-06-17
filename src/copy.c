@@ -5,7 +5,10 @@ mara_copy(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_value_t value, mara_valu
 	mara_obj_t* obj = mara_value_to_obj(value);
 	if (
 		obj == NULL
-		|| obj->zone->level <= zone->level
+		|| (
+			obj->zone->branch == zone->branch
+			&& obj->zone->level <= zone->level
+		)
 	) {
 		*result = value;
 		return NULL;
