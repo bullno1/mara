@@ -295,7 +295,7 @@ mara_parse_token(
 }
 
 MARA_PRIVATE mara_error_t*
-mara_parse_script(
+mara_do_parse_all(
 	mara_exec_ctx_t* ctx,
 	mara_zone_t* zone,
 	mara_str_t filename,
@@ -335,7 +335,7 @@ mara_parse_script(
 
 
 MARA_PRIVATE mara_error_t*
-mara_parse_repl(
+mara_do_parse_one(
 	mara_exec_ctx_t* ctx,
 	mara_zone_t* zone,
 	mara_str_t filename,
@@ -352,10 +352,9 @@ mara_parse_repl(
 }
 
 mara_error_t*
-mara_parse(
+mara_parse_all(
 	mara_exec_ctx_t* ctx,
 	mara_zone_t* zone,
-	mara_parse_mode_t mode,
 	mara_str_t filename,
 	mara_reader_t reader,
 	mara_value_t* result
@@ -365,16 +364,25 @@ mara_parse(
 		.num_marked_zones = 1,
 		.marked_zones = (const mara_zone_t*[]){ zone },
 	});
-	{
-		switch (mode) {
-			case MARA_PARSE_SCRIPT:
-				error = mara_parse_script(ctx, zone, filename, reader, result);
-				break;
-			case MARA_PARSE_REPL:
-				error = mara_parse_repl(ctx, zone, filename, reader, result);
-				break;
-		}
-	}
+	error = mara_do_parse_all(ctx, zone, filename, reader, result);
+	mara_zone_exit(ctx);
+	return error;
+}
+
+mara_error_t*
+mara_parse_one(
+	mara_exec_ctx_t* ctx,
+	mara_zone_t* zone,
+	mara_str_t filename,
+	mara_reader_t reader,
+	mara_value_t* result
+) {
+	mara_error_t* error;
+	mara_zone_enter(ctx, (mara_zone_options_t){
+		.num_marked_zones = 1,
+		.marked_zones = (const mara_zone_t*[]){ zone },
+	});
+	error = mara_do_parse_one(ctx, zone, filename, reader, result);
 	mara_zone_exit(ctx);
 	return error;
 }
