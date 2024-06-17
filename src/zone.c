@@ -44,6 +44,7 @@ mara_zone_new(mara_exec_ctx_t* ctx, mara_zone_options_t options) {
 				.next = ctx_arenas,
 			};
 			ctx->arenas = arena;
+			arena_for_zone = arena;
 		}
 	}
 

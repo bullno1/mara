@@ -318,12 +318,6 @@ mara_map_get(mara_exec_ctx_t* ctx, mara_value_t map, mara_value_t key, mara_valu
 MARA_API mara_error_t*
 mara_map_delete(mara_exec_ctx_t* ctx, mara_value_t map, mara_value_t key, mara_value_t* result);
 
-MARA_API mara_error_t*
-mara_map_key_at(mara_exec_ctx_t* ctx, mara_value_t map, mara_index_t index, mara_value_t* result);
-
-MARA_API mara_error_t*
-mara_map_value_at(mara_exec_ctx_t* ctx, mara_value_t map, mara_index_t index, mara_value_t* result);
-
 // Module
 
 MARA_API mara_error_t*
@@ -335,11 +329,12 @@ mara_add_importer(mara_exec_ctx_t* ctx, mara_value_t fn);
 MARA_API void
 mara_reload(mara_env_t* env);
 
-// Calling
+// Function
 
 MARA_API mara_error_t*
 mara_call(
 	mara_exec_ctx_t* ctx,
+	mara_zone_t* zone,
 	mara_value_t fn,
 	mara_index_t argc,
 	const mara_value_t* argv,
@@ -349,6 +344,7 @@ mara_call(
 MARA_API mara_error_t*
 mara_apply(
 	mara_exec_ctx_t* ctx,
+	mara_zone_t* zone,
 	mara_value_t fn,
 	mara_value_t args,
 	mara_value_t* result

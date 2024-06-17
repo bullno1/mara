@@ -7,6 +7,8 @@ set(SOURCES
 	"vendor.c"
 	"lexer.c"
 	"parser.c"
+	"copy.c"
+	"list.c"
 )
 
 setup_library(mara ${MARA_STATIC} "${SOURCES}")

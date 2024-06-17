@@ -88,7 +88,7 @@ mara_arena_restore(mara_exec_ctx_t* ctx, mara_arena_t* arena, mara_arena_snapsho
 	while (chunk != snapshot.chunk) {
 		mara_arena_chunk_t* next = chunk->next;
 		chunk->next = env->free_chunks;
-		env->free_chunks = chunk->next;
+		env->free_chunks = chunk;
 		chunk = next;
 	}
 
