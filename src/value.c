@@ -249,7 +249,7 @@ mara_str_t
 mara_vsnprintf(mara_exec_ctx_t* ctx, mara_zone_t* zone, const char* fmt, va_list args) {
 	va_list args_copy;
 	va_copy(args_copy, args);
-	char buf[1024];
+	char buf[512];
 	int len = vsnprintf(buf, sizeof(buf), fmt, args_copy);
 	if (len < 0) { len = 0; }
 

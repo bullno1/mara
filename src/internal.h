@@ -6,9 +6,6 @@
 #include <assert.h>
 
 #define MARA_PRIVATE static inline
-#define mara_array(type) type*
-#define mara_max(a, b) ((a) > (b) ? (a) : (b))
-#define mara_min(a, b) ((a) < (b) ? (a) : (b))
 #define mara_assert(cond, msg) assert((cond) && (msg))
 
 typedef struct mara_finalizer_s {
@@ -67,6 +64,7 @@ struct mara_zone_s {
 	mara_finalizer_t* finalizers;
 	mara_arena_t* arena;
 	mara_arena_t* ctx_arenas;
+	mara_source_info_t debug_info;
 	mara_arena_snapshot_t local_snapshot;
 	mara_arena_snapshot_t control_snapshot;
 };
@@ -134,8 +132,5 @@ mara_str_t
 mara_vsnprintf(mara_exec_ctx_t* ctx, mara_zone_t* zone, const char* fmt, va_list args);
 
 // Debug
-
-void
-mara_set_debug_info(mara_exec_ctx_t* ctx, mara_source_info_t source_info);
 
 #endif

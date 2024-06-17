@@ -4,6 +4,7 @@ set(SOURCES
 	"zone.c"
 	"value.c"
 	"error.c"
+	"vendor.c"
 )
 
 setup_library(mara ${MARA_STATIC} "${SOURCES}")

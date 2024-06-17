@@ -134,6 +134,14 @@ mara_destroy_env(mara_env_t* env);
 MARA_API void
 mara_exec(mara_env_t* env, mara_callback_t callback);
 
+// Debug
+
+MARA_API void
+mara_set_debug_info(mara_exec_ctx_t* ctx, mara_source_info_t debug_info);
+
+MARA_API mara_source_info_t
+mara_get_debug_info(mara_exec_ctx_t* ctx, mara_value_t value);
+
 // Zone
 
 MARA_API mara_zone_t*
