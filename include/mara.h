@@ -290,7 +290,7 @@ MARA_API mara_error_t*
 mara_list_get(mara_exec_ctx_t* ctx, mara_value_t list, mara_index_t index, mara_value_t* result);
 
 MARA_API mara_error_t*
-mara_list_set(mara_exec_ctx_t* ctx, mara_value_t list, mara_value_t index, mara_value_t value);
+mara_list_set(mara_exec_ctx_t* ctx, mara_value_t list, mara_index_t index, mara_value_t value);
 
 MARA_API mara_error_t*
 mara_list_push(mara_exec_ctx_t* ctx, mara_value_t list, mara_value_t value);

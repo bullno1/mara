@@ -94,14 +94,18 @@ mara_zone_cleanup(mara_exec_ctx_t* ctx, mara_zone_t* zone) {
 }
 
 void
-mara_defer(mara_exec_ctx_t* ctx, mara_callback_t callback) {
-	mara_zone_t* zone = mara_get_local_zone(ctx);
+mara_add_finalizer(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_callback_t callback) {
 	mara_finalizer_t* finalizer = mara_zone_alloc(ctx, zone, sizeof(mara_finalizer_t));
 	mara_assert(finalizer != NULL, "Out of memory");
 
 	finalizer->callback = callback;
 	finalizer->next = zone->finalizers;
 	zone->finalizers = finalizer;
+}
+
+void
+mara_defer(mara_exec_ctx_t* ctx, mara_callback_t callback) {
+	mara_add_finalizer(ctx, ctx->current_zone, callback);
 }
 
 void*

@@ -157,6 +157,9 @@ mara_zone_switch(mara_exec_ctx_t* ctx, mara_zone_t* zone);
 void
 mara_zone_cleanup(mara_exec_ctx_t* ctx, mara_zone_t* zone);
 
+void
+mara_add_finalizer(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_callback_t callback);
+
 // Value
 
 mara_obj_t*
