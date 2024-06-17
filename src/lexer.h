@@ -32,7 +32,7 @@ typedef struct mara_token_s {
 } mara_token_t;
 
 void
-mara_lexer_init(mara_lexer_t* lexer, mara_reader_t src);
+mara_lexer_init(mara_lexer_t* lexer, mara_str_t filename, mara_reader_t src);
 
 mara_error_t*
 mara_lexer_next(mara_exec_ctx_t* ctx, mara_lexer_t* lexer, mara_token_t* result);

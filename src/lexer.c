@@ -44,7 +44,7 @@ mara_lexer_peek(mara_exec_ctx_t* ctx, mara_lexer_t* lexer, char* result) {
 			return mara_lexer_error(
 				ctx,
 				lexer,
-				mara_str_from_cstr("core/io-error"),
+				mara_str_from_literal("core/io-error"),
 				"Reader returned: %d",
 				mara_value_from_int(bytes_read),
 				bytes_read
@@ -67,7 +67,7 @@ mara_lexer_consume_char(mara_exec_ctx_t* ctx, mara_lexer_t* lexer) {
 			return mara_lexer_error(
 				ctx,
 				lexer,
-				mara_str_from_cstr("core/syntax-error"),
+				mara_str_from_literal("core/syntax/element-too-long"),
 				"Element is too long",
 				mara_null()
 			);
@@ -162,13 +162,12 @@ mara_lexer_begin_capture(mara_lexer_t* lexer) {
 }
 
 MARA_PRIVATE mara_error_t*
-mara_lexer_handle_number(mara_exec_ctx_t* ctx, mara_lexer_t* lexer, mara_token_t* result) {
-	mara_lexer_begin_capture(lexer);
-	char ch;
+mara_lexer_continue_number(mara_exec_ctx_t* ctx, mara_lexer_t* lexer, mara_token_t* result) {
 	mara_check_error(mara_lexer_consume_char(ctx, lexer));
 
 	bool dotted = false;
 	while (true) {
+		char ch;
 		mara_check_error(mara_lexer_peek(ctx, lexer, &ch));
 
 		if (ch == '.') {
@@ -178,7 +177,7 @@ mara_lexer_handle_number(mara_exec_ctx_t* ctx, mara_lexer_t* lexer, mara_token_t
 				return mara_lexer_error(
 					ctx,
 					lexer,
-					mara_str_from_cstr("core/syntax-error"),
+					mara_str_from_literal("core/syntax/bad-number"),
 					"Badly formatted number",
 					mara_null()
 				);
@@ -199,7 +198,7 @@ mara_lexer_handle_number(mara_exec_ctx_t* ctx, mara_lexer_t* lexer, mara_token_t
 			return mara_lexer_error(
 				ctx,
 				lexer,
-				mara_str_from_cstr("core/syntax-error"),
+				mara_str_from_literal("core/syntax/bad-number"),
 				"Badly formatted number",
 				mara_null()
 			);
@@ -230,7 +229,7 @@ mara_lexer_handle_string(mara_exec_ctx_t* ctx, mara_lexer_t* lexer, mara_token_t
 			return mara_lexer_error(
 				ctx,
 				lexer,
-				mara_str_from_cstr("core/syntax-error"),
+				mara_str_from_literal("core/syntax/bad-string"),
 				"Badly formatted string",
 				mara_null()
 			);
@@ -241,10 +240,9 @@ mara_lexer_handle_string(mara_exec_ctx_t* ctx, mara_lexer_t* lexer, mara_token_t
 }
 
 MARA_PRIVATE mara_error_t*
-mara_lexer_handle_symbol(mara_exec_ctx_t* ctx, mara_lexer_t* lexer, mara_token_t* result) {
-	char ch;
-	mara_lexer_begin_capture(lexer);
+mara_lexer_continue_symbol(mara_exec_ctx_t* ctx, mara_lexer_t* lexer, mara_token_t* result) {
 	while (true) {
+		char ch;
 		mara_check_error(mara_lexer_peek(ctx, lexer, &ch));
 		if (
 			mara_lexer_is_space(ch)
@@ -261,8 +259,9 @@ mara_lexer_handle_symbol(mara_exec_ctx_t* ctx, mara_lexer_t* lexer, mara_token_t
 }
 
 void
-mara_lexer_init(mara_lexer_t* lexer, mara_reader_t src) {
+mara_lexer_init(mara_lexer_t* lexer, mara_str_t filename, mara_reader_t src) {
 	*lexer = (mara_lexer_t) {
+		.filename = filename,
 		.src = src,
 		.current_pos = {
 			.line = 1,
@@ -299,12 +298,25 @@ mara_lexer_next(mara_exec_ctx_t* ctx, mara_lexer_t* lexer, mara_token_t* result)
 				*result = mara_lexer_make_token(lexer, MARA_TOK_RIGHT_PAREN);
 			}
 			return mara_lexer_consume_char(ctx, lexer);
+		} else if (ch == '-') {
+			mara_lexer_begin_capture(lexer);
+			mara_check_error(mara_lexer_consume_char(ctx, lexer));
+
+			mara_check_error(mara_lexer_peek(ctx, lexer, &ch));
+			if (mara_lexer_is_digit(ch)) {
+				return mara_lexer_continue_number(ctx, lexer, result);
+			} else {
+				return mara_lexer_continue_symbol(ctx, lexer, result);
+			}
 		} else if (mara_lexer_is_digit(ch)) {
-			return mara_lexer_handle_number(ctx, lexer, result);
+			mara_lexer_begin_capture(lexer);
+			return mara_lexer_continue_number(ctx, lexer, result);
 		} else if (ch == '"') {
 			return mara_lexer_handle_string(ctx, lexer, result);
 		} else {
-			return mara_lexer_handle_symbol(ctx, lexer, result);
+			mara_lexer_begin_capture(lexer);
+			mara_check_error(mara_lexer_consume_char(ctx, lexer));
+			return mara_lexer_continue_symbol(ctx, lexer, result);
 		}
 	}
 }

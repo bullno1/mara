@@ -42,7 +42,7 @@ mara_type_error(
 ) {
 	return mara_errorf(
 		ctx,
-		mara_str_from_cstr("core/type-error"),
+		mara_str_from_literal("core/unexpected-type"),
 		"Expecting %s got %s",
 		mara_null(),
 		mara_value_type_name(expected),
@@ -198,7 +198,7 @@ mara_value_to_str(mara_exec_ctx_t* ctx, mara_value_t value, mara_str_t* result) 
 	} else {
 		return mara_errorf(
 			ctx,
-			mara_str_from_cstr("core/type-error"),
+			mara_str_from_literal("core/unexpected-type"),
 			"Expecting %s got %s",
 			mara_null(),
 			"string or symbol",
@@ -216,7 +216,7 @@ mara_value_to_ref(mara_exec_ctx_t* ctx, mara_value_t value, void* tag, void** re
 	} else {
 		return mara_errorf(
 			ctx,
-			mara_str_from_cstr("core/type-error"),
+			mara_str_from_literal("core/unexpected-type"),
 			"Expecting %s:%p got %s",
 			mara_null(),
 			"ref", tag,

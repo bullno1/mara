@@ -19,13 +19,16 @@
 #define MARA_NATIVE_DEBUG_INFO(ctx) \
 	do { \
 		mara_set_debug_info(ctx, (mara_source_info_t){ \
-			.filename = __FILE__, \
+			.filename = mara_str_from_literal(__FILE__), \
 			.range = { \
 				.start = { .line = __LINE__, .col = 1, .byte_offset = -1 }, \
 				.end = { .line = __LINE__, .col = 0, .byte_offset = -1 }, \
 			} \
 		}); \
 	} while (0)
+
+#define mara_container_of(ptr, type, member) \
+	(void*)((char*)ptr - offsetof(type, member))
 
 static inline mara_str_t
 mara_str_from_cstr(const char* cstr) {

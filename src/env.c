@@ -53,7 +53,7 @@ mara_exec(mara_env_t* env, mara_callback_t callback) {
 		},
 	};
 
-	mara_zone_enter(&ctx, 0, NULL);
+	mara_zone_enter(&ctx, (mara_zone_options_t){ 0 });
 	callback.fn(&ctx, callback.userdata);
 	mara_zone_exit(&ctx);
 

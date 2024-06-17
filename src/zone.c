@@ -2,7 +2,7 @@
 #include <string.h>
 
 void
-mara_zone_enter(mara_exec_ctx_t* ctx, mara_index_t argc, const mara_value_t* argv) {
+mara_zone_enter(mara_exec_ctx_t* ctx, mara_zone_options_t options) {
 	mara_zone_t* current_zone = ctx->current_zone;
 
 	mara_arena_snapshot_t control_snapshot = mara_arena_snapshot(ctx, &ctx->control_arena);
@@ -20,11 +20,15 @@ mara_zone_enter(mara_exec_ctx_t* ctx, mara_index_t argc, const mara_value_t* arg
 			current_zone->arena->in_use = true;
 		}
 
-		for (mara_index_t i = 0; i < argc; ++i) {
-			mara_obj_t* obj = mara_value_to_obj(argv[i]);
+		for (mara_index_t i = 0; i < options.argc; ++i) {
+			mara_obj_t* obj = mara_value_to_obj(options.argv[i]);
 			if (obj == NULL) { continue; }
 
 			obj->zone->arena->in_use = true;
+		}
+
+		for (mara_index_t i = 0; i < options.num_marked_zones; ++i) {
+			options.marked_zones[i]->arena->in_use = true;
 		}
 
 		for (mara_arena_t* itr = ctx_arenas; itr != NULL; itr = itr->next) {

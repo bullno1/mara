@@ -59,6 +59,13 @@ typedef struct mara_list_s {
 	bool own_memory;
 } mara_list_t;
 
+typedef struct mara_zone_options_s {
+	mara_index_t num_marked_zones;
+	const mara_zone_t** marked_zones;
+	mara_index_t argc;
+	const mara_value_t* argv;
+} mara_zone_options_t;
+
 struct mara_zone_s {
 	mara_zone_t* parent;
 	mara_finalizer_t* finalizers;
@@ -106,7 +113,10 @@ mara_arena_restore(mara_exec_ctx_t* ctx, mara_arena_t* arena, mara_arena_snapsho
 // Zone
 
 void
-mara_zone_enter(mara_exec_ctx_t* ctx, mara_index_t argc, const mara_value_t* argv);
+mara_zone_prepare(mara_exec_ctx_t* ctx);
+
+void
+mara_zone_enter(mara_exec_ctx_t* ctx, mara_zone_options_t options);
 
 void
 mara_zone_exit(mara_exec_ctx_t* ctx);

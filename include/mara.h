@@ -117,6 +117,11 @@ typedef enum mara_value_type_e {
 	MARA_VAL_MAP,
 } mara_value_type_t;
 
+typedef enum mara_parse_mode_e {
+	MARA_PARSE_REPL,
+	MARA_PARSE_SCRIPT
+} mara_parse_mode_t;
+
 typedef struct mara_zone_s mara_zone_t;
 
 #ifdef __cplusplus
@@ -321,6 +326,7 @@ MARA_API mara_error_t*
 mara_parse(
 	mara_exec_ctx_t* ctx,
 	mara_zone_t* zone,
+	mara_parse_mode_t mode,
 	mara_str_t filename,
 	mara_reader_t reader,
 	mara_value_t* result
