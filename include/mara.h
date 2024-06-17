@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdarg.h>
 
 #ifdef MARA_SHARED
 #	if defined(_WIN32)
@@ -21,6 +22,12 @@
 #	endif
 #else
 #	define MARA_API
+#endif
+
+#ifdef __GNUC__
+#	define MARA_PRINTF_LIKE(FMT, ARGS) __attribute__((format(printf, FMT, ARGS)))
+#else
+#	define MARA_PRINTF_LIKE(FMT, ARGS)
 #endif
 
 typedef struct mara_env_s mara_env_t;
@@ -187,24 +194,41 @@ MARA_API mara_value_t
 mara_value_from_real(double value);
 
 MARA_API mara_error_t*
-mara_new_error(
-	mara_exec_ctx_t* ctx,
-	mara_value_t type,
-	mara_value_t message,
-	mara_value_t extra
-);
-
-MARA_API mara_error_t*
 mara_new_errorf(
 	mara_exec_ctx_t* ctx,
 	mara_str_t type,
-	mara_str_t fmt,
+	const char* fmt,
 	mara_value_t extra,
 	...
+) MARA_PRINTF_LIKE(3, 5);
+
+MARA_API mara_error_t*
+mara_new_errorv(
+	mara_exec_ctx_t* ctx,
+	mara_str_t type,
+	const char* fmt,
+	mara_value_t extra,
+	va_list args
 );
 
 MARA_API mara_value_t
 mara_new_str(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_str_t value);
+
+MARA_API mara_value_t
+mara_new_strf(
+	mara_exec_ctx_t* ctx,
+	mara_zone_t* zone,
+	const char* fmt,
+	...
+) MARA_PRINTF_LIKE(3, 4);
+
+MARA_API mara_value_t
+mara_new_strv(
+	mara_exec_ctx_t* ctx,
+	mara_zone_t* zone,
+	const char* fmt,
+	va_list args
+);
 
 MARA_API mara_value_t
 mara_new_symbol(mara_exec_ctx_t* ctx, mara_str_t name);

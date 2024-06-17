@@ -2,6 +2,7 @@
 #include "mara.h"
 #include "mara/utils.h"
 #include "vendor/nanbox.h"
+#include <stdio.h>
 
 _Static_assert(sizeof(nanbox_t) == sizeof(mara_value_t), "mara_value_t cannot be nan-boxed");
 
@@ -37,11 +38,15 @@ mara_value_type_name(mara_value_type_t type) {
 }
 
 MARA_PRIVATE mara_error_t*
-mara_type_error(mara_exec_ctx_t* ctx, mara_value_type_t expected, mara_value_t value) {
+mara_type_error(
+	mara_exec_ctx_t* ctx,
+	mara_value_type_t expected,
+	mara_value_t value
+) {
 	return mara_new_errorf(
 		ctx,
 		mara_str_from_cstr("core/type-error"),
-		mara_str_from_cstr("Expecting %s got %s"),
+		"Expecting %s got %s",
 		mara_null(),
 		mara_value_type_name(expected),
 		mara_value_type_name(mara_value_type(ctx, value, NULL))
@@ -201,7 +206,7 @@ mara_value_to_str(mara_exec_ctx_t* ctx, mara_value_t value, mara_str_t* result) 
 		return mara_new_errorf(
 			ctx,
 			mara_str_from_cstr("core/type-error"),
-			mara_str_from_cstr("Expecting %s got %s"),
+			"Expecting %s got %s",
 			mara_null(),
 			"string or symbol",
 			mara_value_type_name(mara_value_type(ctx, value, NULL))
@@ -219,7 +224,7 @@ mara_value_to_ref(mara_exec_ctx_t* ctx, mara_value_t value, void* tag, void** re
 		return mara_new_errorf(
 			ctx,
 			mara_str_from_cstr("core/type-error"),
-			mara_str_from_cstr("Expecting %s:%p got %s"),
+			"Expecting %s:%p got %s",
 			mara_null(),
 			"ref", tag,
 			mara_value_type_name(mara_value_type(ctx, value, NULL))
@@ -268,6 +273,45 @@ mara_new_str(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_str_t value) {
 	char* chars = (char*)obj + sizeof(mara_str_t);
 	str->data = chars;
 	memcpy(chars, value.data, value.len);
+
+	return mara_obj_to_value(obj);
+}
+
+mara_value_t
+mara_new_strf(mara_exec_ctx_t* ctx, mara_zone_t* zone, const char* fmt, ...) {
+	va_list args;
+	va_start(args, fmt);
+	mara_value_t result = mara_new_strv(ctx, zone, fmt, args);
+	va_end(args);
+	return result;
+}
+
+mara_value_t
+mara_new_strv(
+	mara_exec_ctx_t* ctx,
+	mara_zone_t* zone,
+	const char* fmt,
+	va_list args
+) {
+	va_list args_copy;
+	va_copy(args_copy, args);
+	char buf[1024];
+	int len = vsnprintf(buf, sizeof(buf), fmt, args_copy);
+	if (len < 0) { len = 0; }
+
+	mara_obj_t* obj = mara_alloc_obj(ctx, zone, sizeof(mara_str_t) + len);
+	obj->type = MARA_OBJ_TYPE_STRING;
+
+	mara_str_t* str = (mara_str_t*)obj->body;
+	char* chars = (char*)obj + sizeof(mara_str_t);
+	str->data = chars;
+	str->len = (size_t)len;
+
+	if ((size_t)len < sizeof(buf)) {
+		memcpy(chars, buf, (size_t)len);
+	} else {
+		vsnprintf(chars, (size_t)len, fmt, args);
+	}
 
 	return mara_obj_to_value(obj);
 }
