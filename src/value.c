@@ -29,8 +29,6 @@ mara_value_type_name(mara_value_type_t type) {
 			return "list";
 		case MARA_VAL_MAP:
 			return "map";
-		case MARA_VAL_ERROR:
-			return "error";
 		default:
 			mara_assert(false, "Invalid type");
 			return "";
@@ -105,8 +103,6 @@ mara_type_check(mara_exec_ctx_t* ctx, mara_value_t value, mara_value_type_t type
 				return obj->type == MARA_OBJ_TYPE_LIST;
 			} else if (type == MARA_VAL_MAP) {
 				return obj->type == MARA_OBJ_TYPE_MAP;
-			} else if (type == MARA_VAL_ERROR) {
-				return obj->type == MARA_OBJ_TYPE_ERROR;
 			} else {
 				return false;
 			}
@@ -148,8 +144,6 @@ mara_value_type(mara_exec_ctx_t* ctx, mara_value_t value, void** tag) {
 				return MARA_VAL_LIST;
 			case MARA_OBJ_TYPE_MAP:
 				return MARA_VAL_MAP;
-			case MARA_OBJ_TYPE_ERROR:
-				return MARA_VAL_ERROR;
 			default:
 				mara_assert(false, "Corrupted value");
 				return MARA_VAL_NULL;
@@ -232,17 +226,6 @@ mara_value_to_ref(mara_exec_ctx_t* ctx, mara_value_t value, void* tag, void** re
 	}
 }
 
-mara_error_t*
-mara_value_to_error(mara_exec_ctx_t* ctx, mara_value_t value, mara_error_t** result) {
-	if (mara_type_check(ctx, value, MARA_VAL_ERROR, NULL)) {
-		mara_obj_t* obj = mara_value_to_obj(value);
-		*result = (mara_error_t*)obj->body;
-		return NULL;
-	} else {
-		return mara_type_error(ctx, MARA_VAL_ERROR, value);
-	}
-}
-
 mara_value_t
 mara_null(void) {
 	return nanbox_null().as_int64;
@@ -261,6 +244,28 @@ mara_value_from_int(mara_index_t value) {
 mara_value_t
 mara_value_from_real(double value) {
 	return nanbox_from_double(value).as_int64;
+}
+
+mara_str_t
+mara_vsnprintf(mara_exec_ctx_t* ctx, mara_zone_t* zone, const char* fmt, va_list args) {
+	va_list args_copy;
+	va_copy(args_copy, args);
+	char buf[1024];
+	int len = vsnprintf(buf, sizeof(buf), fmt, args_copy);
+	if (len < 0) { len = 0; }
+
+	char* chars = mara_zone_alloc(ctx, zone, (size_t)len);
+
+	if ((size_t)len < sizeof(buf)) {
+		memcpy(chars, buf, (size_t)len);
+	} else {
+		vsnprintf(chars, (size_t)len, fmt, args);
+	}
+
+	return (mara_str_t){
+		.len = (size_t)len,
+		.data = chars,
+	};
 }
 
 mara_value_t
@@ -293,25 +298,11 @@ mara_new_strv(
 	const char* fmt,
 	va_list args
 ) {
-	va_list args_copy;
-	va_copy(args_copy, args);
-	char buf[1024];
-	int len = vsnprintf(buf, sizeof(buf), fmt, args_copy);
-	if (len < 0) { len = 0; }
-
-	mara_obj_t* obj = mara_alloc_obj(ctx, zone, sizeof(mara_str_t) + len);
+	mara_obj_t* obj = mara_alloc_obj(ctx, zone, sizeof(mara_str_t));
 	obj->type = MARA_OBJ_TYPE_STRING;
 
 	mara_str_t* str = (mara_str_t*)obj->body;
-	char* chars = (char*)obj + sizeof(mara_str_t);
-	str->data = chars;
-	str->len = (size_t)len;
-
-	if ((size_t)len < sizeof(buf)) {
-		memcpy(chars, buf, (size_t)len);
-	} else {
-		vsnprintf(chars, (size_t)len, fmt, args);
-	}
+	*str = mara_vsnprintf(ctx, zone, fmt, args);
 
 	return mara_obj_to_value(obj);
 }

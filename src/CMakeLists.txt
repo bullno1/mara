@@ -3,6 +3,7 @@ set(SOURCES
 	"alloc.c"
 	"zone.c"
 	"value.c"
+	"error.c"
 )
 
 setup_library(mara ${MARA_STATIC} "${SOURCES}")

@@ -42,7 +42,6 @@ typedef enum mara_obj_type_e {
 	MARA_OBJ_TYPE_NATIVE_FN,
 	MARA_OBJ_TYPE_LIST,
 	MARA_OBJ_TYPE_MAP,
-	MARA_OBJ_TYPE_ERROR,
 } mara_obj_type_t;
 
 typedef struct mara_obj_s {
@@ -82,7 +81,7 @@ struct mara_exec_ctx_s {
 	mara_zone_t* current_zone;
 	mara_arena_t* arenas;
 	mara_arena_t control_arena;
-	mara_zone_t error_zone;
+	mara_zone_t context_zone;
 };
 
 // Malloc
@@ -116,6 +115,9 @@ mara_zone_exit(mara_exec_ctx_t* ctx);
 mara_zone_t*
 mara_zone_switch(mara_exec_ctx_t* ctx, mara_zone_t* zone);
 
+void
+mara_zone_cleanup(mara_exec_ctx_t* ctx, mara_zone_t* zone);
+
 // Value
 
 mara_obj_t*
@@ -126,6 +128,9 @@ mara_value_to_obj(mara_value_t value);
 
 mara_value_t
 mara_obj_to_value(mara_obj_t* obj);
+
+mara_str_t
+mara_vsnprintf(mara_exec_ctx_t* ctx, mara_zone_t* zone, const char* fmt, va_list args);
 
 // Debug
 

@@ -115,7 +115,6 @@ typedef enum mara_value_type_e {
 	MARA_VAL_FUNCTION,
 	MARA_VAL_LIST,
 	MARA_VAL_MAP,
-	MARA_VAL_ERROR,
 } mara_value_type_t;
 
 typedef struct mara_zone_s mara_zone_t;
@@ -144,7 +143,7 @@ MARA_API mara_zone_t*
 mara_get_return_zone(mara_exec_ctx_t* ctx);
 
 MARA_API mara_zone_t*
-mara_get_error_zone(mara_exec_ctx_t* ctx);
+mara_get_context_zone(mara_exec_ctx_t* ctx);
 
 MARA_API mara_zone_t*
 mara_get_zone_of(mara_exec_ctx_t* ctx, mara_value_t value);
@@ -177,9 +176,6 @@ mara_value_to_str(mara_exec_ctx_t* ctx, mara_value_t value, mara_str_t* result);
 
 MARA_API mara_error_t*
 mara_value_to_ref(mara_exec_ctx_t* ctx, mara_value_t value, void* tag, void** result);
-
-MARA_API mara_error_t*
-mara_value_to_error(mara_exec_ctx_t* ctx, mara_value_t value, mara_error_t** result);
 
 MARA_API mara_value_t
 mara_null(void);
