@@ -1,5 +1,4 @@
 #include "internal.h"
-#include "mara.h"
 #include "mara/utils.h"
 
 MARA_PRIVATE mara_error_t*

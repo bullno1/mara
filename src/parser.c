@@ -1,6 +1,5 @@
 #include "internal.h"
 #include "lexer.h"
-#include "mara.h"
 #include <mara/utils.h>
 #include <stdlib.h>
 #include <errno.h>
