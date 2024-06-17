@@ -26,13 +26,15 @@ mara_errorv(
 	char* type_str = mara_zone_alloc(ctx, &ctx->error_zone, type.len);
 	memcpy(type_str, type.data, type.len);
 
+	mara_value_t extra_copy;
+	mara_copy(ctx, &ctx->error_zone, extra, &extra_copy),
 	ctx->last_error = (mara_error_t){
 		.type = {
 			.len = type.len,
 			.data = type_str,
 		},
 		.message = mara_vsnprintf(ctx, &ctx->error_zone, fmt, args),
-		.extra = mara_copy(ctx, &ctx->error_zone, extra),
+		.extra = extra_copy,
 	};
 
 	return &ctx->last_error;

@@ -6,7 +6,17 @@
 #include <assert.h>
 
 #define MARA_PRIVATE static inline
+#define MARA_HAMT_HASH_TYPE uint64_t
+#define MARA_HAMT_NUM_BITS 3
+#define MARA_HAMT_NUM_CHILDREN (1 << MARA_HAMT_NUM_BITS)
+#define MARA_HAMT_MASK (((MARA_HAMT_HASH_TYPE)1 << MARA_HAMT_NUM_BITS) - 1)
 #define mara_assert(cond, msg) assert((cond) && (msg))
+
+#if defined(__GNUC__) || defined(__clang__)
+#	define MARA_EXPECT(X) __builtin_expect(X, true)
+#else
+#	define MARA_EXPECT(X) (X)
+#endif
 
 typedef struct mara_finalizer_s {
 	mara_callback_t callback;
@@ -52,6 +62,25 @@ typedef struct mara_obj_ref_s {
 	void* value;
 } mara_obj_ref_t;
 
+typedef struct mara_obj_list_s {
+	bool in_zone;
+	mara_index_t len;
+	mara_index_t capacity;
+	mara_value_t* elems;
+} mara_obj_list_t;
+
+typedef struct mara_hamt_node_s {
+	struct mara_hamt_node_s* children[MARA_HAMT_NUM_CHILDREN];
+	mara_value_t key;
+	mara_value_t value;
+} mara_hamt_node_t;
+
+typedef struct mara_obj_map_s {
+	bool entries_in_sync;
+	mara_value_t entries;
+	mara_hamt_node_t* root;
+} mara_obj_map_t;
+
 typedef struct mara_list_s {
 	mara_index_t capacity;
 	mara_index_t len;
@@ -68,6 +97,7 @@ typedef struct mara_zone_options_s {
 
 struct mara_zone_s {
 	mara_zone_t* parent;
+	mara_index_t level;
 	mara_finalizer_t* finalizers;
 	mara_arena_t* arena;
 	mara_arena_t* ctx_arenas;
@@ -140,6 +170,9 @@ mara_obj_to_value(mara_obj_t* obj);
 
 mara_str_t
 mara_vsnprintf(mara_exec_ctx_t* ctx, mara_zone_t* zone, const char* fmt, va_list args);
+
+mara_error_t*
+mara_type_error(mara_exec_ctx_t* ctx, mara_value_type_t expected, mara_value_t value);
 
 // Debug
 

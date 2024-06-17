@@ -34,7 +34,7 @@ mara_value_type_name(mara_value_type_t type) {
 	}
 }
 
-MARA_PRIVATE mara_error_t*
+mara_error_t*
 mara_type_error(
 	mara_exec_ctx_t* ctx,
 	mara_value_type_t expected,
@@ -46,7 +46,7 @@ mara_type_error(
 		"Expecting %s got %s",
 		mara_null(),
 		mara_value_type_name(expected),
-		mara_value_type_name(mara_value_type(ctx, value, NULL))
+		mara_value_type_name(mara_value_type(value, NULL))
 	);
 }
 
@@ -73,48 +73,73 @@ mara_obj_to_value(mara_obj_t* obj) {
 }
 
 bool
-mara_type_check(mara_exec_ctx_t* ctx, mara_value_t value, mara_value_type_t type, void* tag) {
-	(void)ctx;
-
+mara_value_is_null(mara_value_t value) {
 	nanbox_t nanbox = { .as_int64 = value };
-	if (type == MARA_VAL_NULL) {
-		return nanbox_is_null(nanbox);
-	} else if (type == MARA_VAL_INT) {
-		return nanbox_is_int(nanbox);
-	} else if (type == MARA_VAL_REAL) {
-		return nanbox_is_double(nanbox);
-	} else if (type == MARA_VAL_BOOL) {
-		return nanbox_is_boolean(nanbox);
-	} else {
-		if (nanbox_is_pointer(nanbox)) {
-			mara_obj_t* obj = nanbox_to_pointer(nanbox);
-			if (type == MARA_VAL_STRING) {
-				return obj->type == MARA_OBJ_TYPE_STRING;
-			} else if (type == MARA_VAL_SYMBOL) {
-				return obj->type == MARA_OBJ_TYPE_SYMBOL;
-			} else if (type == MARA_VAL_REF) {
-				return obj->type == MARA_OBJ_TYPE_REF
-					&& ((mara_obj_ref_t*)obj->body)->tag == tag;
-			} else if (type == MARA_VAL_FUNCTION) {
-				return obj->type == MARA_OBJ_TYPE_MARA_FN
-					|| obj->type == MARA_OBJ_TYPE_NATIVE_FN;
-			} else if (type == MARA_VAL_LIST) {
-				return obj->type == MARA_OBJ_TYPE_LIST;
-			} else if (type == MARA_VAL_MAP) {
-				return obj->type == MARA_OBJ_TYPE_MAP;
-			} else {
-				return false;
-			}
-		} else {
-			return false;
-		}
-	}
+	return nanbox_is_null(nanbox);
+}
+
+bool
+mara_value_is_int(mara_value_t value) {
+	nanbox_t nanbox = { .as_int64 = value };
+	return nanbox_is_int(nanbox);
+}
+
+bool
+mara_value_is_real(mara_value_t value) {
+	nanbox_t nanbox = { .as_int64 = value };
+	return nanbox_is_double(nanbox);
+}
+
+bool
+mara_value_is_bool(mara_value_t value) {
+	nanbox_t nanbox = { .as_int64 = value };
+	return nanbox_is_boolean(nanbox);
+}
+
+bool
+mara_value_is_str(mara_value_t value) {
+	mara_obj_t* obj = mara_value_to_obj(value);
+	return obj != NULL && obj->type == MARA_OBJ_TYPE_STRING;
+}
+
+bool
+mara_value_is_symbol(mara_value_t value) {
+	mara_obj_t* obj = mara_value_to_obj(value);
+	return obj != NULL && obj->type == MARA_OBJ_TYPE_SYMBOL;
+}
+
+bool
+mara_value_is_ref(mara_value_t value, void* tag) {
+	mara_obj_t* obj = mara_value_to_obj(value);
+	return obj != NULL
+		&& obj->type == MARA_OBJ_TYPE_REF
+		&& ((mara_obj_ref_t*)obj->body)->tag == tag;
+}
+
+bool
+mara_value_is_function(mara_value_t value) {
+	mara_obj_t* obj = mara_value_to_obj(value);
+	return obj != NULL
+		&& (
+			obj->type == MARA_OBJ_TYPE_MARA_FN
+			|| obj->type == MARA_OBJ_TYPE_NATIVE_FN
+		);
+}
+
+bool
+mara_value_is_list(mara_value_t value) {
+	mara_obj_t* obj = mara_value_to_obj(value);
+	return obj != NULL && obj->type == MARA_OBJ_TYPE_LIST;
+}
+
+bool
+mara_value_is_map(mara_value_t value) {
+	mara_obj_t* obj = mara_value_to_obj(value);
+	return obj != NULL && obj->type == MARA_OBJ_TYPE_MAP;
 }
 
 mara_value_type_t
-mara_value_type(mara_exec_ctx_t* ctx, mara_value_t value, void** tag) {
-	(void)ctx;
-
+mara_value_type(mara_value_t value, void** tag) {
 	nanbox_t nanbox = { .as_int64 = value };
 	if (nanbox_is_null(nanbox)) {
 		return MARA_VAL_NULL;
@@ -156,7 +181,7 @@ mara_value_type(mara_exec_ctx_t* ctx, mara_value_t value, void** tag) {
 mara_error_t*
 mara_value_to_int(mara_exec_ctx_t* ctx, mara_value_t value, int* result) {
 	nanbox_t nanbox = { .as_int64 = value };
-	if (nanbox_is_int(nanbox)) {
+	if (MARA_EXPECT(nanbox_is_int(nanbox))) {
 		*result = nanbox_to_int(nanbox);
 		return NULL;
 	} else {
@@ -167,7 +192,7 @@ mara_value_to_int(mara_exec_ctx_t* ctx, mara_value_t value, int* result) {
 mara_error_t*
 mara_value_to_real(mara_exec_ctx_t* ctx, mara_value_t value, double* result) {
 	nanbox_t nanbox = { .as_int64 = value };
-	if (nanbox_is_double(nanbox)) {
+	if (MARA_EXPECT(nanbox_is_double(nanbox))) {
 		*result = nanbox_to_double(nanbox);
 		return NULL;
 	} else {
@@ -178,7 +203,7 @@ mara_value_to_real(mara_exec_ctx_t* ctx, mara_value_t value, double* result) {
 mara_error_t*
 mara_value_to_bool(mara_exec_ctx_t* ctx, mara_value_t value, bool* result) {
 	nanbox_t nanbox = { .as_int64 = value };
-	if (nanbox_is_boolean(nanbox)) {
+	if (MARA_EXPECT(nanbox_is_boolean(nanbox))) {
 		*result = nanbox_to_boolean(nanbox);
 		return NULL;
 	} else {
@@ -188,10 +213,7 @@ mara_value_to_bool(mara_exec_ctx_t* ctx, mara_value_t value, bool* result) {
 
 mara_error_t*
 mara_value_to_str(mara_exec_ctx_t* ctx, mara_value_t value, mara_str_t* result) {
-	if (
-		mara_type_check(ctx, value, MARA_VAL_STRING, NULL)
-		|| mara_type_check(ctx, value, MARA_VAL_SYMBOL, NULL)
-	) {
+	if (MARA_EXPECT(mara_value_is_str(value) || mara_value_is_symbol(value))) {
 		mara_obj_t* obj = mara_value_to_obj(value);
 		*result = *(mara_str_t*)obj->body;
 		return NULL;
@@ -202,14 +224,14 @@ mara_value_to_str(mara_exec_ctx_t* ctx, mara_value_t value, mara_str_t* result) 
 			"Expecting %s got %s",
 			mara_null(),
 			"string or symbol",
-			mara_value_type_name(mara_value_type(ctx, value, NULL))
+			mara_value_type_name(mara_value_type(value, NULL))
 		);
 	}
 }
 
 mara_error_t*
 mara_value_to_ref(mara_exec_ctx_t* ctx, mara_value_t value, void* tag, void** result) {
-	if (mara_type_check(ctx, value, MARA_VAL_REF, tag)) {
+	if (MARA_EXPECT(mara_value_is_ref(value, tag))) {
 		mara_obj_t* obj = mara_value_to_obj(value);
 		*result = ((mara_obj_ref_t*)obj->body)->value;
 		return NULL;
@@ -220,7 +242,7 @@ mara_value_to_ref(mara_exec_ctx_t* ctx, mara_value_t value, void* tag, void** re
 			"Expecting %s:%p got %s",
 			mara_null(),
 			"ref", tag,
-			mara_value_type_name(mara_value_type(ctx, value, NULL))
+			mara_value_type_name(mara_value_type(value, NULL))
 		);
 	}
 }
