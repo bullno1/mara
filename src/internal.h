@@ -187,6 +187,17 @@ mara_vsnprintf(mara_exec_ctx_t* ctx, mara_zone_t* zone, const char* fmt, va_list
 mara_error_t*
 mara_type_error(mara_exec_ctx_t* ctx, mara_value_type_t expected, mara_value_t value);
 
+// List
+
+mara_error_t*
+mara_unbox_list(mara_exec_ctx_t* ctx, mara_value_t value, mara_obj_list_t** result);
+
+mara_error_t*
+mara_raw_list_push(mara_exec_ctx_t* ctx, mara_obj_list_t* list, mara_value_t value);
+
+mara_error_t*
+mara_raw_list_set(mara_exec_ctx_t* ctx, mara_obj_list_t* list, mara_index_t index, mara_value_t value);
+
 // Debug
 
 #endif
