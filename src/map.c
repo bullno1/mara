@@ -1,9 +1,8 @@
 #include "internal.h"
 #include "vendor/xxhash.h"
-#include "vendor/nanbox.h"
 
 #define BHAMT_KEYEQ(lhs, rhs) mara_value_equal(lhs, rhs)
-#define BHAMT_IS_TOMBSTONE(value) nanbox_is_deleted((nanbox_t){ .as_int64 = (value)->key })
+#define BHAMT_IS_TOMBSTONE(value) mara_value_is_tombstone((value)->key)
 
 MARA_PRIVATE BHAMT_HASH_TYPE
 mara_hash_value(mara_value_t value) {
@@ -155,10 +154,38 @@ mara_map_delete(mara_exec_ctx_t* ctx, mara_value_t map, mara_value_t key, mara_v
 
 	if (node != NULL) {
 		obj->len -= 1;
-		node->key = nanbox_deleted().as_int64;
+		node->key = mara_tombstone();
 		*result = mara_value_from_bool(true);
 	} else {
 		*result = mara_value_from_bool(false);
+	}
+
+	return NULL;
+}
+
+mara_error_t*
+mara_map_foreach(mara_exec_ctx_t* ctx, mara_value_t map, mara_native_fn_t fn) {
+	mara_obj_map_t* obj;
+	mara_check_error(mara_unbox_map(ctx, map, &obj));
+
+	for (
+		mara_hamt_node_t* itr = obj->root;
+		itr != NULL;
+		itr = itr->next
+	) {
+		if (mara_value_is_tombstone(itr->key)) { continue; }
+
+		mara_value_t args[] = {
+			itr->value,
+			itr->key,
+			map
+		};
+		mara_value_t should_continue = mara_null();
+		fn.fn(ctx, sizeof(args) / sizeof(args[0]), args, fn.userdata, &should_continue);
+
+		if (mara_value_is_false(should_continue)) {
+			break;
+		}
 	}
 
 	return NULL;

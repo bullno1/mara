@@ -1,5 +1,5 @@
 #include "internal.h"
-#include "mara/utils.h"
+#include <mara/utils.h>
 
 MARA_PRIVATE void
 mara_list_free(mara_exec_ctx_t* ctx, void* userdata) {
@@ -222,4 +222,35 @@ mara_list_resize(mara_exec_ctx_t* ctx, mara_value_t list, mara_index_t new_len) 
 		obj->len = new_len;
 		return NULL;
 	}
+}
+
+mara_error_t*
+mara_list_foreach(mara_exec_ctx_t* ctx, mara_value_t list, mara_native_fn_t fn) {
+	mara_obj_list_t* obj;
+	mara_check_error(mara_unbox_list(ctx, list, &obj));
+
+	mara_index_t len = obj->len;
+	for (mara_index_t i = 0; i < len; ++i) {
+		mara_value_t args[] = {
+			obj->elems[i],
+			mara_value_from_int(i),
+			list,
+		};
+		mara_value_t should_continue = mara_null();
+		mara_check_error(
+			fn.fn(
+				ctx,
+				sizeof(args) / sizeof(args[0]),
+				args,
+				fn.userdata,
+				&should_continue
+			)
+		);
+
+		if (mara_value_is_false(should_continue)) {
+			break;
+		}
+	}
+
+	return NULL;
 }

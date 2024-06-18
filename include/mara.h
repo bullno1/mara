@@ -177,6 +177,12 @@ MARA_API bool
 mara_value_is_bool(mara_value_t value);
 
 MARA_API bool
+mara_value_is_true(mara_value_t value);
+
+MARA_API bool
+mara_value_is_false(mara_value_t value);
+
+MARA_API bool
 mara_value_is_str(mara_value_t value);
 
 MARA_API bool

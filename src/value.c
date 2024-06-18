@@ -338,3 +338,23 @@ mara_new_ref(mara_exec_ctx_t* ctx, mara_zone_t* zone, void* tag, void* value) {
 
 	return mara_obj_to_value(obj);
 }
+
+mara_value_t
+mara_tombstone(void) {
+	return nanbox_deleted().as_int64;
+}
+
+bool
+mara_value_is_tombstone(mara_value_t value) {
+	return nanbox_is_deleted((nanbox_t){ .as_int64 = value });
+}
+
+bool
+mara_value_is_true(mara_value_t value) {
+	return nanbox_is_true((nanbox_t){ .as_int64 = value });
+}
+
+bool
+mara_value_is_false(mara_value_t value) {
+	return nanbox_is_false((nanbox_t){ .as_int64 = value });
+}

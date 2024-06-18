@@ -186,6 +186,12 @@ mara_vsnprintf(mara_exec_ctx_t* ctx, mara_zone_t* zone, const char* fmt, va_list
 mara_error_t*
 mara_type_error(mara_exec_ctx_t* ctx, mara_value_type_t expected, mara_value_t value);
 
+mara_value_t
+mara_tombstone(void);
+
+bool
+mara_value_is_tombstone(mara_value_t value);
+
 // List
 
 mara_error_t*
