@@ -3,7 +3,7 @@
 #include <mara/utils.h>
 #include "common.h"
 
-struct {
+static struct {
 	mara_env_t* env;
 } fixture;
 
@@ -60,7 +60,6 @@ test_basic(mara_exec_ctx_t* ctx, void* userdata) {
 	MARA_ASSERT_NO_ERROR(mara_list_len(ctx, value, &len));
 	ASSERT_EQ(len, 2);
 	{
-
 		mara_value_t elem;
 		MARA_ASSERT_NO_ERROR(mara_list_get(ctx, value, 0, &elem));
 		ASSERT_EQ(mara_value_type(elem, NULL), MARA_VAL_INT);

@@ -1,6 +1,7 @@
 set(SOURCES
 	"./main.c"
 	"./lexer.c"
+	"./runtime.c"
 )
 add_executable(tests "${SOURCES}")
 
