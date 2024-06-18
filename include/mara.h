@@ -304,6 +304,9 @@ mara_list_quick_delete(mara_exec_ctx_t* ctx, mara_value_t list, mara_index_t ind
 MARA_API mara_error_t*
 mara_list_resize(mara_exec_ctx_t* ctx, mara_value_t list, mara_index_t len);
 
+MARA_API mara_error_t*
+mara_list_foreach(mara_exec_ctx_t* ctx, mara_value_t list, mara_native_fn_t fn);
+
 // Map
 
 MARA_API mara_error_t*
@@ -317,6 +320,9 @@ mara_map_get(mara_exec_ctx_t* ctx, mara_value_t map, mara_value_t key, mara_valu
 
 MARA_API mara_error_t*
 mara_map_delete(mara_exec_ctx_t* ctx, mara_value_t map, mara_value_t key, mara_value_t* result);
+
+MARA_API mara_error_t*
+mara_map_foreach(mara_exec_ctx_t* ctx, mara_value_t map, mara_native_fn_t fn);
 
 // Module
 
