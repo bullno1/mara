@@ -111,6 +111,28 @@ mara_deep_copy(
 				*result = new_list;
 				return NULL;
 			}
+		case MARA_OBJ_TYPE_MAP:
+			{
+				mara_obj_map_t* old_map;
+				mara_check_error(mara_unbox_map(ctx, value, &old_map));
+
+				mara_value_t new_map = mara_new_map(ctx, zone);
+				mara_ptr_map_put(ctx, local_zone, copied_objs, obj, mara_value_to_obj(new_map));
+
+				for (
+					mara_obj_map_node_t* itr = old_map->root;
+					itr != NULL;
+					itr = itr->next
+				) {
+					mara_value_t key_copy, value_copy;
+					mara_check_error(mara_deep_copy(ctx, local_zone, copied_objs, itr->key, &key_copy));
+					mara_check_error(mara_deep_copy(ctx, local_zone, copied_objs, itr->value, &value_copy));
+					mara_check_error(mara_map_set(ctx, new_map, key_copy, value_copy));
+				}
+
+				*result = new_map;
+				return NULL;
+			}
 		default:
 			return mara_errorf(
 				ctx,

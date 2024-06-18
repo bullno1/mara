@@ -67,17 +67,17 @@ typedef struct mara_obj_list_s {
 	mara_value_t* elems;
 } mara_obj_list_t;
 
-typedef struct mara_hamt_node_s {
+typedef struct mara_obj_map_node_s {
 	mara_value_t key;
-	struct mara_hamt_node_s* children[BHAMT_NUM_CHILDREN];
+	struct mara_obj_map_node_s* children[BHAMT_NUM_CHILDREN];
 
 	mara_value_t value;
-	struct mara_hamt_node_s* next;
-} mara_hamt_node_t;
+	struct mara_obj_map_node_s* next;
+} mara_obj_map_node_t;
 
 typedef struct mara_obj_map_s {
 	mara_index_t len;
-	mara_hamt_node_t* root;
+	mara_obj_map_node_t* root;
 } mara_obj_map_t;
 
 typedef struct mara_list_s {
@@ -202,6 +202,11 @@ mara_raw_list_push(mara_exec_ctx_t* ctx, mara_obj_list_t* list, mara_value_t val
 
 mara_error_t*
 mara_raw_list_set(mara_exec_ctx_t* ctx, mara_obj_list_t* list, mara_index_t index, mara_value_t value);
+
+// Map
+
+mara_error_t*
+mara_unbox_map(mara_exec_ctx_t* ctx, mara_value_t value, mara_obj_map_t** result);
 
 // Debug
 

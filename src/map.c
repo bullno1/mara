@@ -50,7 +50,7 @@ mara_value_equal(mara_value_t lhs, mara_value_t rhs) {
 	}
 }
 
-MARA_PRIVATE mara_error_t*
+mara_error_t*
 mara_unbox_map(mara_exec_ctx_t* ctx, mara_value_t value, mara_obj_map_t** result) {
 	if (MARA_EXPECT(mara_value_is_map(value))) {
 		*result = (mara_obj_map_t*)(mara_value_to_obj(value)->body);
@@ -92,10 +92,10 @@ mara_map_set(mara_exec_ctx_t* ctx, mara_value_t map, mara_value_t key, mara_valu
 	mara_obj_map_t* obj;
 	mara_check_error(mara_unbox_map(ctx, map, &obj));
 
-	mara_hamt_node_t** itr;
-	mara_hamt_node_t* head = obj->root;
-	mara_hamt_node_t* free_node;
-	mara_hamt_node_t* node;
+	mara_obj_map_node_t** itr;
+	mara_obj_map_node_t* head = obj->root;
+	mara_obj_map_node_t* free_node;
+	mara_obj_map_node_t* node;
 	BHAMT_HASH_TYPE hash = mara_hash_value(key);
 	BHAMT_SEARCH(obj->root, itr, node, free_node, hash, key);
 
@@ -107,7 +107,7 @@ mara_map_set(mara_exec_ctx_t* ctx, mara_value_t map, mara_value_t key, mara_valu
 			node = *itr = mara_zone_alloc(
 				ctx,
 				map_zone,
-				sizeof(mara_hamt_node_t)
+				sizeof(mara_obj_map_node_t)
 			);
 			memset(node->children, 0, sizeof(node->children));
 			if (head != NULL) {
@@ -130,7 +130,7 @@ mara_map_get(mara_exec_ctx_t* ctx, mara_value_t map, mara_value_t key, mara_valu
 	mara_obj_map_t* obj;
 	mara_check_error(mara_unbox_map(ctx, map, &obj));
 
-	mara_hamt_node_t* node;
+	mara_obj_map_node_t* node;
 	BHAMT_HASH_TYPE hash = mara_hash_value(key);
 	BHAMT_GET(obj->root, node, hash, key);
 
@@ -148,7 +148,7 @@ mara_map_delete(mara_exec_ctx_t* ctx, mara_value_t map, mara_value_t key, mara_v
 	mara_obj_map_t* obj;
 	mara_check_error(mara_unbox_map(ctx, map, &obj));
 
-	mara_hamt_node_t* node;
+	mara_obj_map_node_t* node;
 	BHAMT_HASH_TYPE hash = mara_hash_value(key);
 	BHAMT_GET(obj->root, node, hash, key);
 
@@ -169,7 +169,7 @@ mara_map_foreach(mara_exec_ctx_t* ctx, mara_value_t map, mara_native_fn_t fn) {
 	mara_check_error(mara_unbox_map(ctx, map, &obj));
 
 	for (
-		mara_hamt_node_t* itr = obj->root;
+		mara_obj_map_node_t* itr = obj->root;
 		itr != NULL;
 		itr = itr->next
 	) {
