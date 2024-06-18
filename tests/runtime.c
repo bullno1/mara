@@ -1,6 +1,7 @@
 #include "rktest.h"
 #include <mara.h>
 #include <mara/utils.h>
+#include "common.h"
 
 static struct {
 	mara_env_t* env;
@@ -14,10 +15,7 @@ TEST_TEARDOWN(runtime) {
 	mara_destroy_env(fixture.env);
 }
 
-static inline void
-test_symbol(mara_exec_ctx_t* ctx, void* userdata) {
-	(void)userdata;
-
+MARA_TEST(runtime, symbol) {
 	char cstr[4];
 	cstr[0] = 'a';
 	cstr[1] = 'b';
@@ -34,8 +32,4 @@ test_symbol(mara_exec_ctx_t* ctx, void* userdata) {
 
 	mara_value_t abf2 = mara_new_symbol(ctx, mara_str_from_literal("abf"));
 	ASSERT_EQ(abf, abf2);
-}
-
-TEST(runtime, symbol) {
-	mara_exec(fixture.env, (mara_callback_t){ .fn = test_symbol });
 }

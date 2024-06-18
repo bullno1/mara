@@ -15,10 +15,7 @@ TEST_TEARDOWN(lexer) {
 	mara_destroy_env(fixture.env);
 }
 
-static inline void
-test_basic(mara_exec_ctx_t* ctx, void* userdata) {
-	(void)userdata;
-
+MARA_TEST(lexer, basic) {
 	mara_str_t input = mara_str_from_literal(
 		"test 1.2 ( -3_000 \"str\\n\" ) \n"
 		" \"Hello\\t\"\r\n"
@@ -91,8 +88,4 @@ test_basic(mara_exec_ctx_t* ctx, void* userdata) {
 	mara_index_t integer;
 	MARA_ASSERT_NO_ERROR(mara_value_to_int(ctx, value, &integer));
 	ASSERT_EQ(integer, 69);
-}
-
-TEST(lexer, basic) {
-	mara_exec(fixture.env, (mara_callback_t){ .fn = test_basic });
 }
