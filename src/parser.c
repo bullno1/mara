@@ -63,9 +63,14 @@ MARA_PRIVATE mara_error_t*
 mara_linked_list_flatten(
 	mara_exec_ctx_t* ctx,
 	mara_zone_t* zone,
+	mara_str_t filename,
 	mara_linked_list_t* tmp_list,
 	mara_value_t* result
 ) {
+	mara_set_debug_info(ctx, (mara_source_info_t){
+		.filename = filename,
+		.range = tmp_list->source_range,
+	});
 	mara_value_t list = mara_new_list(ctx, zone, tmp_list->len);
 	for (
 		mara_list_link_t* itr = tmp_list->link.next;
@@ -277,7 +282,9 @@ mara_parse_token(
 					mara_linked_list_init(&tmp_list, token.location.start);
 					error = mara_parse_list(ctx, zone, lexer, &tmp_list);
 					if (error == NULL) {
-						error = mara_linked_list_flatten(ctx, zone, &tmp_list, result);
+						error = mara_linked_list_flatten(
+							ctx, zone, lexer->filename, &tmp_list, result
+						);
 					}
 				}
 				mara_arena_restore(ctx->env, local_arena, snapshot);
@@ -335,7 +342,7 @@ mara_do_parse_all(
 	}
 
 	if (error == NULL) {
-		error = mara_linked_list_flatten(ctx, zone, &tmp_list, result);
+		error = mara_linked_list_flatten(ctx, zone, filename, &tmp_list, result);
 	}
 
 	return error;
