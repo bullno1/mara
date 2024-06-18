@@ -43,10 +43,10 @@ typedef enum mara_obj_type_e {
 	MARA_OBJ_TYPE_STRING,
 	MARA_OBJ_TYPE_SYMBOL,
 	MARA_OBJ_TYPE_REF,
-	MARA_OBJ_TYPE_MARA_FN,
-	MARA_OBJ_TYPE_NATIVE_FN,
 	MARA_OBJ_TYPE_LIST,
 	MARA_OBJ_TYPE_MAP,
+	MARA_OBJ_TYPE_MARA_FN,
+	MARA_OBJ_TYPE_NATIVE_FN,
 } mara_obj_type_t;
 
 typedef struct mara_obj_s {
@@ -89,7 +89,7 @@ typedef struct mara_list_s {
 
 typedef struct mara_zone_options_s {
 	mara_index_t num_marked_zones;
-	const mara_zone_t** marked_zones;
+	mara_zone_t** marked_zones;
 	mara_index_t argc;
 	const mara_value_t* argv;
 } mara_zone_options_t;
@@ -154,8 +154,8 @@ mara_arena_restore(mara_exec_ctx_t* ctx, mara_arena_t* arena, mara_arena_snapsho
 
 // Zone
 
-mara_zone_t*
-mara_zone_new(mara_exec_ctx_t* ctx, mara_zone_options_t options);
+void
+mara_zone_enter_new(mara_exec_ctx_t* ctx, mara_zone_options_t options);
 
 void
 mara_zone_enter(mara_exec_ctx_t* ctx, mara_zone_t* zone);

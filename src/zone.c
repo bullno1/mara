@@ -1,7 +1,7 @@
 #include "internal.h"
 #include <string.h>
 
-mara_zone_t*
+MARA_PRIVATE mara_zone_t*
 mara_zone_new(mara_exec_ctx_t* ctx, mara_zone_options_t options) {
 	mara_zone_t* current_zone = ctx->current_zone;
 
@@ -58,6 +58,11 @@ mara_zone_new(mara_exec_ctx_t* ctx, mara_zone_options_t options) {
 	};
 
 	return new_zone;
+}
+
+void
+mara_zone_enter_new(mara_exec_ctx_t* ctx, mara_zone_options_t options) {
+	mara_zone_enter(ctx, mara_zone_new(ctx, options));
 }
 
 void
