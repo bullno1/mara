@@ -10,7 +10,7 @@ typedef struct mara_list_link_s {
 
 typedef struct mara_list_node_s {
 	mara_list_link_t link;
-	mara_index_t value;
+	mara_value_t value;
 } mara_list_node_t;
 
 typedef struct mara_linked_list_s {
@@ -119,7 +119,7 @@ mara_parse_list(
 				{
 					mara_value_t elem;
 					mara_error_t* error = mara_parse_token(ctx, zone, lexer, token, &elem);
-					if (error == NULL) { return error; }
+					if (error != NULL) { return error; }
 
 					mara_linked_list_push(ctx, list, elem);
 				}
@@ -220,32 +220,42 @@ mara_parse_token(
 			}
 		case MARA_TOK_STRING:
 			{
-				mara_value_t value;
 				mara_arena_snapshot_t snapshot = mara_arena_snapshot(ctx->env, local_arena);
-				{
-					char* str = mara_arena_alloc(ctx->env, local_arena, token.lexeme.len * 2 + 1);
-					mara_index_t len = 0;
-					for (mara_index_t i = 0; i < token.lexeme.len; ++i) {
-						if (token.lexeme.data[i] == '%') {
-							str[len++] = token.lexeme.data[i];
-							str[len++] = token.lexeme.data[i];
-						} else {
-							str[len++] = token.lexeme.data[i];
+				mara_error_t* error = NULL;
+				char* str = mara_arena_alloc(ctx->env, local_arena, token.lexeme.len);
+				mara_index_t len = 0;
+				for (mara_index_t i = 0; i < token.lexeme.len; ++i) {
+					char ch = token.lexeme.data[i];
+					if (ch == '\\') {
+						if (++i < token.lexeme.len) {
+							ch = token.lexeme.data[i];
+							switch (ch) {
+								case 'n':
+									str[len++] = '\n';
+									break;
+								case 'r':
+									str[len++] = '\r';
+									break;
+								case 't':
+									str[len++] = '\t';
+									break;
+								default:
+									str[len++] = ch;
+									break;
+							}
 						}
+					} else {
+						str[len++] = ch;
 					}
-					str[len] = '\0';
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wformat-security"
-#endif
-					value = mara_new_strf(ctx, zone, str);
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
+				}
+				if (error == NULL) {
+					*result = mara_new_str(ctx, zone, (mara_str_t){
+						.len = len,
+						.data = str,
+					});
 				}
 				mara_arena_restore(ctx->env, local_arena, snapshot);
-				*result = value;
-				return NULL;
+				return error;
 			}
 		case MARA_TOK_SYMBOL:
 			*result = mara_new_symbol(ctx, token.lexeme);

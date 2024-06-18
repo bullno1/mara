@@ -38,7 +38,7 @@ mara_lexer_peek(mara_exec_ctx_t* ctx, mara_lexer_t* lexer, char* result) {
 			return NULL;
 		} else if (bytes_read == 0) {
 			lexer->buffered = true;
-			*result = 0;
+			lexer->read_buf = *result = 0;
 			return NULL;
 		} else {
 			return mara_lexer_error(
@@ -192,7 +192,7 @@ mara_lexer_continue_number(mara_exec_ctx_t* ctx, mara_lexer_t* lexer, mara_token
 			|| mara_lexer_is_end(ch)
 			|| mara_lexer_is_comment(ch)
 		) {
-			*result = mara_lexer_make_token(lexer, dotted ? MARA_TOK_INT : MARA_TOK_REAL);
+			*result = mara_lexer_make_token(lexer, dotted ? MARA_TOK_REAL: MARA_TOK_INT);
 			return NULL;
 		} else {
 			return mara_lexer_error(

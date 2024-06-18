@@ -64,6 +64,7 @@ mara_read_from_str(void* buffer, mara_index_t size, void* userdata) {
 	mara_index_t bytes_left = reader->str.len - reader->read_offset;
 	mara_index_t bytes_to_read = mara_min(size, bytes_left);
 	memcpy(buffer, reader->str.data + reader->read_offset, bytes_to_read);
+	reader->read_offset += bytes_to_read;
 	return bytes_to_read;
 }
 
