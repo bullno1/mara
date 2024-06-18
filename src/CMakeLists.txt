@@ -10,6 +10,7 @@ set(SOURCES
 	"copy.c"
 	"list.c"
 	"map.c"
+	"strpool.c"
 )
 
 setup_library(mara ${MARA_STATIC} "${SOURCES}")

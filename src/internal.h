@@ -41,7 +41,6 @@ typedef struct mara_arena_s {
 
 typedef enum mara_obj_type_e {
 	MARA_OBJ_TYPE_STRING,
-	MARA_OBJ_TYPE_SYMBOL,
 	MARA_OBJ_TYPE_REF,
 	MARA_OBJ_TYPE_LIST,
 	MARA_OBJ_TYPE_MAP,
@@ -79,6 +78,17 @@ typedef struct mara_obj_map_s {
 	mara_index_t len;
 	mara_obj_map_node_t* root;
 } mara_obj_map_t;
+
+typedef struct mara_strpool_node_s {
+	mara_str_t key;
+	mara_index_t children[BHAMT_NUM_CHILDREN];
+} mara_strpool_node_t;
+
+typedef struct mara_strpool_s {
+	mara_index_t capacity;
+	mara_index_t len;
+	mara_strpool_node_t* nodes;
+} mara_strpool_t;
 
 typedef struct mara_list_s {
 	mara_index_t capacity;
@@ -120,6 +130,7 @@ struct mara_zone_s {
 struct mara_env_s {
 	mara_env_options_t options;
 	mara_arena_chunk_t* free_chunks;
+	mara_strpool_t symtab;
 };
 
 struct mara_exec_ctx_s {
@@ -144,13 +155,16 @@ void*
 mara_realloc(mara_allocator_t* allocator, void* ptr, size_t new_size);
 
 void*
-mara_arena_alloc(mara_exec_ctx_t* ctx, mara_arena_t* arena, size_t size);
+mara_arena_alloc(mara_env_t* env, mara_arena_t* arena, size_t size);
 
 mara_arena_snapshot_t
-mara_arena_snapshot(mara_exec_ctx_t* ctx, mara_arena_t* arena);
+mara_arena_snapshot(mara_env_t* env, mara_arena_t* arena);
 
 void
-mara_arena_restore(mara_exec_ctx_t* ctx, mara_arena_t* arena, mara_arena_snapshot_t snapshot);
+mara_arena_restore(mara_env_t* env, mara_arena_t* arena, mara_arena_snapshot_t snapshot);
+
+void
+mara_arena_reset(mara_env_t* env, mara_arena_t* arena);
 
 // Zone
 
@@ -207,6 +221,17 @@ mara_raw_list_set(mara_exec_ctx_t* ctx, mara_obj_list_t* list, mara_index_t inde
 
 mara_error_t*
 mara_unbox_map(mara_exec_ctx_t* ctx, mara_value_t value, mara_obj_map_t** result);
+
+// String pool
+
+mara_index_t
+mara_strpool_intern(mara_allocator_t* allocator, mara_strpool_t* strpool, mara_str_t string);
+
+mara_str_t
+mara_strpool_lookup(mara_strpool_t* strpool, mara_index_t id);
+
+void
+mara_strpool_cleanup(mara_allocator_t* allocator, mara_strpool_t* strpool);
 
 // Debug
 

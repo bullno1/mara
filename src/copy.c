@@ -81,9 +81,6 @@ mara_deep_copy(
 			*result = mara_new_str(ctx, zone, *(mara_str_t*)obj->body);
 			mara_ptr_map_put(ctx, local_zone, copied_objs, obj, mara_value_to_obj(*result));
 			return NULL;
-		case MARA_OBJ_TYPE_SYMBOL:
-			*result = value;
-			return NULL;
 		case MARA_OBJ_TYPE_REF:
 			{
 				mara_obj_ref_t* ref = (mara_obj_ref_t*)obj->body;
@@ -179,9 +176,6 @@ mara_copy(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_value_t value, mara_valu
 	switch (obj->type) {
 		case MARA_OBJ_TYPE_STRING:
 			*result = mara_new_str(ctx, zone, *(mara_str_t*)obj->body);
-			return NULL;
-		case MARA_OBJ_TYPE_SYMBOL:
-			*result = value;
 			return NULL;
 		case MARA_OBJ_TYPE_REF:
 			{

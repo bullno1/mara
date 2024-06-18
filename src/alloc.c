@@ -37,12 +37,11 @@ mara_realloc(mara_allocator_t* allocator, void* ptr, size_t new_size) {
 }
 
 void*
-mara_arena_alloc(mara_exec_ctx_t* ctx, mara_arena_t* arena, size_t size) {
+mara_arena_alloc(mara_env_t* env, mara_arena_t* arena, size_t size) {
 	void* mem = mara_alloc_from_chunk(arena->current_chunk, size);
 	if (mem != NULL) {
 		return mem;
 	} else {
-		mara_env_t* env = ctx->env;
 		size_t configured_chunk_size = env->options.alloc_chunk_size;
 		size_t required_chunk_size = sizeof(mara_arena_chunk_t) + size;
 		size_t chunk_size = mara_max(configured_chunk_size, required_chunk_size);
@@ -71,8 +70,8 @@ mara_arena_alloc(mara_exec_ctx_t* ctx, mara_arena_t* arena, size_t size) {
 }
 
 mara_arena_snapshot_t
-mara_arena_snapshot(mara_exec_ctx_t* ctx, mara_arena_t* arena) {
-	(void)ctx;
+mara_arena_snapshot(mara_env_t* env, mara_arena_t* arena) {
+	(void)env;
 	mara_arena_chunk_t* current_chunk = arena->current_chunk;
 	return (mara_arena_snapshot_t){
 		.chunk = current_chunk,
@@ -81,9 +80,7 @@ mara_arena_snapshot(mara_exec_ctx_t* ctx, mara_arena_t* arena) {
 }
 
 void
-mara_arena_restore(mara_exec_ctx_t* ctx, mara_arena_t* arena, mara_arena_snapshot_t snapshot) {
-	mara_env_t* env = ctx->env;
-
+mara_arena_restore(mara_env_t* env, mara_arena_t* arena, mara_arena_snapshot_t snapshot) {
 	mara_arena_chunk_t* chunk = arena->current_chunk;
 	while (chunk != snapshot.chunk) {
 		mara_arena_chunk_t* next = chunk->next;
@@ -97,4 +94,9 @@ mara_arena_restore(mara_exec_ctx_t* ctx, mara_arena_t* arena, mara_arena_snapsho
 	}
 
 	arena->current_chunk = chunk;
+}
+
+void
+mara_arena_reset(mara_env_t* env, mara_arena_t* arena) {
+	mara_arena_restore(env, arena, (mara_arena_snapshot_t){ 0 });
 }

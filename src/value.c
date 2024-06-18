@@ -103,8 +103,8 @@ mara_value_is_str(mara_value_t value) {
 
 bool
 mara_value_is_symbol(mara_value_t value) {
-	mara_obj_t* obj = mara_value_to_obj(value);
-	return obj != NULL && obj->type == MARA_OBJ_TYPE_SYMBOL;
+	nanbox_t nanbox = { .as_int64 = value };
+	return nanbox_is_aux(nanbox) && nanbox.as_bits.tag == NANBOX_MIN_AUX_TAG;
 }
 
 bool
@@ -148,13 +148,16 @@ mara_value_type(mara_value_t value, void** tag) {
 		return MARA_VAL_REAL;
 	} else if (nanbox_is_boolean(nanbox)) {
 		return MARA_VAL_BOOL;
+	} else if (
+		nanbox_is_aux(nanbox)
+		&& nanbox.as_bits.tag == NANBOX_MIN_AUX_TAG
+	) {
+		return MARA_VAL_SYMBOL;
 	} else if (nanbox_is_pointer(nanbox)) {
 		mara_obj_t* obj = nanbox_to_pointer(nanbox);
 		switch (obj->type) {
 			case MARA_OBJ_TYPE_STRING:
 				return MARA_VAL_STRING;
-			case MARA_OBJ_TYPE_SYMBOL:
-				return MARA_VAL_SYMBOL;
 			case MARA_OBJ_TYPE_REF:
 				if (tag != NULL) {
 					*tag = ((mara_obj_ref_t*)obj->body)->tag;
@@ -212,9 +215,13 @@ mara_value_to_bool(mara_exec_ctx_t* ctx, mara_value_t value, bool* result) {
 
 mara_error_t*
 mara_value_to_str(mara_exec_ctx_t* ctx, mara_value_t value, mara_str_t* result) {
-	if (MARA_EXPECT(mara_value_is_str(value) || mara_value_is_symbol(value))) {
+	if (mara_value_is_str(value)) {
 		mara_obj_t* obj = mara_value_to_obj(value);
 		*result = *(mara_str_t*)obj->body;
+		return NULL;
+	} else if (mara_value_is_symbol(value)) {
+		nanbox_t nanbox = { .as_int64 = value };
+		*result = mara_strpool_lookup(&ctx->env->symtab, nanbox.as_bits.payload);
 		return NULL;
 	} else {
 		return mara_errorf(
@@ -357,4 +364,15 @@ mara_value_is_true(mara_value_t value) {
 bool
 mara_value_is_false(mara_value_t value) {
 	return nanbox_is_false((nanbox_t){ .as_int64 = value });
+}
+
+mara_value_t
+mara_new_symbol(mara_exec_ctx_t* ctx, mara_str_t name) {
+	mara_env_t* env = ctx->env;
+	mara_index_t id = mara_strpool_intern(&env->options.allocator, &env->symtab, name);
+
+	nanbox_t nanbox = {
+		.as_bits = { .payload = id, .tag = NANBOX_MIN_AUX_TAG },
+	};
+	return nanbox.as_int64;
 }

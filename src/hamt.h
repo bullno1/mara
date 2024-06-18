@@ -27,7 +27,7 @@
 
 #define BHAMT_SEARCH(ROOT, ITR, RESULT, FREE_NODE, HASH, KEY) \
 	do { \
-		ITR = &ROOT; \
+		ITR = &(ROOT); \
 		FREE_NODE = NULL; \
 		RESULT = NULL; \
 		for ( \

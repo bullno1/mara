@@ -5,8 +5,8 @@ MARA_PRIVATE mara_zone_t*
 mara_zone_new(mara_exec_ctx_t* ctx, mara_zone_options_t options) {
 	mara_zone_t* current_zone = ctx->current_zone;
 
-	mara_arena_snapshot_t control_snapshot = mara_arena_snapshot(ctx, &ctx->control_arena);
-	mara_zone_t* new_zone = mara_arena_alloc(ctx, &ctx->control_arena, sizeof(mara_zone_t));
+	mara_arena_snapshot_t control_snapshot = mara_arena_snapshot(ctx->env, &ctx->control_arena);
+	mara_zone_t* new_zone = mara_arena_alloc(ctx->env, &ctx->control_arena, sizeof(mara_zone_t));
 	mara_assert(new_zone != NULL, "Out of memory");
 
 	mara_arena_t* arena_for_zone = NULL;
@@ -39,7 +39,7 @@ mara_zone_new(mara_exec_ctx_t* ctx, mara_zone_options_t options) {
 		}
 
 		if (arena_for_zone == NULL) {
-			mara_arena_t* arena = mara_arena_alloc(ctx, &ctx->control_arena, sizeof(mara_arena_t));
+			mara_arena_t* arena = mara_arena_alloc(ctx->env, &ctx->control_arena, sizeof(mara_arena_t));
 			*arena = (mara_arena_t){
 				.next = ctx_arenas,
 			};
@@ -54,7 +54,7 @@ mara_zone_new(mara_exec_ctx_t* ctx, mara_zone_options_t options) {
 		.arena = arena_for_zone,
 		.ctx_arenas = ctx_arenas,
 		.control_snapshot = control_snapshot,
-		.local_snapshot = mara_arena_snapshot(ctx, arena_for_zone),
+		.local_snapshot = mara_arena_snapshot(ctx->env, arena_for_zone),
 	};
 
 	return new_zone;
@@ -68,10 +68,10 @@ mara_zone_enter_new(mara_exec_ctx_t* ctx, mara_zone_options_t options) {
 void
 mara_zone_enter(mara_exec_ctx_t* ctx, mara_zone_t* zone) {
 	mara_arena_snapshot_t control_snapshot = mara_arena_snapshot(
-		ctx, &ctx->control_arena
+		ctx->env, &ctx->control_arena
 	);
 	mara_zone_bookmark_t* bookmark = mara_arena_alloc(
-		ctx, &ctx->control_arena, sizeof(mara_zone_bookmark_t)
+		ctx->env, &ctx->control_arena, sizeof(mara_zone_bookmark_t)
 	);
 	bookmark->previous_bookmark = ctx->current_zone_bookmark;
 	bookmark->previous_zone = ctx->current_zone;
@@ -94,12 +94,12 @@ mara_zone_exit(mara_exec_ctx_t* ctx) {
 	mara_zone_bookmark_t* bookmark = ctx->current_zone_bookmark;
 	ctx->current_zone = bookmark->previous_zone;
 	ctx->current_zone_bookmark = bookmark->previous_bookmark;
-	mara_arena_restore(ctx, &ctx->control_arena, bookmark->control_snapshot);
+	mara_arena_restore(ctx->env, &ctx->control_arena, bookmark->control_snapshot);
 
 	if (--current_zone->ref_count == 0) {
 		mara_zone_cleanup(ctx, current_zone);
 		ctx->arenas = current_zone->ctx_arenas;
-		mara_arena_restore(ctx, &ctx->control_arena, current_zone->control_snapshot);
+		mara_arena_restore(ctx->env, &ctx->control_arena, current_zone->control_snapshot);
 	}
 }
 
@@ -120,7 +120,7 @@ mara_zone_cleanup(mara_exec_ctx_t* ctx, mara_zone_t* zone) {
 		itr->callback.fn(ctx, itr->callback.userdata);
 	}
 
-	mara_arena_restore(ctx, zone->arena, zone->local_snapshot);
+	mara_arena_restore(ctx->env, zone->arena, zone->local_snapshot);
 }
 
 void
@@ -140,7 +140,7 @@ mara_defer(mara_exec_ctx_t* ctx, mara_callback_t callback) {
 
 void*
 mara_zone_alloc(mara_exec_ctx_t* ctx, mara_zone_t* zone, size_t size) {
-	return mara_arena_alloc(ctx, zone->arena, size);
+	return mara_arena_alloc(ctx->env, zone->arena, size);
 }
 
 mara_zone_t*
