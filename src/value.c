@@ -53,6 +53,14 @@ mara_obj_t*
 mara_alloc_obj(mara_exec_ctx_t* ctx, mara_zone_t* zone, size_t size) {
 	mara_obj_t* obj = mara_zone_alloc(ctx, zone, sizeof(mara_obj_t) + size);
 	obj->zone = zone;
+	if (
+		MARA_EXPECT(
+			ctx->arenas <= zone->arena
+			&& zone->arena < ctx->arenas + MARA_NUM_ARENAS
+		)
+	) {
+		obj->arena_mask = 1 << (zone->arena - ctx->arenas);
+	}
 	return obj;
 }
 
@@ -375,4 +383,12 @@ mara_new_symbol(mara_exec_ctx_t* ctx, mara_str_t name) {
 		.as_bits = { .payload = id, .tag = NANBOX_MIN_AUX_TAG },
 	};
 	return nanbox.as_int64;
+}
+
+void
+mara_obj_add_arena_mask(mara_obj_t* parent, mara_value_t child) {
+	mara_obj_t* child_obj = mara_value_to_obj(child);
+	if (child_obj != NULL) {
+		parent->arena_mask |= child_obj->arena_mask;
+	}
 }

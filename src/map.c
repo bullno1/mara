@@ -99,6 +99,7 @@ mara_map_set(mara_exec_ctx_t* ctx, mara_value_t map, mara_value_t key, mara_valu
 	BHAMT_HASH_TYPE hash = mara_hash_value(key);
 	BHAMT_SEARCH(obj->root, itr, node, free_node, hash, key);
 
+	mara_obj_t* header = mara_container_of(obj, mara_obj_t, body);
 	mara_zone_t* map_zone = mara_container_of(obj, mara_obj_t, body)->zone;
 	if (node == NULL) {
 		if (free_node != NULL) {
@@ -119,10 +120,17 @@ mara_map_set(mara_exec_ctx_t* ctx, mara_value_t map, mara_value_t key, mara_valu
 		}
 
 		obj->len += 1;
-		mara_check_error(mara_copy(ctx, map_zone, key, &node->key));
+		mara_value_t key_copy;
+		mara_check_error(mara_copy(ctx, map_zone, key, &key_copy));
+		node->key = key_copy;
+		mara_obj_add_arena_mask(header, key_copy);
 	}
 
-	return mara_copy(ctx, map_zone, value, &node->value);
+	mara_value_t value_copy;
+	mara_check_error(mara_copy(ctx, map_zone, value, &value_copy));
+	node->value = value_copy;
+	mara_obj_add_arena_mask(header, value_copy);
+	return NULL;
 }
 
 mara_error_t*

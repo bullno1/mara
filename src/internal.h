@@ -4,8 +4,12 @@
 #include <mara.h>
 #include <mara/utils.h>
 #include <assert.h>
+#include <limits.h>
 #define BHAMT_HASH_TYPE uint64_t
 #include "hamt.h"
+
+#define MARA_ARENA_MASK_TYPE uint8_t
+#define MARA_NUM_ARENAS (sizeof(MARA_ARENA_MASK_TYPE) * CHAR_BIT)
 
 #define MARA_PRIVATE static inline
 #define mara_assert(cond, msg) assert((cond) && (msg))
@@ -15,6 +19,8 @@
 #else
 #	define MARA_EXPECT(X) (X)
 #endif
+
+typedef MARA_ARENA_MASK_TYPE mara_arena_mask_t;
 
 typedef struct mara_finalizer_s {
 	mara_callback_t callback;
@@ -34,9 +40,7 @@ typedef struct mara_arena_snapshot_s {
 } mara_arena_snapshot_t;
 
 typedef struct mara_arena_s {
-	struct mara_arena_s* next;
 	mara_arena_chunk_t* current_chunk;
-	bool in_use;
 } mara_arena_t;
 
 typedef enum mara_obj_type_e {
@@ -50,6 +54,7 @@ typedef enum mara_obj_type_e {
 
 typedef struct mara_obj_s {
 	mara_obj_type_t type;
+	mara_arena_mask_t arena_mask;
 	mara_zone_t* zone;
 	_Alignas(max_align_t) char body[];
 } mara_obj_t;
@@ -121,7 +126,6 @@ struct mara_zone_s {
 	mara_zone_branch_t branch;
 	mara_finalizer_t* finalizers;
 	mara_arena_t* arena;
-	mara_arena_t* ctx_arenas;
 	mara_source_info_t debug_info;
 	mara_arena_snapshot_t local_snapshot;
 	mara_arena_snapshot_t control_snapshot;
@@ -137,10 +141,10 @@ struct mara_exec_ctx_s {
 	mara_env_t* env;
 	mara_zone_t* current_zone;
 	mara_zone_bookmark_t* current_zone_bookmark;
-	mara_arena_t* arenas;
 	mara_arena_t control_arena;
 	mara_error_t last_error;
 	mara_zone_t error_zone;
+	mara_arena_t arenas[MARA_NUM_ARENAS];
 };
 
 // Malloc
@@ -205,6 +209,9 @@ mara_tombstone(void);
 
 bool
 mara_value_is_tombstone(mara_value_t value);
+
+void
+mara_obj_add_arena_mask(mara_obj_t* parent, mara_value_t child);
 
 // List
 

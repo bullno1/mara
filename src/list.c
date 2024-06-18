@@ -55,22 +55,29 @@ mara_unbox_list(mara_exec_ctx_t* ctx, mara_value_t value, mara_obj_list_t** resu
 mara_error_t*
 mara_raw_list_push(mara_exec_ctx_t* ctx, mara_obj_list_t* obj, mara_value_t value) {
 	mara_index_t current_capacity = obj->capacity;
-	if (obj->len < current_capacity) {
-		mara_obj_t* header = mara_container_of(obj, mara_obj_t, body);
-		return mara_copy(ctx, header->zone, value, &obj->elems[obj->len++]);
-	} else {
+	mara_obj_t* header = mara_container_of(obj, mara_obj_t, body);
+
+	mara_value_t copy;
+	mara_check_error(mara_copy(ctx, header->zone, value, &copy));
+
+	if (obj->len >= current_capacity) {
 		mara_index_t new_capacity = current_capacity > 0 ? current_capacity * 2 : 4;
 		mara_list_reserve(ctx, obj, new_capacity);
-
-		mara_obj_t* header = mara_container_of(obj, mara_obj_t, body);
-		return mara_copy(ctx, header->zone, value, &obj->elems[obj->len++]);
 	}
+
+	obj->elems[obj->len++] = copy;
+	mara_obj_add_arena_mask(header, copy);
+	return NULL;
 }
 
 mara_error_t*
 mara_raw_list_set(mara_exec_ctx_t* ctx, mara_obj_list_t* obj, mara_index_t index, mara_value_t value) {
 	mara_obj_t* header = mara_container_of(obj, mara_obj_t, body);
-	return mara_copy(ctx, header->zone, value, &obj->elems[index]);
+	mara_value_t copy;
+	mara_check_error(mara_copy(ctx, header->zone, value, &copy));
+	mara_obj_add_arena_mask(header, copy);
+	obj->elems[index] = copy;
+	return NULL;
 }
 
 mara_value_t
