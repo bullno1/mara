@@ -28,7 +28,7 @@
 	} while (0)
 
 #define mara_container_of(ptr, type, member) \
-	(void*)((char*)ptr - offsetof(type, member))
+	((type*)((char*)ptr - offsetof(type, member)))
 
 typedef struct mara_str_reader_s {
 	mara_str_t str;

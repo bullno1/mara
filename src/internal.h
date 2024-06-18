@@ -4,12 +4,10 @@
 #include <mara.h>
 #include <mara/utils.h>
 #include <assert.h>
+#define BHAMT_HASH_TYPE uint64_t
+#include "hamt.h"
 
 #define MARA_PRIVATE static inline
-#define MARA_HAMT_HASH_TYPE uint64_t
-#define MARA_HAMT_NUM_BITS 3
-#define MARA_HAMT_NUM_CHILDREN (1 << MARA_HAMT_NUM_BITS)
-#define MARA_HAMT_MASK (((MARA_HAMT_HASH_TYPE)1 << MARA_HAMT_NUM_BITS) - 1)
 #define mara_assert(cond, msg) assert((cond) && (msg))
 
 #if defined(__GNUC__) || defined(__clang__)
@@ -70,14 +68,15 @@ typedef struct mara_obj_list_s {
 } mara_obj_list_t;
 
 typedef struct mara_hamt_node_s {
-	struct mara_hamt_node_s* children[MARA_HAMT_NUM_CHILDREN];
 	mara_value_t key;
+	struct mara_hamt_node_s* children[BHAMT_NUM_CHILDREN];
+
 	mara_value_t value;
+	struct mara_hamt_node_s* next;
 } mara_hamt_node_t;
 
 typedef struct mara_obj_map_s {
-	bool entries_in_sync;
-	mara_value_t entries;
+	mara_index_t len;
 	mara_hamt_node_t* root;
 } mara_obj_map_t;
 

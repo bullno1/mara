@@ -253,7 +253,7 @@ MARA_API mara_value_t
 mara_new_list(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_index_t initial_capacity);
 
 MARA_API mara_value_t
-mara_new_map(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_index_t initial_capacity);
+mara_new_map(mara_exec_ctx_t* ctx, mara_zone_t* zone);
 
 MARA_API mara_value_t
 mara_new_ref(mara_exec_ctx_t* ctx, mara_zone_t* zone, void* tag, void* value);
@@ -307,7 +307,7 @@ mara_list_resize(mara_exec_ctx_t* ctx, mara_value_t list, mara_index_t len);
 // Map
 
 MARA_API mara_error_t*
-mara_map_len(mara_exec_ctx_t* ctx, mara_value_t map, mara_index_t* out);
+mara_map_len(mara_exec_ctx_t* ctx, mara_value_t map, mara_index_t* result);
 
 MARA_API mara_error_t*
 mara_map_set(mara_exec_ctx_t* ctx, mara_value_t map, mara_value_t key, mara_value_t value);

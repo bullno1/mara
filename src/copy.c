@@ -40,6 +40,7 @@ mara_copy(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_value_t value, mara_valu
 				mara_value_t* old_elems = old_list->elems;
 				mara_value_t* new_elems = new_list_obj->elems;
 				for (mara_index_t i = 0; i < len; ++i) {
+					// TODO: recursive objects
 					mara_check_error(mara_copy(ctx, zone, old_elems[i], &new_elems[i]));
 				}
 

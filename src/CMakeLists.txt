@@ -9,6 +9,7 @@ set(SOURCES
 	"parser.c"
 	"copy.c"
 	"list.c"
+	"map.c"
 )
 
 setup_library(mara ${MARA_STATIC} "${SOURCES}")
