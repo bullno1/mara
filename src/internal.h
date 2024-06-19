@@ -306,12 +306,6 @@ mara_obj_add_arena_mask(mara_obj_t* parent, mara_value_t child);
 mara_error_t*
 mara_unbox_list(mara_exec_ctx_t* ctx, mara_value_t value, mara_obj_list_t** result);
 
-mara_error_t*
-mara_raw_list_push(mara_exec_ctx_t* ctx, mara_obj_list_t* list, mara_value_t value);
-
-mara_error_t*
-mara_raw_list_set(mara_exec_ctx_t* ctx, mara_obj_list_t* list, mara_index_t index, mara_value_t value);
-
 // Map
 
 mara_error_t*
