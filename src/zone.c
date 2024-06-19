@@ -42,7 +42,7 @@ mara_zone_new(mara_exec_ctx_t* ctx, mara_zone_options_t options) {
 		mara_arena_mask_t arena_mask = 0;
 
 		if (current_zone != NULL) {
-			arena_mask |= (1 << (current_zone->arena - ctx->arenas));
+			arena_mask |= mara_arena_mask_of_zone(ctx, current_zone);
 		}
 
 		for (mara_index_t i = 0; i < options.argc; ++i) {
@@ -53,7 +53,7 @@ mara_zone_new(mara_exec_ctx_t* ctx, mara_zone_options_t options) {
 		}
 
 		for (mara_index_t i = 0; i < options.num_marked_zones; ++i) {
-			arena_mask |= (1 << (options.marked_zones[i]->arena - ctx->arenas));
+			arena_mask |= mara_arena_mask_of_zone(options.marked_zones[i]);
 		}
 
 		mara_arena_mask_t free_mask = ~arena_mask;
@@ -183,4 +183,19 @@ mara_zone_t*
 mara_get_zone_of(mara_exec_ctx_t* ctx, mara_value_t value) {
 	mara_obj_t* obj = mara_value_to_obj(value);
 	return obj != NULL ? obj->zone : mara_get_local_zone(ctx);
+}
+
+mara_arena_mask_t
+mara_arena_mask_of_zone(mara_exec_ctx_t* ctx, mara_zone_t* zone) {
+	if (
+		MARA_EXPECT(
+			zone->branch == MARA_ZONE_BRANCH_MAIN
+			&& ctx->arenas <= zone->arena
+			&& zone->arena < (ctx->arenas + MARA_NUM_ARENAS)
+		)
+	) {
+		return 1 << (zone->arena - ctx->arenas);
+	} else {
+		return 0;
+	}
 }

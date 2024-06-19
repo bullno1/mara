@@ -393,7 +393,7 @@ mara_compile(
 	mara_exec_ctx_t* ctx,
 	mara_zone_t* zone,
 	mara_compile_options_t options,
-	mara_value_t expr,
+	mara_value_t exprs,
 	mara_value_t* result
 );
 

@@ -15,7 +15,7 @@
 #define mara_assert(cond, msg) assert((cond) && (msg))
 
 #if defined(__GNUC__) || defined(__clang__)
-#	define MARA_EXPECT(X) __builtin_expect(X, true)
+#	define MARA_EXPECT(X) __builtin_expect(!!(X), 1)
 #else
 #	define MARA_EXPECT(X) (X)
 #endif
@@ -272,6 +272,9 @@ mara_zone_cleanup(mara_exec_ctx_t* ctx, mara_zone_t* zone);
 
 void
 mara_add_finalizer(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_callback_t callback);
+
+mara_arena_mask_t
+mara_arena_mask_of_zone(mara_exec_ctx_t* ctx, mara_zone_t* zone);
 
 // Value
 
