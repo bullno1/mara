@@ -22,18 +22,18 @@ mara_alloc_from_chunk(mara_arena_chunk_t* chunk, size_t size) {
 }
 
 void*
-mara_malloc(mara_allocator_t* allocator, size_t size) {
+mara_malloc(mara_allocator_t allocator, size_t size) {
 	return mara_realloc(allocator, NULL, size);
 }
 
 void
-mara_free(mara_allocator_t* allocator, void* ptr) {
+mara_free(mara_allocator_t allocator, void* ptr) {
 	mara_realloc(allocator, ptr, 0);
 }
 
 void*
-mara_realloc(mara_allocator_t* allocator, void* ptr, size_t new_size) {
-	return allocator->fn(ptr, new_size, allocator->userdata);
+mara_realloc(mara_allocator_t allocator, void* ptr, size_t new_size) {
+	return allocator.fn(ptr, new_size, allocator.userdata);
 }
 
 void*
@@ -56,7 +56,7 @@ mara_arena_alloc(mara_env_t* env, mara_arena_t* arena, size_t size) {
 				new_chunk = free_chunk;
 				env->free_chunks = new_chunk->next;
 			} else {
-				new_chunk = mara_malloc(&env->options.allocator, chunk_size);
+				new_chunk = mara_malloc(env->options.allocator, chunk_size);
 				mara_assert(new_chunk != NULL, "Out of memory");
 				new_chunk->end = (char*)new_chunk + chunk_size;
 			}

@@ -377,7 +377,7 @@ mara_value_is_false(mara_value_t value) {
 mara_value_t
 mara_new_symbol(mara_exec_ctx_t* ctx, mara_str_t name) {
 	mara_env_t* env = ctx->env;
-	mara_index_t id = mara_strpool_intern(&env->options.allocator, &env->symtab, name);
+	mara_index_t id = mara_strpool_intern(&env->symtab, name);
 
 	nanbox_t nanbox = {
 		.as_bits = { .payload = id, .tag = NANBOX_MIN_AUX_TAG },

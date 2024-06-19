@@ -3,7 +3,7 @@
 
 MARA_PRIVATE void
 mara_list_free(mara_exec_ctx_t* ctx, void* userdata) {
-	mara_free(&ctx->env->options.allocator, ((mara_obj_list_t*)userdata)->elems);
+	mara_free(ctx->env->options.allocator, ((mara_obj_list_t*)userdata)->elems);
 }
 
 MARA_PRIVATE void
@@ -17,7 +17,7 @@ mara_list_reserve(
 
 	if (obj->in_zone) {
 		mara_value_t* new_elems = mara_malloc(
-			&ctx->env->options.allocator,
+			ctx->env->options.allocator,
 			sizeof(mara_value_t) * new_capacity
 		);
 		mara_assert(new_elems, "Out of memory");
@@ -32,7 +32,7 @@ mara_list_reserve(
 		obj->in_zone = false;
 	} else {
 		obj->elems = mara_realloc(
-			&ctx->env->options.allocator,
+			ctx->env->options.allocator,
 			obj->elems,
 			sizeof(mara_value_t) * new_capacity
 		);

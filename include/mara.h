@@ -118,6 +118,11 @@ typedef enum mara_value_type_e {
 	MARA_VAL_MAP,
 } mara_value_type_t;
 
+typedef struct mara_compile_options_s {
+	bool as_module;
+	bool strip_debug_info;
+} mara_compile_options_t;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -326,10 +331,18 @@ mara_map_foreach(mara_exec_ctx_t* ctx, mara_value_t map, mara_native_fn_t fn);
 // Module
 
 MARA_API mara_error_t*
-mara_import(mara_exec_ctx_t* ctx, mara_str_t name, mara_value_t* result);
+mara_import(
+	mara_exec_ctx_t* ctx,
+	mara_str_t module_name,
+	mara_str_t symbol_name,
+	mara_value_t* result
+);
 
 MARA_API mara_error_t*
-mara_add_importer(mara_exec_ctx_t* ctx, mara_value_t fn);
+mara_init_module(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_value_t fn);
+
+MARA_API mara_error_t*
+mara_add_module_loader(mara_exec_ctx_t* ctx, mara_value_t fn);
 
 MARA_API void
 mara_reload(mara_env_t* env);
@@ -379,6 +392,7 @@ MARA_API mara_error_t*
 mara_compile(
 	mara_exec_ctx_t* ctx,
 	mara_zone_t* zone,
+	mara_compile_options_t options,
 	mara_value_t expr,
 	mara_value_t* result
 );

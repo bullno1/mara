@@ -91,7 +91,13 @@ typedef struct mara_strpool_node_s {
 	mara_index_t children[BHAMT_NUM_CHILDREN];
 } mara_strpool_node_t;
 
+typedef struct mara_strpool_options_s {
+	mara_allocator_t table_allocator;
+	mara_allocator_t string_allocator;
+} mara_strpool_options_t;
+
 typedef struct mara_strpool_s {
+	mara_strpool_options_t options;
 	mara_index_t capacity;
 	mara_index_t len;
 	mara_strpool_node_t* nodes;
@@ -153,18 +159,9 @@ typedef enum mara_opcode_e {
 	MARA_OP_MAKE_CLOSURE,
 } mara_opcode_t;
 
-typedef union mara_instruction_u {
-	struct {
-		unsigned opcode: 8;
-		unsigned operands: 24;
-	};
-	uint32_t encoded;
-} mara_instruction_t;
-
-_Static_assert(
-	sizeof(mara_instruction_t) == sizeof(uint32_t),
-	"Instruction is bigger than 32-bit"
-);
+// 8 bits for opcode
+// 24 bits for operands
+typedef uint32_t mara_instruction_t;
 
 typedef struct mara_function_s {
 	mara_index_t num_args;
@@ -238,13 +235,13 @@ struct mara_exec_ctx_s {
 // Malloc
 
 void*
-mara_malloc(mara_allocator_t* allocator, size_t size);
+mara_malloc(mara_allocator_t allocator, size_t size);
 
 void
-mara_free(mara_allocator_t* allocator, void* ptr);
+mara_free(mara_allocator_t allocator, void* ptr);
 
 void*
-mara_realloc(mara_allocator_t* allocator, void* ptr, size_t new_size);
+mara_realloc(mara_allocator_t allocator, void* ptr, size_t new_size);
 
 void*
 mara_arena_alloc(mara_env_t* env, mara_arena_t* arena, size_t size);
@@ -313,14 +310,17 @@ mara_unbox_map(mara_exec_ctx_t* ctx, mara_value_t value, mara_obj_map_t** result
 
 // String pool
 
+void
+mara_strpool_init(mara_strpool_t* strpool, mara_strpool_options_t options);
+
 mara_index_t
-mara_strpool_intern(mara_allocator_t* allocator, mara_strpool_t* strpool, mara_str_t string);
+mara_strpool_intern(mara_strpool_t* strpool, mara_str_t string);
 
 mara_str_t
 mara_strpool_lookup(mara_strpool_t* strpool, mara_index_t id);
 
 void
-mara_strpool_cleanup(mara_allocator_t* allocator, mara_strpool_t* strpool);
+mara_strpool_cleanup(mara_strpool_t* strpool);
 
 // Debug
 

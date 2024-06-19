@@ -22,28 +22,32 @@ mara_create_env(mara_env_options_t options) {
 		options.alloc_chunk_size = 4096 * 4;
 	}
 
-	mara_env_t* env = mara_malloc(&options.allocator, sizeof(mara_env_t));
+	mara_env_t* env = mara_malloc(options.allocator, sizeof(mara_env_t));
 	mara_assert(env != NULL, "Out of memory");
 
 	*env = (mara_env_t){
 		.options = options,
 	};
+	mara_strpool_init(&env->symtab, (mara_strpool_options_t){
+		.table_allocator = options.allocator,
+		.string_allocator = options.allocator,
+	});
 
 	return env;
 }
 
 void
 mara_destroy_env(mara_env_t* env) {
-	mara_strpool_cleanup(&env->options.allocator, &env->symtab);
+	mara_strpool_cleanup(&env->symtab);
 
-	mara_allocator_t* allocator = &env->options.allocator;
+	mara_allocator_t allocator = env->options.allocator;
 	for (mara_arena_chunk_t* itr = env->free_chunks; itr != NULL;) {
 		mara_arena_chunk_t* next = itr->next;
 		mara_free(allocator, itr);
 		itr = next;
 	}
 
-	mara_free(&env->options.allocator, env);
+	mara_free(allocator, env);
 }
 
 void
