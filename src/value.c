@@ -7,8 +7,8 @@ _Static_assert(sizeof(nanbox_t) == sizeof(mara_value_t), "mara_value_t cannot be
 MARA_PRIVATE const char*
 mara_value_type_name(mara_value_type_t type) {
 	switch (type) {
-		case MARA_VAL_NULL:
-			return "null";
+		case MARA_VAL_NIL:
+			return "nil";
 		case MARA_VAL_INT:
 			return "int";
 		case MARA_VAL_REAL:
@@ -43,7 +43,7 @@ mara_type_error(
 		ctx,
 		mara_str_from_literal("core/unexpected-type"),
 		"Expecting %s got %s",
-		mara_null(),
+		mara_nil(),
 		mara_value_type_name(expected),
 		mara_value_type_name(mara_value_type(value, NULL))
 	);
@@ -80,7 +80,7 @@ mara_obj_to_value(mara_obj_t* obj) {
 }
 
 bool
-mara_value_is_null(mara_value_t value) {
+mara_value_is_nil(mara_value_t value) {
 	nanbox_t nanbox = { .as_int64 = value };
 	return nanbox_is_null(nanbox);
 }
@@ -149,7 +149,7 @@ mara_value_type_t
 mara_value_type(mara_value_t value, void** tag) {
 	nanbox_t nanbox = { .as_int64 = value };
 	if (nanbox_is_null(nanbox)) {
-		return MARA_VAL_NULL;
+		return MARA_VAL_NIL;
 	} else if (nanbox_is_int(nanbox)) {
 		return MARA_VAL_INT;
 	} else if (nanbox_is_double(nanbox)) {
@@ -180,11 +180,11 @@ mara_value_type(mara_value_t value, void** tag) {
 				return MARA_VAL_MAP;
 			default:
 				mara_assert(false, "Corrupted value");
-				return MARA_VAL_NULL;
+				return MARA_VAL_NIL;
 		}
 	} else {
 		mara_assert(false, "Corrupted value");
-		return MARA_VAL_NULL;
+		return MARA_VAL_NIL;
 	}
 }
 
@@ -236,7 +236,7 @@ mara_value_to_str(mara_exec_ctx_t* ctx, mara_value_t value, mara_str_t* result) 
 			ctx,
 			mara_str_from_literal("core/unexpected-type"),
 			"Expecting %s got %s",
-			mara_null(),
+			mara_nil(),
 			"string or symbol",
 			mara_value_type_name(mara_value_type(value, NULL))
 		);
@@ -254,7 +254,7 @@ mara_value_to_ref(mara_exec_ctx_t* ctx, mara_value_t value, void* tag, void** re
 			ctx,
 			mara_str_from_literal("core/unexpected-type"),
 			"Expecting %s:%p got %s",
-			mara_null(),
+			mara_nil(),
 			"ref", tag,
 			mara_value_type_name(mara_value_type(value, NULL))
 		);
@@ -262,7 +262,7 @@ mara_value_to_ref(mara_exec_ctx_t* ctx, mara_value_t value, void* tag, void** re
 }
 
 mara_value_t
-mara_null(void) {
+mara_nil(void) {
 	return nanbox_null().as_int64;
 }
 

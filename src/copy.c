@@ -135,7 +135,7 @@ mara_deep_copy(
 				ctx,
 				mara_str_from_literal("core/not-implemented"),
 				"Not implemented",
-				mara_null()
+				mara_nil()
 			);
 	}
 }
@@ -191,7 +191,7 @@ mara_copy(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_value_t value, mara_valu
 				ctx,
 				mara_str_from_literal("core/panic"),
 				"Invalid state",
-				mara_null()
+				mara_nil()
 			);
 	}
 }

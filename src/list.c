@@ -207,14 +207,14 @@ mara_list_resize(mara_exec_ctx_t* ctx, mara_value_t list, mara_index_t new_len) 
 		return NULL;
 	} else if (new_len <= obj->capacity) {
 		for (mara_index_t i = obj->len; i < new_len; ++i) {
-			obj->elems[i] = mara_null();
+			obj->elems[i] = mara_nil();
 		}
 		obj->len = new_len;
 		return NULL;
 	} else {
 		mara_list_reserve(ctx, obj, new_len);
 		for (mara_index_t i = obj->len; i < new_len; ++i) {
-			obj->elems[i] = mara_null();
+			obj->elems[i] = mara_nil();
 		}
 		obj->len = new_len;
 		return NULL;
@@ -233,7 +233,7 @@ mara_list_foreach(mara_exec_ctx_t* ctx, mara_value_t list, mara_native_fn_t fn) 
 			mara_value_from_int(i),
 			list,
 		};
-		mara_value_t should_continue = mara_null();
+		mara_value_t should_continue = mara_nil();
 		mara_check_error(
 			fn.fn(
 				ctx,

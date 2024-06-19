@@ -133,7 +133,7 @@ typedef enum mara_zone_branch_e {
 typedef enum mara_opcode_e {
 	MARA_OP_NOP,
 
-	MARA_OP_NULL,
+	MARA_OP_NIL,
 	MARA_OP_TRUE,
 	MARA_OP_FALSE,
 
@@ -156,7 +156,7 @@ typedef enum mara_opcode_e {
 	MARA_OP_ZONE_ENTER,
 	MARA_OP_ZONE_EXIT,
 
-	MARA_OP_MAKE_CLOSURE,
+	MARA_OP_MAKE_CLOSURE,  // Should arena mask the closure
 } mara_opcode_t;
 
 // 8 bits for opcode
@@ -165,6 +165,7 @@ typedef uint32_t mara_instruction_t;
 
 typedef struct mara_function_s {
 	mara_index_t num_args;
+	mara_index_t num_captures;
 	mara_index_t stack_size;
 	mara_index_t num_instructions;
 	mara_instruction_t* instructions;
@@ -179,7 +180,7 @@ typedef struct mara_function_s {
 
 typedef struct mara_obj_closure_s {
 	mara_function_t* fn;
-	mara_value_t* captures;
+	mara_value_t captures[];
 } mara_obj_closure_t;
 
 typedef struct mara_stack_frame_s mara_stack_frame_t;
@@ -331,8 +332,8 @@ mara_opcode_to_str(mara_opcode_t opcode) {
 	switch (opcode) {
 		case MARA_OP_NOP:
 			return "NOP";
-		case MARA_OP_NULL:
-			return "NULL";
+		case MARA_OP_NIL:
+			return "NIL";
 		case MARA_OP_TRUE:
 			return "TRUE";
 		case MARA_OP_FALSE:

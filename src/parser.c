@@ -35,7 +35,7 @@ mara_parser_error(
 
 	va_list args;
 	va_start(args, range);
-	mara_error_t* result = mara_errorv(ctx, type, fmt, mara_null(), args);
+	mara_error_t* result = mara_errorv(ctx, type, fmt, mara_nil(), args);
 	va_end(args);
 	return result;
 }
@@ -138,7 +138,7 @@ mara_parse_list(
 					ctx,
 					mara_str_from_literal("core/panic"),
 					"Invalid state",
-					mara_null()
+					mara_nil()
 				);
 		}
 	}
@@ -304,7 +304,7 @@ mara_parse_token(
 				ctx,
 				mara_str_from_literal("core/panic"),
 				"Invalid state",
-				mara_null()
+				mara_nil()
 			);
 	}
 }

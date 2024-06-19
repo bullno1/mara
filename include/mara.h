@@ -106,7 +106,7 @@ typedef struct mara_env_options_s {
 } mara_env_options_t;
 
 typedef enum mara_value_type_e {
-	MARA_VAL_NULL,
+	MARA_VAL_NIL,
 	MARA_VAL_INT,
 	MARA_VAL_REAL,
 	MARA_VAL_BOOL,
@@ -163,7 +163,7 @@ mara_zone_alloc(mara_exec_ctx_t* ctx, mara_zone_t* zone, size_t size);
 // Value
 
 MARA_API bool
-mara_value_is_null(mara_value_t value);
+mara_value_is_nil(mara_value_t value);
 
 MARA_API bool
 mara_value_is_int(mara_value_t value);
@@ -217,7 +217,7 @@ MARA_API mara_error_t*
 mara_value_to_ref(mara_exec_ctx_t* ctx, mara_value_t value, void* tag, void** result);
 
 MARA_API mara_value_t
-mara_null(void);
+mara_nil(void);
 
 MARA_API mara_value_t
 mara_value_from_bool(bool value);

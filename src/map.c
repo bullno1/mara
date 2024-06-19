@@ -84,7 +84,7 @@ mara_map_len(mara_exec_ctx_t* ctx, mara_value_t map, mara_index_t* result) {
 
 mara_error_t*
 mara_map_set(mara_exec_ctx_t* ctx, mara_value_t map, mara_value_t key, mara_value_t value) {
-	if (mara_value_is_null(value)) {
+	if (mara_value_is_nil(value)) {
 		mara_value_t result;
 		return mara_map_delete(ctx, map, key, &result);
 	}
@@ -145,7 +145,7 @@ mara_map_get(mara_exec_ctx_t* ctx, mara_value_t map, mara_value_t key, mara_valu
 	if (node != NULL) {
 		*result = node->value;
 	} else {
-		*result = mara_null();
+		*result = mara_nil();
 	}
 
 	return NULL;
@@ -188,7 +188,7 @@ mara_map_foreach(mara_exec_ctx_t* ctx, mara_value_t map, mara_native_fn_t fn) {
 			itr->key,
 			map
 		};
-		mara_value_t should_continue = mara_null();
+		mara_value_t should_continue = mara_nil();
 		fn.fn(ctx, sizeof(args) / sizeof(args[0]), args, fn.userdata, &should_continue);
 
 		if (mara_value_is_false(should_continue)) {

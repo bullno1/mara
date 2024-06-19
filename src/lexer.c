@@ -69,7 +69,7 @@ mara_lexer_consume_char(mara_exec_ctx_t* ctx, mara_lexer_t* lexer) {
 				lexer,
 				mara_str_from_literal("core/syntax/element-too-long"),
 				"Element is too long",
-				mara_null()
+				mara_nil()
 			);
 		}
 
@@ -179,7 +179,7 @@ mara_lexer_continue_number(mara_exec_ctx_t* ctx, mara_lexer_t* lexer, mara_token
 					lexer,
 					mara_str_from_literal("core/syntax/bad-number"),
 					"Badly formatted number",
-					mara_null()
+					mara_nil()
 				);
 			} else {
 				dotted = true;
@@ -200,7 +200,7 @@ mara_lexer_continue_number(mara_exec_ctx_t* ctx, mara_lexer_t* lexer, mara_token
 				lexer,
 				mara_str_from_literal("core/syntax/bad-number"),
 				"Badly formatted number",
-				mara_null()
+				mara_nil()
 			);
 		}
 	}
@@ -231,7 +231,7 @@ mara_lexer_handle_string(mara_exec_ctx_t* ctx, mara_lexer_t* lexer, mara_token_t
 				lexer,
 				mara_str_from_literal("core/syntax/bad-string"),
 				"Badly formatted string",
-				mara_null()
+				mara_nil()
 			);
 		} else {
 			mara_check_error(mara_lexer_consume_char(ctx, lexer));
