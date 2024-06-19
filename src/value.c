@@ -4,35 +4,6 @@
 
 _Static_assert(sizeof(nanbox_t) == sizeof(mara_value_t), "mara_value_t cannot be nan-boxed");
 
-MARA_PRIVATE const char*
-mara_value_type_name(mara_value_type_t type) {
-	switch (type) {
-		case MARA_VAL_NIL:
-			return "nil";
-		case MARA_VAL_INT:
-			return "int";
-		case MARA_VAL_REAL:
-			return "real";
-		case MARA_VAL_BOOL:
-			return "bool";
-		case MARA_VAL_STRING:
-			return "string";
-		case MARA_VAL_SYMBOL:
-			return "symbol";
-		case MARA_VAL_REF:
-			return "ref";
-		case MARA_VAL_FUNCTION:
-			return "function";
-		case MARA_VAL_LIST:
-			return "list";
-		case MARA_VAL_MAP:
-			return "map";
-		default:
-			mara_assert(false, "Invalid type");
-			return "";
-	}
-}
-
 mara_error_t*
 mara_type_error(
 	mara_exec_ctx_t* ctx,

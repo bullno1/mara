@@ -14,6 +14,12 @@
 #define MARA_PRIVATE static inline
 #define mara_assert(cond, msg) assert((cond) && (msg))
 
+#define MARA_ZONE_ALLOC_TYPE(ctx, zone, type) \
+	mara_zone_alloc_ex((ctx), (zone), sizeof(type), _Alignof(type))
+
+#define MARA_ARENA_ALLOC_TYPE(env, arena, type) \
+	mara_arena_alloc_ex((env), (arena), sizeof(type), _Alignof(type))
+
 #if defined(__GNUC__) || defined(__clang__)
 #	define MARA_EXPECT(X) __builtin_expect(!!(X), 1)
 #else
@@ -307,6 +313,35 @@ mara_value_is_tombstone(mara_value_t value);
 void
 mara_obj_add_arena_mask(mara_obj_t* parent, mara_value_t child);
 
+MARA_PRIVATE const char*
+mara_value_type_name(mara_value_type_t type) {
+	switch (type) {
+		case MARA_VAL_NIL:
+			return "nil";
+		case MARA_VAL_INT:
+			return "int";
+		case MARA_VAL_REAL:
+			return "real";
+		case MARA_VAL_BOOL:
+			return "bool";
+		case MARA_VAL_STRING:
+			return "string";
+		case MARA_VAL_SYMBOL:
+			return "symbol";
+		case MARA_VAL_REF:
+			return "ref";
+		case MARA_VAL_FUNCTION:
+			return "function";
+		case MARA_VAL_LIST:
+			return "list";
+		case MARA_VAL_MAP:
+			return "map";
+		default:
+			mara_assert(false, "Invalid type");
+			return "";
+	}
+}
+
 // List
 
 mara_error_t*
@@ -335,7 +370,7 @@ mara_strpool_cleanup(mara_strpool_t* strpool);
 
 // VM
 
-static inline const char*
+MARA_PRIVATE const char*
 mara_opcode_to_str(mara_opcode_t opcode) {
 	switch (opcode) {
 		case MARA_OP_NOP:

@@ -28,10 +28,7 @@ mara_zone_new(mara_exec_ctx_t* ctx, mara_zone_options_t options) {
 	mara_zone_t* current_zone = ctx->current_zone;
 
 	mara_arena_snapshot_t control_snapshot = mara_arena_snapshot(ctx->env, &ctx->control_arena);
-	mara_zone_t* new_zone = mara_arena_alloc_ex(
-		ctx->env, &ctx->control_arena,
-		sizeof(mara_zone_t), _Alignof(mara_zone_t)
-	);
+	mara_zone_t* new_zone = MARA_ARENA_ALLOC_TYPE(ctx->env, &ctx->control_arena, mara_zone_t);
 	mara_assert(new_zone != NULL, "Out of memory");
 
 	// Find an arena for this new zone.
@@ -70,9 +67,8 @@ mara_zone_new(mara_exec_ctx_t* ctx, mara_zone_options_t options) {
 			// to control_snapshot.
 			// The problem is that it grabs a brand new chunk which increases
 			// peak memory usage.
-			mara_arena_t* arena = mara_arena_alloc_ex(
-				ctx->env, &ctx->control_arena,
-				sizeof(mara_arena_t), _Alignof(mara_arena_t)
+			mara_arena_t* arena = MARA_ARENA_ALLOC_TYPE(
+				ctx->env, &ctx->control_arena, mara_arena_t
 			);
 			*arena = (mara_arena_t){ 0 };
 			arena_for_zone = arena;
@@ -100,9 +96,8 @@ mara_zone_enter(mara_exec_ctx_t* ctx, mara_zone_t* zone) {
 	mara_arena_snapshot_t control_snapshot = mara_arena_snapshot(
 		ctx->env, &ctx->control_arena
 	);
-	mara_zone_bookmark_t* bookmark = mara_arena_alloc_ex(
-		ctx->env, &ctx->control_arena,
-		sizeof(mara_zone_bookmark_t), _Alignof(mara_zone_bookmark_t)
+	mara_zone_bookmark_t* bookmark = MARA_ARENA_ALLOC_TYPE(
+		ctx->env, &ctx->control_arena, mara_zone_bookmark_t
 	);
 	bookmark->previous_bookmark = ctx->current_zone_bookmark;
 	bookmark->previous_zone = ctx->current_zone;
@@ -155,9 +150,7 @@ mara_zone_cleanup(mara_exec_ctx_t* ctx, mara_zone_t* zone) {
 
 void
 mara_add_finalizer(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_callback_t callback) {
-	mara_finalizer_t* finalizer = mara_zone_alloc_ex(
-		ctx, zone, sizeof(mara_finalizer_t), _Alignof(mara_finalizer_t)
-	);
+	mara_finalizer_t* finalizer = MARA_ZONE_ALLOC_TYPE(ctx, zone, mara_finalizer_t);
 	mara_assert(finalizer != NULL, "Out of memory");
 
 	finalizer->callback = callback;
