@@ -53,7 +53,7 @@ mara_zone_new(mara_exec_ctx_t* ctx, mara_zone_options_t options) {
 		}
 
 		for (mara_index_t i = 0; i < options.num_marked_zones; ++i) {
-			arena_mask |= mara_arena_mask_of_zone(options.marked_zones[i]);
+			arena_mask |= mara_arena_mask_of_zone(ctx, options.marked_zones[i]);
 		}
 
 		mara_arena_mask_t free_mask = ~arena_mask;

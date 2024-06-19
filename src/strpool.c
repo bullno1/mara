@@ -42,7 +42,9 @@ mara_strpool_intern(mara_strpool_t* strpool, mara_str_t string) {
 		mara_strpool_node_t* new_node = &strpool->nodes[strpool->len++];
 
 		memset(new_node->children, 0, sizeof(new_node->children));
-		char* chars = mara_malloc(strpool->options.string_allocator, string.len);
+		char* chars = mara_arena_alloc(
+			strpool->options.env, strpool->options.string_arena, string.len
+		);
 		mara_assert(chars != NULL, "Out of memory");
 		memcpy(chars, string.data, string.len);
 		new_node->key = (mara_str_t){
@@ -65,10 +67,6 @@ mara_strpool_lookup(mara_strpool_t* strpool, mara_index_t id) {
 
 void
 mara_strpool_cleanup(mara_strpool_t* strpool) {
-	mara_index_t len = strpool->len;
-	for (mara_index_t i = 0; i < len; ++i) {
-		mara_free(strpool->options.string_allocator, (void*)strpool->nodes[i].key.data);
-	}
 	mara_free(strpool->options.table_allocator, strpool->nodes);
 	strpool->len = 0;
 	strpool->capacity = 0;

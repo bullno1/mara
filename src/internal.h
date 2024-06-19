@@ -92,8 +92,9 @@ typedef struct mara_strpool_node_s {
 } mara_strpool_node_t;
 
 typedef struct mara_strpool_options_s {
+	mara_env_t* env;
 	mara_allocator_t table_allocator;
-	mara_allocator_t string_allocator;
+	mara_arena_t* string_arena;
 } mara_strpool_options_t;
 
 typedef struct mara_strpool_s {
@@ -218,6 +219,7 @@ struct mara_zone_s {
 struct mara_env_s {
 	mara_env_options_t options;
 	mara_arena_chunk_t* free_chunks;
+	mara_arena_t permanent_arena;
 	mara_strpool_t symtab;
 };
 
