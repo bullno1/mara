@@ -1,5 +1,5 @@
 #include "internal.h"
-#include "vendor/xxhash.h"
+#include "xxhash.h"
 
 #define BHAMT_KEYEQ(lhs, rhs) mara_value_equal(lhs, rhs)
 #define BHAMT_IS_TOMBSTONE(value) mara_value_is_tombstone((value)->key)
@@ -8,16 +8,16 @@ MARA_PRIVATE BHAMT_HASH_TYPE
 mara_hash_value(mara_value_t value) {
 	mara_obj_t* obj = mara_value_to_obj(value);
 	if (obj == NULL) {
-		return XXH3_64bits(&value, sizeof(value));
+		return mara_XXH3_64bits(&value, sizeof(value));
 	} else {
 		if (obj->type == MARA_OBJ_TYPE_STRING) {
 			mara_str_t* str = (mara_str_t*)obj->body;
-			return XXH3_64bits(str->data, str->len);
+			return mara_XXH3_64bits(str->data, str->len);
 		} else if (obj->type == MARA_OBJ_TYPE_REF) {
 			mara_obj_ref_t* ref = (mara_obj_ref_t*)obj->body;
-			return XXH3_64bits(ref, sizeof(*ref));
+			return mara_XXH3_64bits(ref, sizeof(*ref));
 		} else {
-			return XXH3_64bits(&value, sizeof(value));
+			return mara_XXH3_64bits(&value, sizeof(value));
 		}
 	}
 }

@@ -1,5 +1,5 @@
 #include "internal.h"
-#include "vendor/xxhash.h"
+#include "xxhash.h"
 
 #define BHAMT_IS_TOMBSTONE(node) false
 #define BHAMT_KEYEQ(lhs, rhs) ((lhs) == (rhs))
@@ -22,7 +22,7 @@ mara_ptr_map_put(
 	void* key,
 	void* value
 ) {
-	BHAMT_HASH_TYPE hash = XXH3_64bits(&key, sizeof(key));
+	BHAMT_HASH_TYPE hash = mara_XXH3_64bits(&key, sizeof(key));
 	mara_ptr_map_node_t** itr;
 	mara_ptr_map_node_t* result;
 	mara_ptr_map_node_t* free_node;
@@ -39,7 +39,7 @@ mara_ptr_map_put(
 
 MARA_PRIVATE void*
 mara_ptr_map_get(mara_ptr_map_t* map, void* key) {
-	BHAMT_HASH_TYPE hash = XXH3_64bits(&key, sizeof(key));
+	BHAMT_HASH_TYPE hash = mara_XXH3_64bits(&key, sizeof(key));
 	mara_ptr_map_node_t* result;
 	BHAMT_GET(map->root, result, hash, key);
 	if (result != NULL) {

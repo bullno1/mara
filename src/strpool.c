@@ -1,5 +1,5 @@
 #include "internal.h"
-#include "vendor/xxhash.h"
+#include "xxhash.h"
 
 void
 mara_strpool_init(mara_strpool_t* strpool, mara_strpool_options_t options) {
@@ -11,7 +11,7 @@ mara_strpool_init(mara_strpool_t* strpool, mara_strpool_options_t options) {
 mara_index_t
 mara_strpool_intern(mara_strpool_t* strpool, mara_str_t string) {
 	mara_index_t index_itr = strpool->len > 0 ? 0 : -1;
-	uint64_t hash_itr = XXH3_64bits(string.data, string.len);
+	uint64_t hash_itr = mara_XXH3_64bits(string.data, string.len);
 	mara_strpool_node_t* node = NULL;
 	for (; index_itr >= 0; hash_itr >>= BHAMT_NUM_BITS) {
 		node = &strpool->nodes[index_itr];
