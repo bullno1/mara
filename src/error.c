@@ -23,7 +23,7 @@ mara_errorv(
 	mara_value_t extra,
 	va_list args
 ) {
-	char* type_str = mara_zone_alloc(ctx, &ctx->error_zone, type.len);
+	char* type_str = mara_zone_alloc_ex(ctx, &ctx->error_zone, type.len, _Alignof(char));
 	memcpy(type_str, type.data, type.len);
 
 	mara_value_t extra_copy;

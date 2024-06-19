@@ -50,7 +50,10 @@ mara_linked_list_init(mara_linked_list_t* list, mara_source_pos_t start) {
 
 MARA_PRIVATE void
 mara_linked_list_push(mara_exec_ctx_t* ctx, mara_linked_list_t* list, mara_value_t value) {
-	mara_list_node_t* node = mara_arena_alloc(ctx->env, ctx->current_zone->arena, sizeof(mara_list_node_t));
+	mara_list_node_t* node = mara_arena_alloc_ex(
+		ctx->env, ctx->current_zone->arena,
+		sizeof(mara_list_node_t), _Alignof(mara_list_node_t)
+	);
 	node->value = value;
 	node->link.next = &list->link;
 	node->link.prev = list->link.prev;
@@ -161,7 +164,10 @@ mara_parse_token(
 				mara_index_t error;
 				mara_arena_snapshot_t snapshot = mara_arena_snapshot(ctx->env, local_arena);
 				{
-					char* str = mara_arena_alloc(ctx->env, local_arena, token.lexeme.len + 1);
+					char* str = mara_arena_alloc_ex(
+						ctx->env, local_arena,
+						token.lexeme.len + 1, _Alignof(char)
+					);
 					mara_index_t len = 0;
 					for (mara_index_t i = 0; i < token.lexeme.len; ++i) {
 						if (token.lexeme.data[i] != '_') {
@@ -195,7 +201,10 @@ mara_parse_token(
 				mara_index_t error;
 				mara_arena_snapshot_t snapshot = mara_arena_snapshot(ctx->env, local_arena);
 				{
-					char* str = mara_arena_alloc(ctx->env, local_arena, token.lexeme.len + 1);
+					char* str = mara_arena_alloc_ex(
+						ctx->env, local_arena,
+						token.lexeme.len + 1, _Alignof(char)
+					);
 					mara_index_t len = 0;
 					for (mara_index_t i = 0; i < token.lexeme.len; ++i) {
 						if (token.lexeme.data[i] != '_') {
@@ -227,7 +236,9 @@ mara_parse_token(
 			{
 				mara_arena_snapshot_t snapshot = mara_arena_snapshot(ctx->env, local_arena);
 				mara_error_t* error = NULL;
-				char* str = mara_arena_alloc(ctx->env, local_arena, token.lexeme.len);
+				char* str = mara_arena_alloc_ex(
+					ctx->env, local_arena, token.lexeme.len, _Alignof(char)
+				);
 				mara_index_t len = 0;
 				for (mara_index_t i = 0; i < token.lexeme.len; ++i) {
 					char ch = token.lexeme.data[i];

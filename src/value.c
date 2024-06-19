@@ -290,7 +290,7 @@ mara_vsnprintf(mara_exec_ctx_t* ctx, mara_zone_t* zone, const char* fmt, va_list
 	int len = vsnprintf(buf, sizeof(buf), fmt, args_copy);
 	if (len < 0) { len = 0; }
 
-	char* chars = mara_zone_alloc(ctx, zone, (size_t)len);
+	char* chars = mara_zone_alloc_ex(ctx, zone, (size_t)len, _Alignof(char));
 
 	if ((size_t)len < sizeof(buf)) {
 		memcpy(chars, buf, (size_t)len);

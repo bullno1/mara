@@ -30,7 +30,9 @@ mara_ptr_map_put(
 	BHAMT_SEARCH(map->root, itr, result, free_node, hash, key);
 
 	if (result == NULL) {
-		result = *itr = mara_zone_alloc(ctx, zone, sizeof(mara_ptr_map_node_t));
+		result = *itr = mara_zone_alloc_ex(
+			ctx, zone, sizeof(mara_ptr_map_node_t), _Alignof(mara_ptr_map_node_t)
+		);
 		memset(result->children, 0, sizeof(result->children));
 		result->key = key;
 		result->value = value;

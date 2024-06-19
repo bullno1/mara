@@ -105,10 +105,10 @@ mara_map_set(mara_exec_ctx_t* ctx, mara_value_t map, mara_value_t key, mara_valu
 		if (free_node != NULL) {
 			node = free_node;
 		} else {
-			node = *itr = mara_zone_alloc(
+			node = *itr = mara_zone_alloc_ex(
 				ctx,
 				map_zone,
-				sizeof(mara_obj_map_node_t)
+				sizeof(mara_obj_map_node_t), _Alignof(mara_obj_map_node_t)
 			);
 			memset(node->children, 0, sizeof(node->children));
 			if (head != NULL) {

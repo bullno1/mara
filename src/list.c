@@ -68,7 +68,10 @@ mara_new_list(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_index_t initial_capa
 		.in_zone = true,
 	};
 	if (initial_capacity > 0) {
-		list->elems = mara_zone_alloc(ctx, zone, sizeof(mara_value_t) * initial_capacity);
+		list->elems = mara_zone_alloc_ex(
+			ctx, zone,
+			sizeof(mara_value_t) * initial_capacity, _Alignof(mara_value_t)
+		);
 	}
 
 	return mara_obj_to_value(obj);

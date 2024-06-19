@@ -160,6 +160,9 @@ mara_get_zone_of(mara_exec_ctx_t* ctx, mara_value_t value);
 MARA_API void*
 mara_zone_alloc(mara_exec_ctx_t* ctx, mara_zone_t* zone, size_t size);
 
+MARA_API void*
+mara_zone_alloc_ex(mara_exec_ctx_t* ctx, mara_zone_t* zone, size_t size, size_t alignment);
+
 // Value
 
 MARA_API bool

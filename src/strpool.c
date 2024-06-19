@@ -42,8 +42,9 @@ mara_strpool_intern(mara_strpool_t* strpool, mara_str_t string) {
 		mara_strpool_node_t* new_node = &strpool->nodes[strpool->len++];
 
 		memset(new_node->children, 0, sizeof(new_node->children));
-		char* chars = mara_arena_alloc(
-			strpool->options.env, strpool->options.string_arena, string.len
+		char* chars = mara_arena_alloc_ex(
+			strpool->options.env, strpool->options.string_arena,
+			string.len, _Alignof(char)
 		);
 		mara_assert(chars != NULL, "Out of memory");
 		memcpy(chars, string.data, string.len);
