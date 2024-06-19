@@ -1,6 +1,6 @@
 #include "internal.h"
 #include "vendor/nanbox.h"
-#include <stdio.h>
+#include "vendor/nanoprintf.h"
 
 _Static_assert(sizeof(nanbox_t) == sizeof(mara_value_t), "mara_value_t cannot be nan-boxed");
 
@@ -258,7 +258,7 @@ mara_vsnprintf(mara_exec_ctx_t* ctx, mara_zone_t* zone, const char* fmt, va_list
 	va_list args_copy;
 	va_copy(args_copy, args);
 	char buf[512];
-	int len = vsnprintf(buf, sizeof(buf), fmt, args_copy);
+	int len = npf_vsnprintf(buf, sizeof(buf), fmt, args_copy);
 	if (len < 0) { len = 0; }
 
 	char* chars = mara_zone_alloc_ex(ctx, zone, (size_t)len, _Alignof(char));
@@ -266,7 +266,7 @@ mara_vsnprintf(mara_exec_ctx_t* ctx, mara_zone_t* zone, const char* fmt, va_list
 	if ((size_t)len < sizeof(buf)) {
 		memcpy(chars, buf, (size_t)len);
 	} else {
-		vsnprintf(chars, (size_t)len, fmt, args);
+		npf_vsnprintf(chars, (size_t)len, fmt, args);
 	}
 
 	return (mara_str_t){
