@@ -1,6 +1,6 @@
 #include "internal.h"
 #include "vendor/nanbox.h"
-#include "vendor/nanoprintf.h"
+#include "nanoprintf.h"
 
 _Static_assert(sizeof(nanbox_t) == sizeof(mara_value_t), "mara_value_t cannot be nan-boxed");
 

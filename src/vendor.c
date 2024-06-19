@@ -3,4 +3,4 @@
 #include "xxhash.h"
 
 #define NANOPRINTF_IMPLEMENTATION
-#include "vendor/nanoprintf.h"
+#include "nanoprintf.h"
