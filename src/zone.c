@@ -204,3 +204,26 @@ mara_arena_mask_of_zone(mara_exec_ctx_t* ctx, mara_zone_t* zone) {
 		return 0;
 	}
 }
+
+mara_zone_snapshot_t
+mara_zone_snapshot(mara_exec_ctx_t* ctx) {
+	mara_zone_t* zone = mara_get_local_zone(ctx);
+	return (mara_zone_snapshot_t){
+		.arena_snapshot = mara_arena_snapshot(ctx->env, zone->arena),
+		.finalizers = zone->finalizers,
+	};
+}
+
+void
+mara_zone_restore(mara_exec_ctx_t* ctx, mara_zone_snapshot_t snapshot) {
+	mara_zone_t* zone = mara_get_local_zone(ctx);
+	mara_finalizer_t* finalizer = zone->finalizers;
+	while (finalizer != snapshot.finalizers) {
+		mara_finalizer_t* next = finalizer->next;
+		finalizer->callback.fn(ctx, finalizer->callback.userdata);
+		finalizer = next;
+	}
+
+	zone->finalizers = snapshot.finalizers;
+	mara_arena_restore(ctx->env, zone->arena, snapshot.arena_snapshot);
+}

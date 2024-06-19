@@ -50,8 +50,8 @@ mara_linked_list_init(mara_linked_list_t* list, mara_source_pos_t start) {
 
 MARA_PRIVATE void
 mara_linked_list_push(mara_exec_ctx_t* ctx, mara_linked_list_t* list, mara_value_t value) {
-	mara_list_node_t* node = MARA_ARENA_ALLOC_TYPE(
-		ctx->env, ctx->current_zone->arena, mara_list_node_t
+	mara_list_node_t* node = MARA_ZONE_ALLOC_TYPE(
+		ctx, mara_get_local_zone(ctx), mara_list_node_t
 	);
 	node->value = value;
 	node->link.next = &list->link;

@@ -105,6 +105,11 @@ typedef struct mara_env_options_s {
 	size_t alloc_chunk_size;
 } mara_env_options_t;
 
+typedef struct {
+	mara_index_t max_depth;
+	mara_index_t max_length;
+} mara_print_options_t;
+
 typedef enum mara_value_type_e {
 	MARA_VAL_NIL,
 	MARA_VAL_INT,
@@ -142,6 +147,22 @@ mara_exec(mara_env_t* env, mara_callback_t callback);
 
 MARA_API void
 mara_set_debug_info(mara_exec_ctx_t* ctx, mara_source_info_t debug_info);
+
+MARA_API void
+mara_print_value(
+	mara_exec_ctx_t* ctx,
+	mara_value_t value,
+	mara_print_options_t options,
+	mara_writer_t output
+);
+
+MARA_API void
+mara_print_error(
+	mara_exec_ctx_t* ctx,
+	mara_error_t* error,
+	mara_print_options_t options,
+	mara_writer_t output
+);
 
 // Zone
 

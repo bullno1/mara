@@ -117,6 +117,11 @@ typedef struct mara_list_s {
 	bool own_memory;
 } mara_list_t;
 
+typedef struct mara_zone_snapshot_s {
+	mara_arena_snapshot_t arena_snapshot;
+	mara_finalizer_t* finalizers;
+} mara_zone_snapshot_t;
+
 typedef struct mara_zone_options_s {
 	mara_index_t num_marked_zones;
 	mara_zone_t** marked_zones;
@@ -143,6 +148,7 @@ typedef enum mara_opcode_e {
 	MARA_OP_NIL,
 	MARA_OP_TRUE,
 	MARA_OP_FALSE,
+	MARA_OP_SMALL_INT,
 
 	MARA_OP_LOAD,
 	MARA_OP_POP,
@@ -169,6 +175,7 @@ typedef enum mara_opcode_e {
 // 8 bits for opcode
 // 24 bits for operands
 typedef uint32_t mara_instruction_t;
+typedef uint32_t mara_operand_t;
 
 typedef struct mara_function_s {
 	mara_index_t num_args;
@@ -176,13 +183,15 @@ typedef struct mara_function_s {
 	mara_index_t stack_size;
 	mara_index_t num_instructions;
 	mara_instruction_t* instructions;
-	mara_source_info_t* source_info;
+
+	mara_str_t filename;
+	mara_source_range_t* source_info;
 
 	mara_index_t num_constants;
 	mara_value_t* constants;
 
 	mara_index_t num_functions;
-	struct mara_function_s* functions;
+	struct mara_function_s** functions;
 } mara_function_t;
 
 typedef struct mara_obj_closure_s {
@@ -287,6 +296,12 @@ mara_add_finalizer(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_callback_t call
 mara_arena_mask_t
 mara_arena_mask_of_zone(mara_exec_ctx_t* ctx, mara_zone_t* zone);
 
+mara_zone_snapshot_t
+mara_zone_snapshot(mara_exec_ctx_t* ctx);
+
+void
+mara_zone_restore(mara_exec_ctx_t* ctx, mara_zone_snapshot_t snapshot);
+
 // Value
 
 mara_obj_t*
@@ -381,6 +396,8 @@ mara_opcode_to_str(mara_opcode_t opcode) {
 			return "TRUE";
 		case MARA_OP_FALSE:
 			return "FALSE";
+		case MARA_OP_SMALL_INT:
+			return "SMALL_INT";
 		case MARA_OP_LOAD:
 			return "LOAD";
 		case MARA_OP_POP:
