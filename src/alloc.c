@@ -6,9 +6,9 @@ mara_align_ptr(void* ptr, size_t alignment) {
 }
 
 MARA_PRIVATE void*
-mara_alloc_from_chunk(mara_arena_chunk_t* chunk, size_t size) {
+mara_alloc_from_chunk(mara_arena_chunk_t* chunk, size_t size, size_t alignment) {
 	if (chunk != NULL) {
-		char* bump_ptr = mara_align_ptr(chunk->bump_ptr, _Alignof(max_align_t));
+		char* bump_ptr = mara_align_ptr(chunk->bump_ptr, alignment);
 		char* next_bump_ptr = bump_ptr + size;
 		if (next_bump_ptr <= chunk->end) {
 			chunk->bump_ptr = next_bump_ptr;
@@ -37,8 +37,8 @@ mara_realloc(mara_allocator_t allocator, void* ptr, size_t new_size) {
 }
 
 void*
-mara_arena_alloc(mara_env_t* env, mara_arena_t* arena, size_t size) {
-	void* mem = mara_alloc_from_chunk(arena->current_chunk, size);
+mara_arena_alloc_ex(mara_env_t* env, mara_arena_t* arena, size_t size, size_t alignment) {
+	void* mem = mara_alloc_from_chunk(arena->current_chunk, size, alignment);
 	if (mem != NULL) {
 		return mem;
 	} else {
@@ -65,8 +65,13 @@ mara_arena_alloc(mara_env_t* env, mara_arena_t* arena, size_t size) {
 		new_chunk->bump_ptr = new_chunk->begin;
 		new_chunk->next = arena->current_chunk;
 		arena->current_chunk = new_chunk;
-		return mara_alloc_from_chunk(new_chunk, size);
+		return mara_alloc_from_chunk(new_chunk, size, alignment);
 	}
+}
+
+void*
+mara_arena_alloc(mara_env_t* env, mara_arena_t* arena, size_t size) {
+	return mara_arena_alloc_ex(env, arena, size, _Alignof(max_align_t));
 }
 
 mara_arena_snapshot_t

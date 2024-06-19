@@ -249,6 +249,9 @@ mara_realloc(mara_allocator_t allocator, void* ptr, size_t new_size);
 void*
 mara_arena_alloc(mara_env_t* env, mara_arena_t* arena, size_t size);
 
+void*
+mara_arena_alloc_ex(mara_env_t* env, mara_arena_t* arena, size_t size, size_t align);
+
 mara_arena_snapshot_t
 mara_arena_snapshot(mara_env_t* env, mara_arena_t* arena);
 
