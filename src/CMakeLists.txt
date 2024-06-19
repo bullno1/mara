@@ -11,6 +11,7 @@ set(SOURCES
 	"list.c"
 	"map.c"
 	"strpool.c"
+	"debug.c"
 )
 
 setup_library(mara ${MARA_STATIC} "${SOURCES}")

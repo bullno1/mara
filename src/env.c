@@ -70,8 +70,3 @@ mara_exec(mara_env_t* env, mara_callback_t callback) {
 	mara_zone_cleanup(&ctx, &ctx.error_zone);
 	mara_arena_reset(env, &ctx.control_arena);
 }
-
-void
-mara_set_debug_info(mara_exec_ctx_t* ctx, mara_source_info_t debug_info) {
-	ctx->current_zone->debug_info = debug_info;
-}

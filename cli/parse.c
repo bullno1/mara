@@ -55,11 +55,14 @@ parse(int argc, const char* argv[], mara_exec_ctx_t* ctx) {
 	);
 
 	if (error != NULL) {
-		fprintf(
-			stderr,
-			"%.*s: %.*s\n",
-			error->type.len, error->type.data,
-			error->message.len, error->message.data
+		mara_print_error(
+			ctx,
+			error,
+			(mara_print_options_t){ 0 },
+			(mara_writer_t){
+				.fn = mara_write_to_file,
+				.userdata = stderr,
+			}
 		);
 
 		exit_code = 1;
