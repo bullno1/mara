@@ -4,16 +4,6 @@
 #include <errno.h>
 #include "vendor/argparse/argparse.h"
 
-mara_index_t
-mara_read_from_file(void* buffer, mara_index_t size, void* userdata) {
-	size_t bytes_read = fread(buffer, sizeof(char), (size_t)size, userdata);
-	if (bytes_read == 0 && ferror(userdata)) {
-		return -1;
-	} else {
-		return (mara_index_t)bytes_read;
-	}
-}
-
 int
 parse(int argc, const char* argv[], mara_exec_ctx_t* ctx) {
 	const char* const usage[] = {

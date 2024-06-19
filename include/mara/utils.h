@@ -3,6 +3,7 @@
 
 #include <mara.h>
 #include <string.h>
+#include <stdio.h>
 
 #define mara_max(a, b) ((a) > (b) ? (a) : (b))
 #define mara_min(a, b) ((a) < (b) ? (a) : (b))
@@ -75,6 +76,26 @@ mara_init_str_reader(mara_str_reader_t* reader, mara_str_t str) {
 		.fn = mara_read_from_str,
 		.userdata = reader,
 	};
+}
+
+static inline mara_index_t
+mara_write_to_file(const void* buffer, mara_index_t size, void* userdata) {
+	size_t bytes_written = fwrite(buffer, sizeof(char), (size_t)size, userdata);
+	if (bytes_written == 0 && ferror(userdata)) {
+		return -1;
+	} else {
+		return (mara_index_t)bytes_written;
+	}
+}
+
+static inline mara_index_t
+mara_read_from_file(void* buffer, mara_index_t size, void* userdata) {
+	size_t bytes_read = fread(buffer, sizeof(char), (size_t)size, userdata);
+	if (bytes_read == 0 && ferror(userdata)) {
+		return -1;
+	} else {
+		return (mara_index_t)bytes_read;
+	}
 }
 
 #endif
