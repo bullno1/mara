@@ -3,7 +3,7 @@
 
 #include "internal.h"
 
-typedef struct mara_lexer_s {
+typedef struct {
 	mara_source_pos_t current_pos;
 	mara_source_pos_t capture_start_pos;
 	mara_str_t filename;
@@ -15,7 +15,7 @@ typedef struct mara_lexer_s {
 	char capture_buf[512];
 } mara_lexer_t;
 
-typedef enum mara_token_type_e {
+typedef enum {
 	MARA_TOK_SYMBOL,
 	MARA_TOK_STRING,
 	MARA_TOK_INT,
@@ -25,7 +25,7 @@ typedef enum mara_token_type_e {
 	MARA_TOK_END,
 } mara_token_type_t;
 
-typedef struct mara_token_s {
+typedef struct {
 	mara_token_type_t type;
 	mara_str_t lexeme;
 	mara_source_range_t location;

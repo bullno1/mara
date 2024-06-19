@@ -10,7 +10,7 @@ typedef struct mara_ptr_map_node_s {
 	struct mara_ptr_map_node_s* children[BHAMT_NUM_CHILDREN];
 } mara_ptr_map_node_t;
 
-typedef struct mara_ptr_map_s {
+typedef struct {
 	mara_ptr_map_node_t* root;
 } mara_ptr_map_t;
 

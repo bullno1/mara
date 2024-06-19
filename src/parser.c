@@ -8,12 +8,12 @@ typedef struct mara_list_link_s {
 	struct mara_list_link_s* prev;
 } mara_list_link_t;
 
-typedef struct mara_list_node_s {
+typedef struct {
 	mara_list_link_t link;
 	mara_value_t value;
 } mara_list_node_t;
 
-typedef struct mara_linked_list_s {
+typedef struct {
 	mara_index_t len;
 	mara_list_link_t link;
 	mara_source_range_t source_range;

@@ -36,55 +36,55 @@ typedef struct mara_zone_s mara_zone_t;
 typedef uint64_t mara_value_t;
 typedef int32_t mara_index_t;
 
-typedef struct mara_allocator_s {
+typedef struct {
 	void* (*fn)(void* ptr, size_t size, void* userdata);
 	void* userdata;
 } mara_allocator_t;
 
-typedef struct mara_reader_s {
+typedef struct {
 	mara_index_t (*fn)(void* buffer, mara_index_t size, void* userdata);
 	void* userdata;
 } mara_reader_t;
 
-typedef struct mara_writer_s {
+typedef struct {
 	mara_index_t (*fn)(const void* buffer, mara_index_t size, void* userdata);
 	void* userdata;
 } mara_writer_t;
 
-typedef struct mara_str_s {
+typedef struct {
 	mara_index_t len;
 	const char* data;
 } mara_str_t;
 
-typedef struct mara_source_pos_s {
+typedef struct {
 	mara_index_t line;
 	mara_index_t col;
 	mara_index_t byte_offset;
 } mara_source_pos_t;
 
-typedef struct mara_source_range_s {
+typedef struct {
 	mara_source_pos_t start;
 	mara_source_pos_t end;
 } mara_source_range_t;
 
-typedef struct mara_source_info_s {
+typedef struct {
 	mara_str_t filename;
 	mara_source_range_t range;
 } mara_source_info_t;
 
-typedef struct mara_stacktrace_s {
+typedef struct {
 	mara_index_t len;
 	mara_source_info_t* frames;
 } mara_stacktrace_t;
 
-typedef struct mara_error_s {
+typedef struct {
 	mara_str_t type;
 	mara_str_t message;
 	mara_value_t extra;
 	mara_stacktrace_t stacktrace;
 } mara_error_t;
 
-typedef struct mara_native_fn_s {
+typedef struct {
 	mara_error_t* (*fn)(
 		mara_exec_ctx_t* ctx,
 		mara_index_t argc,
@@ -95,12 +95,12 @@ typedef struct mara_native_fn_s {
 	void* userdata;
 } mara_native_fn_t;
 
-typedef struct mara_callback_s {
+typedef struct {
 	void (*fn)(mara_exec_ctx_t* ctx, void* userdata);
 	void* userdata;
 } mara_callback_t;
 
-typedef struct mara_env_options_s {
+typedef struct {
 	mara_allocator_t allocator;
 	size_t alloc_chunk_size;
 } mara_env_options_t;
@@ -110,7 +110,7 @@ typedef struct {
 	mara_index_t max_length;
 } mara_print_options_t;
 
-typedef enum mara_value_type_e {
+typedef enum {
 	MARA_VAL_NIL,
 	MARA_VAL_INT,
 	MARA_VAL_REAL,
@@ -123,7 +123,7 @@ typedef enum mara_value_type_e {
 	MARA_VAL_MAP,
 } mara_value_type_t;
 
-typedef struct mara_compile_options_s {
+typedef struct {
 	bool as_module;
 	bool strip_debug_info;
 } mara_compile_options_t;

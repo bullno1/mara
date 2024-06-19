@@ -42,12 +42,12 @@ typedef struct mara_arena_chunk_s {
 	char begin[];
 } mara_arena_chunk_t;
 
-typedef struct mara_arena_snapshot_s {
+typedef struct {
 	mara_arena_chunk_t* chunk;
 	char* bump_ptr;
 } mara_arena_snapshot_t;
 
-typedef struct mara_arena_s {
+typedef struct {
 	mara_arena_chunk_t* current_chunk;
 } mara_arena_t;
 
@@ -60,19 +60,19 @@ typedef enum mara_obj_type_e {
 	MARA_OBJ_TYPE_NATIVE_FN,
 } mara_obj_type_t;
 
-typedef struct mara_obj_s {
+typedef struct {
 	mara_obj_type_t type;
 	mara_arena_mask_t arena_mask;
 	mara_zone_t* zone;
 	_Alignas(max_align_t) char body[];
 } mara_obj_t;
 
-typedef struct mara_obj_ref_s {
+typedef struct {
 	void* tag;
 	void* value;
 } mara_obj_ref_t;
 
-typedef struct mara_obj_list_s {
+typedef struct {
 	bool in_zone;
 	mara_index_t len;
 	mara_index_t capacity;
@@ -87,42 +87,42 @@ typedef struct mara_obj_map_node_s {
 	struct mara_obj_map_node_s* next;
 } mara_obj_map_node_t;
 
-typedef struct mara_obj_map_s {
+typedef struct {
 	mara_index_t len;
 	mara_obj_map_node_t* root;
 } mara_obj_map_t;
 
-typedef struct mara_strpool_node_s {
+typedef struct {
 	mara_str_t key;
 	mara_index_t children[BHAMT_NUM_CHILDREN];
 } mara_strpool_node_t;
 
-typedef struct mara_strpool_options_s {
+typedef struct {
 	mara_env_t* env;
 	mara_allocator_t table_allocator;
 	mara_arena_t* string_arena;
 } mara_strpool_options_t;
 
-typedef struct mara_strpool_s {
+typedef struct {
 	mara_strpool_options_t options;
 	mara_index_t capacity;
 	mara_index_t len;
 	mara_strpool_node_t* nodes;
 } mara_strpool_t;
 
-typedef struct mara_list_s {
+typedef struct {
 	mara_index_t capacity;
 	mara_index_t len;
 	mara_value_t* elems;
 	bool own_memory;
 } mara_list_t;
 
-typedef struct mara_zone_snapshot_s {
+typedef struct {
 	mara_arena_snapshot_t arena_snapshot;
 	mara_finalizer_t* finalizers;
 } mara_zone_snapshot_t;
 
-typedef struct mara_zone_options_s {
+typedef struct {
 	mara_index_t num_marked_zones;
 	mara_zone_t** marked_zones;
 	mara_index_t argc;
