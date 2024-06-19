@@ -32,6 +32,7 @@
 
 typedef struct mara_env_s mara_env_t;
 typedef struct mara_exec_ctx_s mara_exec_ctx_t;
+typedef struct mara_zone_s mara_zone_t;
 typedef uint64_t mara_value_t;
 typedef int32_t mara_index_t;
 
@@ -117,8 +118,6 @@ typedef enum mara_value_type_e {
 	MARA_VAL_MAP,
 } mara_value_type_t;
 
-typedef struct mara_zone_s mara_zone_t;
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -138,9 +137,6 @@ mara_exec(mara_env_t* env, mara_callback_t callback);
 
 MARA_API void
 mara_set_debug_info(mara_exec_ctx_t* ctx, mara_source_info_t debug_info);
-
-MARA_API mara_source_info_t
-mara_get_debug_info(mara_exec_ctx_t* ctx, mara_value_t value);
 
 // Zone
 

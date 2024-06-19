@@ -20,6 +20,8 @@
 #	define MARA_EXPECT(X) (X)
 #endif
 
+// Common types
+
 typedef MARA_ARENA_MASK_TYPE mara_arena_mask_t;
 
 typedef struct mara_finalizer_s {
@@ -120,6 +122,90 @@ typedef enum mara_zone_branch_e {
 	MARA_ZONE_BRANCH_ERROR,
 } mara_zone_branch_t;
 
+// VM types
+
+typedef enum mara_opcode_e {
+	MARA_OP_NOP,
+
+	MARA_OP_NULL,
+	MARA_OP_TRUE,
+	MARA_OP_FALSE,
+
+	MARA_OP_LOAD,
+	MARA_OP_POP,
+
+	MARA_OP_SET_LOCAL,
+	MARA_OP_GET_LOCAL,
+	MARA_OP_SET_ARG,
+	MARA_OP_GET_ARG,
+	MARA_OP_SET_CAPTURE,
+	MARA_OP_GET_CAPTURE,
+
+	MARA_OP_CALL,
+	MARA_OP_RETURN,
+	MARA_OP_TAIL_CALL,
+	MARA_OP_JUMP,
+	MARA_OP_JUMP_IF_FALSE,
+
+	MARA_OP_ZONE_ENTER,
+	MARA_OP_ZONE_EXIT,
+
+	MARA_OP_MAKE_CLOSURE,
+} mara_opcode_t;
+
+typedef union mara_instruction_u {
+	struct {
+		unsigned opcode: 8;
+		unsigned operands: 24;
+	};
+	uint32_t encoded;
+} mara_instruction_t;
+
+_Static_assert(
+	sizeof(mara_instruction_t) == sizeof(uint32_t),
+	"Instruction is bigger than 32-bit"
+);
+
+typedef struct mara_function_s {
+	mara_index_t num_args;
+	mara_index_t stack_size;
+	mara_index_t num_instructions;
+	mara_instruction_t* instructions;
+	mara_source_info_t* source_info;
+
+	mara_index_t num_constants;
+	mara_value_t* constants;
+
+	mara_index_t num_functions;
+	struct mara_function_s* functions;
+} mara_function_t;
+
+typedef struct mara_obj_closure_s {
+	mara_function_t* fn;
+	mara_value_t* captures;
+} mara_obj_closure_t;
+
+typedef struct mara_stack_frame_s mara_stack_frame_t;
+
+typedef struct mara_vm_state_s {
+	mara_stack_frame_t* fp;
+	mara_instruction_t* ip;
+	mara_value_t* sp;
+	mara_value_t* bp;
+} mara_vm_state_t;
+
+struct mara_stack_frame_s {
+	mara_obj_closure_t* closure;
+
+	mara_source_info_t* source_info;
+	mara_zone_bookmark_t* zone_bookmark;
+	mara_vm_state_t saved_state;
+
+	mara_value_t stack[];
+};
+
+// Public types
+
 struct mara_zone_s {
 	mara_index_t level;
 	mara_index_t ref_count;
@@ -145,6 +231,8 @@ struct mara_exec_ctx_s {
 	mara_error_t last_error;
 	mara_zone_t error_zone;
 	mara_arena_t arenas[MARA_NUM_ARENAS];
+
+	mara_vm_state_t vm_state;
 };
 
 // Malloc
@@ -241,5 +329,55 @@ void
 mara_strpool_cleanup(mara_allocator_t* allocator, mara_strpool_t* strpool);
 
 // Debug
+
+// VM
+
+static inline const char*
+mara_opcode_to_str(mara_opcode_t opcode) {
+	switch (opcode) {
+		case MARA_OP_NOP:
+			return "NOP";
+		case MARA_OP_NULL:
+			return "NULL";
+		case MARA_OP_TRUE:
+			return "TRUE";
+		case MARA_OP_FALSE:
+			return "FALSE";
+		case MARA_OP_LOAD:
+			return "LOAD";
+		case MARA_OP_POP:
+			return "POP";
+		case MARA_OP_SET_LOCAL:
+			return "SET_LOCAL";
+		case MARA_OP_GET_LOCAL:
+			return "GET_LOCAL";
+		case MARA_OP_SET_ARG:
+			return "SET_ARG";
+		case MARA_OP_GET_ARG:
+			return "GET_ARG";
+		case MARA_OP_SET_CAPTURE:
+			return "SET_CAPTURE";
+		case MARA_OP_GET_CAPTURE:
+			return "GET_CAPTURE";
+		case MARA_OP_CALL:
+			return "CALL";
+		case MARA_OP_RETURN:
+			return "RETURN";
+		case MARA_OP_TAIL_CALL:
+			return "TAIL_CALL";
+		case MARA_OP_JUMP:
+			return "JUMP";
+		case MARA_OP_JUMP_IF_FALSE:
+			return "JUMP_IF_FALSE";
+		case MARA_OP_ZONE_ENTER:
+			return "ZONE_ENTER";
+		case MARA_OP_ZONE_EXIT:
+			return "ZONE_EXIT";
+		case MARA_OP_MAKE_CLOSURE:
+			return "MAKE_CLOSURE";
+	}
+
+	return NULL;
+}
 
 #endif

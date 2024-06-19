@@ -142,11 +142,9 @@ mara_deep_copy(
 
 MARA_PRIVATE mara_error_t*
 mara_start_deep_copy(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_value_t value, mara_value_t* result) {
-	// TODO: Implement deep copy policies:
-	//
-	// * Allow
-	// * Warn
-	// * Forbid
+	// TODO: Adjust copy policy to just ban it.
+	// Copy must be made explicitly.
+	// Encourage constructing objects in the correct zone in the first place.
 
 	// value is not included because we are not modifying it
 	mara_zone_enter_new(ctx, (mara_zone_options_t){
