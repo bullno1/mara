@@ -155,9 +155,6 @@ mara_get_zone_of(mara_exec_ctx_t* ctx, mara_value_t value);
 MARA_API void*
 mara_zone_alloc(mara_exec_ctx_t* ctx, mara_zone_t* zone, size_t size);
 
-MARA_API void
-mara_defer(mara_exec_ctx_t* ctx, mara_callback_t callback);
-
 // Value
 
 MARA_API bool

@@ -158,11 +158,6 @@ mara_add_finalizer(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_callback_t call
 	zone->finalizers = finalizer;
 }
 
-void
-mara_defer(mara_exec_ctx_t* ctx, mara_callback_t callback) {
-	mara_add_finalizer(ctx, ctx->current_zone, callback);
-}
-
 void*
 mara_zone_alloc(mara_exec_ctx_t* ctx, mara_zone_t* zone, size_t size) {
 	return mara_arena_alloc(ctx->env, zone->arena, size);
