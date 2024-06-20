@@ -74,14 +74,14 @@ typedef struct {
 
 typedef struct {
 	mara_index_t len;
-	mara_source_info_t* frames;
+	mara_source_info_t frames[];
 } mara_stacktrace_t;
 
 typedef struct {
 	mara_str_t type;
 	mara_str_t message;
 	mara_value_t extra;
-	mara_stacktrace_t stacktrace;
+	mara_stacktrace_t* stacktrace;
 } mara_error_t;
 
 typedef struct {

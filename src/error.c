@@ -36,6 +36,21 @@ mara_errorv(
 		.message = mara_vsnprintf(ctx, &ctx->error_zone, fmt, args),
 		.extra = extra_copy,
 	};
+	if (
+		ctx->vm_state.fp == NULL
+		&& ctx->current_zone->debug_info.filename.data != NULL
+	) {
+		mara_stacktrace_t* stacktrace = mara_zone_alloc_ex(
+			ctx,
+			&ctx->error_zone,
+			sizeof(mara_stacktrace_t) + sizeof(mara_source_info_t),
+			sizeof(mara_stacktrace_t)
+		);
+		stacktrace->len = 1;
+		stacktrace->frames[0] = ctx->current_zone->debug_info;
+
+		ctx->last_error.stacktrace = stacktrace;
+	}
 
 	return &ctx->last_error;
 }
