@@ -71,4 +71,5 @@ mara_end(mara_exec_ctx_t* ctx) {
 
 	mara_zone_cleanup(ctx, &ctx->error_zone);
 	mara_arena_reset(ctx->env, &ctx->control_arena);
+	mara_arena_reset(ctx->env, &ctx->debug_info_arena);
 }

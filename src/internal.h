@@ -10,6 +10,7 @@
 
 #define MARA_ARENA_MASK_TYPE uint8_t
 #define MARA_NUM_ARENAS (sizeof(MARA_ARENA_MASK_TYPE) * CHAR_BIT)
+#define MARA_DEBUG_INFO_SELF ((mara_index_t)-1)
 
 #define MARA_PRIVATE static inline
 #define mara_assert(cond, msg) assert((cond) && (msg))
@@ -98,20 +99,29 @@ typedef struct {
 } mara_obj_map_t;
 
 typedef struct {
-	mara_value_t container;
-	mara_value_t index;
+	mara_obj_t* container;
+	mara_index_t index;
 } mara_debug_info_key_t;
 
-typedef struct mara_debug_info_map_node_s {
+typedef struct mara_debug_info_node_s {
 	mara_debug_info_key_t key;
-	struct mara_obj_map_node_s* children[BHAMT_NUM_CHILDREN];
+	struct mara_debug_info_node_s* children[BHAMT_NUM_CHILDREN];
 
 	mara_source_info_t debug_info;
-} mara_debug_info_map_node_t;
+} mara_debug_info_node_t;
 
 typedef struct {
-	mara_debug_info_map_node_t* root;
+	mara_debug_info_node_t* root;
 } mara_debug_info_map_t;
+
+typedef struct mara_strpool_node_s {
+	mara_str_t key;
+	struct mara_strpool_node_s* children[BHAMT_NUM_CHILDREN];
+} mara_strpool_node_t;
+
+typedef struct {
+	mara_strpool_node_t* root;
+} mara_strpool_t;
 
 typedef struct {
 	mara_str_t key;
@@ -257,10 +267,15 @@ struct mara_exec_ctx_s {
 	mara_zone_t* current_zone;
 	mara_zone_bookmark_t* current_zone_bookmark;
 	mara_arena_t control_arena;
+	mara_arena_t arenas[MARA_NUM_ARENAS];
+
 	mara_arena_t error_arena;
 	mara_error_t last_error;
 	mara_zone_t error_zone;
-	mara_arena_t arenas[MARA_NUM_ARENAS];
+
+	mara_arena_t debug_info_arena;
+	mara_strpool_t debug_info_strpool;
+	mara_debug_info_map_t debug_info_map;
 
 	mara_vm_state_t vm_state;
 };
@@ -401,8 +416,8 @@ mara_symtab_cleanup(mara_env_t* env, mara_symtab_t* symtab);
 void
 mara_put_debug_info(
 	mara_exec_ctx_t* ctx,
-	mara_value_t container,
-	mara_value_t index,
+	mara_obj_t* container,
+	mara_index_t index,
 	mara_source_info_t debug_info
 );
 
@@ -411,6 +426,14 @@ mara_get_debug_info(
 	mara_exec_ctx_t* ctx,
 	mara_value_t container,
 	mara_value_t index
+);
+
+mara_str_t
+mara_strpool_intern(
+	mara_env_t* env,
+	mara_arena_t* arena,
+	mara_strpool_t* strpool,
+	mara_str_t str
 );
 
 // VM
