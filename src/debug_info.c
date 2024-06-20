@@ -45,6 +45,8 @@ mara_put_debug_info(
 
 const mara_source_info_t*
 mara_get_debug_info(mara_exec_ctx_t* ctx, mara_debug_info_key_t key) {
+	if (mara_value_is_nil(key.container)) { return NULL; }
+
 	mara_debug_info_node_t* node;
 	BHAMT_HASH_TYPE hash = mara_XXH3_64bits(&key, sizeof(key));
 	BHAMT_GET(ctx->debug_info_map.root, node, hash, key);

@@ -172,22 +172,18 @@ mara_do_print_value(
 		mara_print_indented(output,options.indent, "(ref ...)");
 	}
 
-	if (!mara_value_is_nil(debug_key.container)) {
-		const mara_source_info_t* debug_info = mara_get_debug_info(ctx, debug_key);
-		if (debug_info != NULL) {
-			mara_fprintf(
-				output, " ; @%.*s:%d:%d:%d - %d:%d:%d\n",
-				debug_info->filename.len, debug_info->filename.data,
-				debug_info->range.start.line,
-				debug_info->range.start.col,
-				debug_info->range.start.byte_offset,
-				debug_info->range.end.line,
-				debug_info->range.end.col,
-				debug_info->range.end.byte_offset
-			);
-		} else {
-			mara_putc('\n', &output);
-		}
+	const mara_source_info_t* debug_info = mara_get_debug_info(ctx, debug_key);
+	if (debug_info != NULL) {
+		mara_fprintf(
+			output, " ; @%.*s:%d:%d:%d - %d:%d:%d\n",
+			debug_info->filename.len, debug_info->filename.data,
+			debug_info->range.start.line,
+			debug_info->range.start.col,
+			debug_info->range.start.byte_offset,
+			debug_info->range.end.line,
+			debug_info->range.end.col,
+			debug_info->range.end.byte_offset
+		);
 	} else {
 		mara_putc('\n', &output);
 	}
