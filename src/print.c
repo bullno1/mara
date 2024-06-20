@@ -82,7 +82,9 @@ mara_do_print_value(
 		mara_printline_indented(output,options.indent, "%f", result);
 	} else if (mara_value_is_list(value)) {
 		mara_obj_list_t* list;
-		mara_assert(mara_unbox_list(ctx, value, &list) == NULL, "Could not unbox list");
+		mara_error_t* error = mara_unbox_list(ctx, value, &list);
+		(void)error;
+		mara_assert(error == NULL, "Could not unbox list");
 		if (options.max_depth <= 0) {
 			mara_printline_indented(
 				output, options.indent,
@@ -114,7 +116,9 @@ mara_do_print_value(
 		}
 	} else if (mara_value_is_map(value)) {
 		mara_obj_map_t* map;
-		mara_assert(mara_unbox_map(ctx, value, &map) == NULL, "Could not unbox map");
+		mara_error_t* error = mara_unbox_map(ctx, value, &map);
+		(void)error;
+		mara_assert(error == NULL, "Could not unbox map");
 		if (options.max_depth <= 0) {
 			mara_printline_indented(
 				output, options.indent,
