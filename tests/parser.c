@@ -7,15 +7,15 @@ static struct {
 	mara_env_t* env;
 } fixture;
 
-TEST_SETUP(lexer) {
+TEST_SETUP(parser) {
 	fixture.env = mara_create_env((mara_env_options_t){ 0 });
 }
 
-TEST_TEARDOWN(lexer) {
+TEST_TEARDOWN(parser) {
 	mara_destroy_env(fixture.env);
 }
 
-MARA_TEST(lexer, basic) {
+MARA_TEST(parser, basic) {
 	mara_str_t input = mara_str_from_literal(
 		"test 1.2 ( -3_000 \"str\\n\" ) \n"
 		" \"Hello\\t\"\r\n"

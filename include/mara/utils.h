@@ -46,7 +46,8 @@ mara_str_from_cstr(const char* cstr) {
 
 static inline bool
 mara_str_equal(mara_str_t lhs, mara_str_t rhs) {
-	return memcmp(lhs.data, rhs.data, mara_min(lhs.len, rhs.len)) == 0;
+	return lhs.len == rhs.len
+		&& memcmp(lhs.data, rhs.data, mara_min(lhs.len, rhs.len)) == 0;
 }
 
 static inline mara_index_t

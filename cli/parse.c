@@ -69,6 +69,16 @@ parse(int argc, const char* argv[], mara_exec_ctx_t* ctx) {
 		goto end;
 	}
 
+	mara_print_value(
+		ctx,
+		result,
+		(mara_print_options_t){ 0 },
+		(mara_writer_t){
+			.fn = mara_write_to_file,
+			.userdata = stdout,
+		}
+	);
+
 end:
 	if (input != stdin) {
 		fclose(input);

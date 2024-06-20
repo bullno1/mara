@@ -108,6 +108,7 @@ typedef struct {
 typedef struct {
 	mara_index_t max_depth;
 	mara_index_t max_length;
+	mara_index_t indent;
 } mara_print_options_t;
 
 typedef enum {
