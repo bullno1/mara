@@ -99,7 +99,7 @@ typedef struct {
 } mara_obj_map_t;
 
 typedef struct {
-	mara_obj_t* container;
+	mara_value_t container;
 	mara_index_t index;
 } mara_debug_info_key_t;
 
@@ -413,20 +413,18 @@ mara_symtab_cleanup(mara_env_t* env, mara_symtab_t* symtab);
 
 // Debug
 
+mara_debug_info_key_t
+mara_make_debug_info_key(mara_value_t container, mara_index_t index);
+
 void
 mara_put_debug_info(
 	mara_exec_ctx_t* ctx,
-	mara_obj_t* container,
-	mara_index_t index,
+	mara_debug_info_key_t key,
 	mara_source_info_t debug_info
 );
 
 const mara_source_info_t*
-mara_get_debug_info(
-	mara_exec_ctx_t* ctx,
-	mara_obj_t* container,
-	mara_index_t index
-);
+mara_get_debug_info(mara_exec_ctx_t* ctx, mara_debug_info_key_t key);
 
 mara_str_t
 mara_strpool_intern(

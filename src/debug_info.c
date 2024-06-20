@@ -18,8 +18,7 @@ mara_set_debug_info(mara_exec_ctx_t* ctx, mara_source_info_t debug_info) {
 void
 mara_put_debug_info(
 	mara_exec_ctx_t* ctx,
-	mara_obj_t* container,
-	mara_index_t index,
+	mara_debug_info_key_t key,
 	mara_source_info_t debug_info
 ) {
 	debug_info.filename = mara_strpool_intern(
@@ -28,14 +27,6 @@ mara_put_debug_info(
 		&ctx->debug_info_strpool,
 		debug_info.filename
 	);
-
-	mara_debug_info_key_t key;
-	// It is not clear whether all compilers zero padding bytes when using
-	// initializer.
-	// This struct is going to be hashed so just memset it.
-	memset(&key, 0, sizeof(mara_debug_info_key_t));
-	key.container = container;
-	key.index = index;
 
 	mara_debug_info_node_t** itr;
 	mara_debug_info_node_t* free_node;
@@ -53,19 +44,21 @@ mara_put_debug_info(
 }
 
 const mara_source_info_t*
-mara_get_debug_info(
-	mara_exec_ctx_t* ctx,
-	mara_obj_t* container,
-	mara_index_t index
-) {
-	mara_debug_info_key_t key;
-	memset(&key, 0, sizeof(mara_debug_info_key_t));
-	key.container = container;
-	key.index = index;
-
+mara_get_debug_info(mara_exec_ctx_t* ctx, mara_debug_info_key_t key) {
 	mara_debug_info_node_t* node;
 	BHAMT_HASH_TYPE hash = mara_XXH3_64bits(&key, sizeof(key));
 	BHAMT_GET(ctx->debug_info_map.root, node, hash, key);
 
 	return node != NULL ? &node->debug_info : NULL;
+}
+
+mara_debug_info_key_t
+mara_make_debug_info_key(mara_value_t container, mara_index_t index) {
+	// Padding bytes might not be zeroed when using initializer
+	mara_debug_info_key_t debug_key;
+	memset(&debug_key, 0, sizeof(debug_key));
+	debug_key.container = container;
+	debug_key.index = index;
+
+	return debug_key;
 }

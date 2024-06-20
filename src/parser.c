@@ -81,11 +81,9 @@ mara_linked_list_flatten(
 		.range = tmp_list->source_range,
 	});
 	mara_value_t list = mara_new_list(ctx, zone, tmp_list->len);
-	mara_obj_t* list_obj = mara_value_to_obj(list);
 	mara_put_debug_info(
 		ctx,
-		list_obj,
-		MARA_DEBUG_INFO_SELF,
+		mara_make_debug_info_key(list, MARA_DEBUG_INFO_SELF),
 		(mara_source_info_t){
 			.filename = filename,
 			.range = tmp_list->source_range
@@ -101,10 +99,14 @@ mara_linked_list_flatten(
 		mara_check_error(mara_list_push(ctx, list, node->value));
 		// TODO: this can be sped up
 		// We push the same filename repeatedly
-		mara_put_debug_info(ctx, list_obj, list_index, (mara_source_info_t){
+		mara_put_debug_info(
+			ctx,
+			mara_make_debug_info_key(list, list_index),
+			(mara_source_info_t){
 			.filename = filename,
-			.range = node->source_range,
-		});
+				.range = node->source_range,
+			}
+		);
 	}
 	*result = list;
 	return NULL;

@@ -84,8 +84,7 @@ mara_do_print_value(
 		mara_error_t* error = mara_unbox_list(ctx, value, &list);
 		(void)error;
 		mara_assert(error == NULL, "Could not unbox list");
-		debug_key.container = mara_container_of(list, mara_obj_t, body);
-		debug_key.index = MARA_DEBUG_INFO_SELF;
+		debug_key = mara_make_debug_info_key(value, MARA_DEBUG_INFO_SELF);
 
 		if (options.max_depth <= 0) {
 			mara_print_indented(
@@ -102,10 +101,7 @@ mara_do_print_value(
 
 				mara_index_t print_len = mara_min(list->len, options.max_length);
 				for (mara_index_t i = 0; i < print_len; ++i) {
-					mara_debug_info_key_t child_key;
-					memset(&child_key, 0, sizeof(child_key));
-					child_key.container = debug_key.container;
-					child_key.index = i;
+					mara_debug_info_key_t child_key = mara_make_debug_info_key(value, i);
 					mara_do_print_value(
 						ctx, list->elems[i], children_options, child_key, output
 					);
@@ -137,7 +133,9 @@ mara_do_print_value(
 			mara_print_indented(output, options.indent, "(map\n");
 			{
 				mara_print_options_t children_options = options;
-				mara_debug_info_key_t children_key = { 0 };
+				mara_debug_info_key_t children_key = mara_make_debug_info_key(
+					mara_nil(), 0
+				);
 				children_options.max_depth -= 1;
 				children_options.indent += 2;
 
@@ -174,10 +172,8 @@ mara_do_print_value(
 		mara_print_indented(output,options.indent, "(ref ...)");
 	}
 
-	if (debug_key.container != NULL) {
-		const mara_source_info_t* debug_info = mara_get_debug_info(
-			ctx, debug_key.container, debug_key.index
-		);
+	if (!mara_value_is_nil(debug_key.container)) {
+		const mara_source_info_t* debug_info = mara_get_debug_info(ctx, debug_key);
 		if (debug_info != NULL) {
 			mara_fprintf(
 				output, " ; @%.*s:%d:%d:%d - %d:%d:%d\n",
@@ -206,9 +202,8 @@ mara_print_value(
 ) {
 	mara_set_default_option(&options.max_length, 10);
 	mara_set_default_option(&options.max_depth, 4);
-	mara_debug_info_key_t debug_key;
-	memset(&debug_key, 0, sizeof(debug_key));
-	mara_do_print_value(ctx, value, options, debug_key, output);
+
+	mara_do_print_value(ctx, value, options, mara_make_debug_info_key(mara_nil(), 0), output);
 }
 
 void
