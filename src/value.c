@@ -282,7 +282,7 @@ mara_new_str(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_str_t value) {
 
 	mara_str_t* str = (mara_str_t*)obj->body;
 	str->len = value.len;
-	char* chars = (char*)obj + sizeof(mara_str_t);
+	char* chars = (char*)str + sizeof(mara_str_t);
 	str->data = chars;
 	memcpy(chars, value.data, value.len);
 
