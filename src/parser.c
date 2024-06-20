@@ -11,6 +11,7 @@ typedef struct mara_list_link_s {
 typedef struct {
 	mara_list_link_t link;
 	mara_value_t value;
+	mara_source_range_t source_range;
 } mara_list_node_t;
 
 typedef struct {
@@ -49,11 +50,17 @@ mara_linked_list_init(mara_linked_list_t* list, mara_source_pos_t start) {
 }
 
 MARA_PRIVATE void
-mara_linked_list_push(mara_exec_ctx_t* ctx, mara_linked_list_t* list, mara_value_t value) {
+mara_linked_list_push(
+	mara_exec_ctx_t* ctx,
+	mara_linked_list_t* list,
+	mara_value_t value,
+	mara_source_range_t source_range
+) {
 	mara_list_node_t* node = MARA_ZONE_ALLOC_TYPE(
 		ctx, mara_get_local_zone(ctx), mara_list_node_t
 	);
 	node->value = value;
+	node->source_range = source_range;
 	node->link.next = &list->link;
 	node->link.prev = list->link.prev;
 	list->link.prev->next = &node->link;
@@ -74,13 +81,23 @@ mara_linked_list_flatten(
 		.range = tmp_list->source_range,
 	});
 	mara_value_t list = mara_new_list(ctx, zone, tmp_list->len);
+	mara_put_debug_info(ctx, list, mara_nil(), (mara_source_info_t){
+		.filename = filename,
+		.range = tmp_list->source_range
+	});
+	mara_index_t list_index = 0;
 	for (
 		mara_list_link_t* itr = tmp_list->link.next;
 		itr != &tmp_list->link;
-		itr = itr->next
+		itr = itr->next, ++list_index
 	) {
 		mara_list_node_t* node = mara_container_of(itr, mara_list_node_t, link);
 		mara_check_error(mara_list_push(ctx, list, node->value));
+		// TODO: this can be sped up
+		// We push the same filename repeatedly
+		mara_put_debug_info(ctx, list, mara_value_from_int(list_index), (mara_source_info_t){
+			.filename = filename,
+		});
 	}
 	*result = list;
 	return NULL;
@@ -128,7 +145,7 @@ mara_parse_list(
 					mara_error_t* error = mara_parse_token(ctx, zone, lexer, token, &elem);
 					if (error != NULL) { return error; }
 
-					mara_linked_list_push(ctx, list, elem);
+					mara_linked_list_push(ctx, list, elem, token.location);
 				}
 				break;
 			case MARA_TOK_RIGHT_PAREN:
@@ -348,7 +365,7 @@ mara_do_parse_all(
 		error = mara_parse_token(ctx, zone, &lexer, token, &elem);
 		if (error != NULL) { break; }
 
-		mara_linked_list_push(ctx, &tmp_list, elem);
+		mara_linked_list_push(ctx, &tmp_list, elem, token.location);
 	}
 
 	if (error == NULL) {

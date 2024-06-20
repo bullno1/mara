@@ -179,7 +179,10 @@ mara_lexer_continue_number(mara_exec_ctx_t* ctx, mara_lexer_t* lexer, mara_token
 					lexer,
 					mara_str_from_literal("core/syntax/bad-number"),
 					"Badly formatted number",
-					mara_nil()
+					mara_new_str(ctx, mara_get_error_zone(ctx), (mara_str_t){
+						.data = lexer->capture_buf,
+						.len = lexer->capture_len,
+					})
 				);
 			} else {
 				dotted = true;

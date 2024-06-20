@@ -201,7 +201,7 @@ mara_value_to_str(mara_exec_ctx_t* ctx, mara_value_t value, mara_str_t* result) 
 		return NULL;
 	} else if (mara_value_is_symbol(value)) {
 		nanbox_t nanbox = { .as_int64 = value };
-		*result = mara_strpool_lookup(&ctx->env->symtab, nanbox.as_bits.payload);
+		*result = mara_symtab_lookup(&ctx->env->symtab, nanbox.as_bits.payload);
 		return NULL;
 	} else {
 		return mara_errorf(
@@ -349,7 +349,7 @@ mara_value_is_false(mara_value_t value) {
 mara_value_t
 mara_new_symbol(mara_exec_ctx_t* ctx, mara_str_t name) {
 	mara_env_t* env = ctx->env;
-	mara_index_t id = mara_strpool_intern(&env->symtab, name);
+	mara_index_t id = mara_symtab_intern(ctx->env, &env->symtab, name);
 
 	nanbox_t nanbox = {
 		.as_bits = { .payload = id, .tag = NANBOX_MIN_AUX_TAG },

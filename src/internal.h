@@ -98,22 +98,31 @@ typedef struct {
 } mara_obj_map_t;
 
 typedef struct {
+	mara_value_t container;
+	mara_value_t index;
+} mara_debug_info_key_t;
+
+typedef struct mara_debug_info_map_node_s {
+	mara_debug_info_key_t key;
+	struct mara_obj_map_node_s* children[BHAMT_NUM_CHILDREN];
+
+	mara_source_info_t debug_info;
+} mara_debug_info_map_node_t;
+
+typedef struct {
+	mara_debug_info_map_node_t* root;
+} mara_debug_info_map_t;
+
+typedef struct {
 	mara_str_t key;
 	mara_index_t children[BHAMT_NUM_CHILDREN];
-} mara_strpool_node_t;
+} mara_symtab_node_t;
 
 typedef struct {
-	mara_env_t* env;
-	mara_allocator_t table_allocator;
-	mara_arena_t* string_arena;
-} mara_strpool_options_t;
-
-typedef struct {
-	mara_strpool_options_t options;
 	mara_index_t capacity;
 	mara_index_t len;
-	mara_strpool_node_t* nodes;
-} mara_strpool_t;
+	mara_symtab_node_t* nodes;
+} mara_symtab_t;
 
 typedef struct {
 	mara_index_t capacity;
@@ -240,7 +249,7 @@ struct mara_env_s {
 	mara_env_options_t options;
 	mara_arena_chunk_t* free_chunks;
 	mara_arena_t permanent_arena;
-	mara_strpool_t symtab;
+	mara_symtab_t symtab;
 };
 
 struct mara_exec_ctx_s {
@@ -373,21 +382,36 @@ mara_unbox_list(mara_exec_ctx_t* ctx, mara_value_t value, mara_obj_list_t** resu
 mara_error_t*
 mara_unbox_map(mara_exec_ctx_t* ctx, mara_value_t value, mara_obj_map_t** result);
 
-// String pool
+// Symbol table
 
 void
-mara_strpool_init(mara_strpool_t* strpool, mara_strpool_options_t options);
+mara_symtab_init(mara_env_t* env, mara_symtab_t* symtab);
 
 mara_index_t
-mara_strpool_intern(mara_strpool_t* strpool, mara_str_t string);
+mara_symtab_intern(mara_env_t* env, mara_symtab_t* symtab, mara_str_t string);
 
 mara_str_t
-mara_strpool_lookup(mara_strpool_t* strpool, mara_index_t id);
+mara_symtab_lookup(mara_symtab_t* symtab, mara_index_t id);
 
 void
-mara_strpool_cleanup(mara_strpool_t* strpool);
+mara_symtab_cleanup(mara_env_t* env, mara_symtab_t* symtab);
 
 // Debug
+
+void
+mara_put_debug_info(
+	mara_exec_ctx_t* ctx,
+	mara_value_t container,
+	mara_value_t index,
+	mara_source_info_t debug_info
+);
+
+mara_source_info_t*
+mara_get_debug_info(
+	mara_exec_ctx_t* ctx,
+	mara_value_t container,
+	mara_value_t index
+);
 
 // VM
 

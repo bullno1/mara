@@ -10,7 +10,7 @@ set(SOURCES
 	"copy.c"
 	"list.c"
 	"map.c"
-	"strpool.c"
+	"symtab.c"
 	"debug.c"
 )
 

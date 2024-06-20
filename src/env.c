@@ -28,18 +28,14 @@ mara_create_env(mara_env_options_t options) {
 	*env = (mara_env_t){
 		.options = options,
 	};
-	mara_strpool_init(&env->symtab, (mara_strpool_options_t){
-		.env = env,
-		.table_allocator = options.allocator,
-		.string_arena = &env->permanent_arena,
-	});
+	mara_symtab_init(env, &env->symtab);
 
 	return env;
 }
 
 void
 mara_destroy_env(mara_env_t* env) {
-	mara_strpool_cleanup(&env->symtab);
+	mara_symtab_cleanup(env, &env->symtab);
 	mara_arena_reset(env, &env->permanent_arena);
 
 	mara_allocator_t allocator = env->options.allocator;

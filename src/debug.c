@@ -1,5 +1,4 @@
 #include "internal.h"
-#include "mara.h"
 #include "nanoprintf.h"
 #include <stdarg.h>
 
@@ -214,3 +213,23 @@ mara_print_error(
 		mara_print_value(ctx, error->extra, options, output);
 	}
 }
+
+void
+mara_put_debug_info(
+	mara_exec_ctx_t* ctx,
+	mara_value_t container,
+	mara_value_t index,
+	mara_source_info_t debug_info
+) {
+	(void)ctx;
+	(void)container;
+	(void)index;
+	(void)debug_info;
+}
+
+mara_source_info_t*
+mara_get_debug_info(
+	mara_exec_ctx_t* ctx,
+	mara_value_t container,
+	mara_value_t index
+);
