@@ -421,11 +421,11 @@ mara_put_debug_info(
 	mara_source_info_t debug_info
 );
 
-mara_source_info_t*
+const mara_source_info_t*
 mara_get_debug_info(
 	mara_exec_ctx_t* ctx,
-	mara_value_t container,
-	mara_value_t index
+	mara_obj_t* container,
+	mara_index_t index
 );
 
 mara_str_t

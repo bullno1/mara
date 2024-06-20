@@ -31,7 +31,7 @@ mara_fprintf(mara_writer_t output, const char* fmt, ...)  {
 }
 
 MARA_PRIVATE MARA_PRINTF_LIKE(3, 4) void
-mara_printline_indented(
+mara_print_indented(
 	mara_writer_t output,
 	int indent,
 	const char* fmt,
@@ -43,8 +43,6 @@ mara_printline_indented(
 	va_start(args, fmt);
 	mara_vfprintf(output, fmt, args);
 	va_end(args);
-
-	mara_putc('\n', &output);
 }
 
 MARA_PRIVATE void
@@ -52,20 +50,21 @@ mara_do_print_value(
 	mara_exec_ctx_t* ctx,
 	mara_value_t value,
 	mara_print_options_t options,
+	mara_debug_info_key_t debug_key,
 	mara_writer_t output
 ) {
 	if (mara_value_is_nil(value)) {
-		mara_printline_indented(output, options.indent, "nil");
+		mara_print_indented(output, options.indent, "nil");
 	} else if (mara_value_is_true(value)) {
-		mara_printline_indented(output, options.indent, "true");
+		mara_print_indented(output, options.indent, "true");
 	} else if (mara_value_is_false(value)) {
-		mara_printline_indented(output, options.indent, "false");
+		mara_print_indented(output, options.indent, "false");
 	} else if (mara_value_is_symbol(value) || mara_value_is_str(value)) {
 		// TODO: escape new lines and quotes
 		mara_str_t result = { 0 };
 		mara_value_to_str(ctx, value, &result);
 		bool need_quotes = mara_value_is_str(value);
-		mara_printline_indented(
+		mara_print_indented(
 			output, options.indent,
 			"%s%.*s%s",
 			need_quotes ? "\"" : "",
@@ -75,24 +74,27 @@ mara_do_print_value(
 	} else if (mara_value_is_int(value)) {
 		mara_index_t result;
 		mara_value_to_int(ctx, value, &result);
-		mara_printline_indented(output,options.indent, "%d", result);
+		mara_print_indented(output,options.indent, "%d", result);
 	} else if (mara_value_is_real(value)) {
 		double result;
 		mara_value_to_real(ctx, value, &result);
-		mara_printline_indented(output,options.indent, "%f", result);
+		mara_print_indented(output,options.indent, "%f", result);
 	} else if (mara_value_is_list(value)) {
 		mara_obj_list_t* list;
 		mara_error_t* error = mara_unbox_list(ctx, value, &list);
 		(void)error;
 		mara_assert(error == NULL, "Could not unbox list");
+		debug_key.container = mara_container_of(list, mara_obj_t, body);
+		debug_key.index = MARA_DEBUG_INFO_SELF;
+
 		if (options.max_depth <= 0) {
-			mara_printline_indented(
+			mara_print_indented(
 				output, options.indent,
 				"(...)  ; %d element%s",
 				list->len, list->len > 1 ? "s" : ""
 			);
 		} else {
-			mara_printline_indented(output, options.indent, "(");
+			mara_print_indented(output, options.indent, "(\n");
 			{
 				mara_print_options_t children_options = options;
 				children_options.max_depth -= 1;
@@ -100,19 +102,25 @@ mara_do_print_value(
 
 				mara_index_t print_len = mara_min(list->len, options.max_length);
 				for (mara_index_t i = 0; i < print_len; ++i) {
-					mara_do_print_value(ctx, list->elems[i], children_options, output);
+					mara_debug_info_key_t child_key;
+					memset(&child_key, 0, sizeof(child_key));
+					child_key.container = debug_key.container;
+					child_key.index = i;
+					mara_do_print_value(
+						ctx, list->elems[i], children_options, child_key, output
+					);
 				}
 
 				mara_index_t num_omitted_elments = list->len - print_len;
 				if (num_omitted_elments > 0) {
-					mara_printline_indented(
+					mara_print_indented(
 						output, children_options.indent,
 						"... ; %d more element%s",
 						num_omitted_elments, num_omitted_elments ? "s" : ""
 					);
 				}
 			}
-			mara_printline_indented(output, options.indent, ")");
+			mara_print_indented(output, options.indent, ")");
 		}
 	} else if (mara_value_is_map(value)) {
 		mara_obj_map_t* map;
@@ -120,15 +128,16 @@ mara_do_print_value(
 		(void)error;
 		mara_assert(error == NULL, "Could not unbox map");
 		if (options.max_depth <= 0) {
-			mara_printline_indented(
+			mara_print_indented(
 				output, options.indent,
 				"(map ...)  ; %d element%s",
 				map->len, map->len > 1 ? "s" : ""
 			);
 		} else {
-			mara_printline_indented(output, options.indent, "(map");
+			mara_print_indented(output, options.indent, "(map\n");
 			{
 				mara_print_options_t children_options = options;
+				mara_debug_info_key_t children_key = { 0 };
 				children_options.max_depth -= 1;
 				children_options.indent += 2;
 
@@ -139,30 +148,52 @@ mara_do_print_value(
 					i < print_len && node != NULL;
 					++i, node = node->next
 				) {
-					mara_printline_indented(output, options.indent + 1, "(");
+					mara_print_indented(output, options.indent + 1, "(\n");
 					{
-						mara_do_print_value(ctx, node->key, children_options, output);
-						mara_do_print_value(ctx, node->value, children_options, output);
+						mara_do_print_value(ctx, node->key, children_options, children_key, output);
+						mara_do_print_value(ctx, node->value, children_options, children_key, output);
 					}
-					mara_printline_indented(output, options.indent + 1, ")");
+					mara_print_indented(output, options.indent + 1, ")\n");
 				}
 
 				mara_index_t num_omitted_elments = map->len - print_len;
 				if (num_omitted_elments > 0) {
-					mara_printline_indented(
+					mara_print_indented(
 						output, children_options.indent,
 						"... ; %d more element%s",
 						num_omitted_elments, num_omitted_elments ? "s" : ""
 					);
 				}
 			}
-			mara_printline_indented(output, options.indent, ")");
+			mara_print_indented(output, options.indent, ")");
 		}
 	} else if (mara_value_is_function(value)) {
-		mara_printline_indented(output,options.indent, "(fn ...)");
+		mara_print_indented(output,options.indent, "(fn ...)");
 	} else {
 		// TODO: rename ref->handle and handle tag should be meaningful
-		mara_printline_indented(output,options.indent, "(ref ...)");
+		mara_print_indented(output,options.indent, "(ref ...)");
+	}
+
+	if (debug_key.container != NULL) {
+		const mara_source_info_t* debug_info = mara_get_debug_info(
+			ctx, debug_key.container, debug_key.index
+		);
+		if (debug_info != NULL) {
+			mara_fprintf(
+				output, " ; @%.*s:%d:%d:%d - %d:%d:%d\n",
+				debug_info->filename.len, debug_info->filename.data,
+				debug_info->range.start.line,
+				debug_info->range.start.col,
+				debug_info->range.start.byte_offset,
+				debug_info->range.end.line,
+				debug_info->range.end.col,
+				debug_info->range.end.byte_offset
+			);
+		} else {
+			mara_putc('\n', &output);
+		}
+	} else {
+		mara_putc('\n', &output);
 	}
 }
 
@@ -175,7 +206,9 @@ mara_print_value(
 ) {
 	mara_set_default_option(&options.max_length, 10);
 	mara_set_default_option(&options.max_depth, 4);
-	mara_do_print_value(ctx, value, options, output);
+	mara_debug_info_key_t debug_key;
+	memset(&debug_key, 0, sizeof(debug_key));
+	mara_do_print_value(ctx, value, options, debug_key, output);
 }
 
 void

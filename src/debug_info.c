@@ -52,9 +52,20 @@ mara_put_debug_info(
 	}
 }
 
-mara_source_info_t*
+const mara_source_info_t*
 mara_get_debug_info(
 	mara_exec_ctx_t* ctx,
-	mara_value_t container,
-	mara_value_t index
-);
+	mara_obj_t* container,
+	mara_index_t index
+) {
+	mara_debug_info_key_t key;
+	memset(&key, 0, sizeof(mara_debug_info_key_t));
+	key.container = container;
+	key.index = index;
+
+	mara_debug_info_node_t* node;
+	BHAMT_HASH_TYPE hash = mara_XXH3_64bits(&key, sizeof(key));
+	BHAMT_GET(ctx->debug_info_map.root, node, hash, key);
+
+	return node != NULL ? &node->debug_info : NULL;
+}
