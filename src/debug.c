@@ -187,11 +187,10 @@ mara_print_error(
 	mara_print_options_t options,
 	mara_writer_t output
 ) {
-	(void)ctx;
-	(void)options;
+	if (error == NULL) { return; }
 
 	mara_fprintf(
-		output, "┌error:%.*s: %.*s\n",
+		output, "┌[%.*s] %.*s\n",
 		error->type.len, error->type.data,
 		error->message.len, error->message.data
 	);
@@ -208,5 +207,10 @@ mara_print_error(
 			src_info->range.start.line, src_info->range.start.col, src_info->range.start.byte_offset,
 			src_info->range.end.line, src_info->range.end.col, src_info->range.end.byte_offset
 		);
+	}
+
+	if (!mara_value_is_nil(error->extra)) {
+		mara_fprintf(output, "Extra:\n");
+		mara_print_value(ctx, error->extra, options, output);
 	}
 }

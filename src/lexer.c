@@ -190,6 +190,7 @@ mara_lexer_continue_number(mara_exec_ctx_t* ctx, mara_lexer_t* lexer, mara_token
 			mara_lexer_is_space(ch)
 			|| mara_lexer_is_new_line(ch)
 			|| mara_lexer_is_end(ch)
+			|| mara_lexer_is_paren(ch)
 			|| mara_lexer_is_comment(ch)
 		) {
 			*result = mara_lexer_make_token(lexer, dotted ? MARA_TOK_REAL: MARA_TOK_INT);

@@ -96,11 +96,6 @@ typedef struct {
 } mara_native_fn_t;
 
 typedef struct {
-	void (*fn)(mara_exec_ctx_t* ctx, void* userdata);
-	void* userdata;
-} mara_callback_t;
-
-typedef struct {
 	mara_allocator_t allocator;
 	size_t alloc_chunk_size;
 } mara_env_options_t;
@@ -141,8 +136,11 @@ mara_create_env(mara_env_options_t options);
 MARA_API void
 mara_destroy_env(mara_env_t* env);
 
+MARA_API mara_exec_ctx_t*
+mara_begin(mara_env_t* env);
+
 MARA_API void
-mara_exec(mara_env_t* env, mara_callback_t callback);
+mara_end(mara_exec_ctx_t* ctx);
 
 // Debug
 

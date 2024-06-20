@@ -30,6 +30,11 @@
 
 typedef MARA_ARENA_MASK_TYPE mara_arena_mask_t;
 
+typedef struct {
+	void (*fn)(mara_exec_ctx_t* ctx, void* userdata);
+	void* userdata;
+} mara_callback_t;
+
 typedef struct mara_finalizer_s {
 	mara_callback_t callback;
 	struct mara_finalizer_s* next;
@@ -243,6 +248,7 @@ struct mara_exec_ctx_s {
 	mara_zone_t* current_zone;
 	mara_zone_bookmark_t* current_zone_bookmark;
 	mara_arena_t control_arena;
+	mara_arena_t error_arena;
 	mara_error_t last_error;
 	mara_zone_t error_zone;
 	mara_arena_t arenas[MARA_NUM_ARENAS];

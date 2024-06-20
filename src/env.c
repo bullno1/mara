@@ -52,21 +52,27 @@ mara_destroy_env(mara_env_t* env) {
 	mara_free(allocator, env);
 }
 
-void
-mara_exec(mara_env_t* env, mara_callback_t callback) {
-	mara_exec_ctx_t ctx = {
+mara_exec_ctx_t*
+mara_begin(mara_env_t* env) {
+	mara_arena_t control_arena = { 0 };
+	mara_exec_ctx_t* ctx = MARA_ARENA_ALLOC_TYPE(env, &control_arena, mara_exec_ctx_t);
+	*ctx = (mara_exec_ctx_t){
 		.env = env,
 		.error_zone = {
-			.arena = &(mara_arena_t){ 0 },
 			.ref_count = 1,
 			.branch = MARA_ZONE_BRANCH_ERROR,
 		},
+		.control_arena = control_arena,
 	};
+	ctx->error_zone.arena = &ctx->error_arena;
+	mara_zone_enter_new(ctx, (mara_zone_options_t){ 0 });
+	return ctx;
+}
 
-	mara_zone_enter_new(&ctx, (mara_zone_options_t){ 0 });
-	callback.fn(&ctx, callback.userdata);
-	mara_zone_exit(&ctx);
+void
+mara_end(mara_exec_ctx_t* ctx) {
+	mara_zone_exit(ctx);
 
-	mara_zone_cleanup(&ctx, &ctx.error_zone);
-	mara_arena_reset(env, &ctx.control_arena);
+	mara_zone_cleanup(ctx, &ctx->error_zone);
+	mara_arena_reset(ctx->env, &ctx->control_arena);
 }
