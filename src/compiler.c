@@ -908,6 +908,7 @@ mara_do_compile(
 	mara_function_t* function = mara_compiler_end_function(ctx);
 
 	mara_obj_t* obj = mara_alloc_obj(ctx->exec_ctx, zone, sizeof(mara_obj_closure_t));
+	obj->type = MARA_OBJ_TYPE_MARA_FN;
 	mara_obj_closure_t* closure = (mara_obj_closure_t*)obj->body;
 	closure->fn = function;
 
