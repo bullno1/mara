@@ -66,7 +66,7 @@ typedef struct {
 	mara_debug_info_key_t debug_key;
 
 	// Temporary list to store captures during compilation
-	mara_value_t captures;
+	barray(mara_value_t) captures;
 
 	// Core symbols
 	mara_value_t sym_if;
@@ -689,15 +689,13 @@ mara_compile_fn(mara_compile_ctx_t* ctx, mara_obj_list_t* list) {
 
 	// Copy the captures to a temporary list
 	mara_index_t num_captures = ctx->function_scope->num_captures;
-	mara_list_resize(ctx->exec_ctx, ctx->captures, num_captures);
-	mara_obj_list_t* capture_list;
-	mara_unbox_list(ctx->exec_ctx, ctx->captures, &capture_list);
+	barray_resize(ctx->exec_ctx->env, ctx->captures, num_captures);
 	for (
 		mara_name_entry_t* name_entry = ctx->function_scope->captures;
 		name_entry != NULL;
 		name_entry = name_entry->next
 	) {
-		capture_list->elems[name_entry->index] = name_entry->name;
+		ctx->captures[name_entry->index] = name_entry->name;
 	}
 
 	// Finish the sub function and emit closure
@@ -713,7 +711,7 @@ mara_compile_fn(mara_compile_ctx_t* ctx, mara_obj_list_t* list) {
 	for (mara_index_t i = 0; i < num_captures; ++i) {
 		mara_opcode_t load_opcode = MARA_OP_NIL;
 		mara_index_t var_index;
-		mara_compiler_find_name(ctx, capture_list->elems[i], &load_opcode, &var_index);
+		mara_compiler_find_name(ctx, ctx->captures[i], &load_opcode, &var_index);
 		// The pseudo instruction is not executed so there is no impact on stack size
 		mara_check_error(mara_compiler_emit(ctx, load_opcode, var_index, 0));
 	}
@@ -853,54 +851,30 @@ mara_compile_expression(mara_compile_ctx_t* ctx, mara_value_t expr) {
 
 MARA_PRIVATE mara_error_t*
 mara_do_compile(
-	mara_exec_ctx_t* ctx,
+	mara_compile_ctx_t* ctx,
 	mara_zone_t* zone,
 	mara_compile_options_t options,
 	mara_value_t exprs,
 	mara_value_t* result
 ) {
-	mara_compile_ctx_t compile_ctx = {
-		.exec_ctx = ctx,
-		.zone = zone,
-		.options = options,
-		.captures = mara_new_list(ctx, mara_get_local_zone(ctx), 2),
-
-		// Sync this list with symtab.c
-		.sym_def = mara_new_symbol(ctx, mara_str_from_literal("def")),
-		.sym_set = mara_new_symbol(ctx, mara_str_from_literal("set")),
-		.sym_if = mara_new_symbol(ctx, mara_str_from_literal("if")),
-		.sym_fn = mara_new_symbol(ctx, mara_str_from_literal("fn")),
-		.sym_do = mara_new_symbol(ctx, mara_str_from_literal("do")),
-		.sym_nil = mara_new_symbol(ctx, mara_str_from_literal("nil")),
-		.sym_true = mara_new_symbol(ctx, mara_str_from_literal("true")),
-		.sym_false = mara_new_symbol(ctx, mara_str_from_literal("false")),
-		.sym_import = mara_new_symbol(ctx, mara_str_from_literal("import")),
-		.sym_export = mara_new_symbol(ctx, mara_str_from_literal("export")),
-	};
-
-	mara_compiler_begin_function(&compile_ctx);
+	mara_compiler_begin_function(ctx);
 	if (options.as_module) {
-		mara_check_error(
-			mara_compiler_add_argument(&compile_ctx, compile_ctx.sym_import)
-		);
-		mara_check_error(
-			mara_compiler_add_argument(&compile_ctx, compile_ctx.sym_export)
-		);
+		mara_check_error(mara_compiler_add_argument(ctx, ctx->sym_import));
+		mara_check_error(mara_compiler_add_argument(ctx, ctx->sym_export));
 	}
 
 	mara_obj_list_t* list;
-	mara_check_error(mara_unbox_list(ctx, exprs, &list));
-	mara_debug_info_key_t list_debug_key = mara_make_debug_info_key(exprs, MARA_DEBUG_INFO_SELF);
-	compile_ctx.debug_key = list_debug_key;
-	mara_check_error(mara_compile_sequence(&compile_ctx, list, 0));
+	mara_check_error(mara_unbox_list(ctx->exec_ctx, exprs, &list));
+	mara_compiler_set_debug_info(ctx, list, MARA_DEBUG_INFO_SELF);
+	mara_check_error(mara_compile_sequence(ctx, list, 0));
 
-	compile_ctx.debug_key = list_debug_key;
-	mara_check_error(mara_compiler_emit(&compile_ctx, MARA_OP_RETURN, 0, 0));
+	mara_compiler_set_debug_info(ctx, list, MARA_DEBUG_INFO_SELF);
+	mara_check_error(mara_compiler_emit(ctx, MARA_OP_RETURN, 0, 0));
 
-	mara_function_t* function = mara_compiler_end_function(&compile_ctx);
+	mara_function_t* function = mara_compiler_end_function(ctx);
 
-	mara_obj_t* obj = mara_alloc_obj(ctx, zone, sizeof(mara_obj_closure_t));
-	mara_obj_closure_t* closure = (mara_obj_closure_t*)obj;
+	mara_obj_t* obj = mara_alloc_obj(ctx->exec_ctx, zone, sizeof(mara_obj_closure_t));
+	mara_obj_closure_t* closure = (mara_obj_closure_t*)obj->body;
 	closure->fn = function;
 
 	*result = mara_obj_to_value(obj);
@@ -920,7 +894,28 @@ mara_compile(
 		.num_marked_zones = 1,
 		.marked_zones = (mara_zone_t*[]){ zone },
 	});
-	error = mara_do_compile(ctx, zone, options, exprs, result);
+
+	mara_compile_ctx_t compile_ctx = {
+		.exec_ctx = ctx,
+		.zone = zone,
+		.options = options,
+
+		// Sync this list with symtab.c
+		.sym_def = mara_new_symbol(ctx, mara_str_from_literal("def")),
+		.sym_set = mara_new_symbol(ctx, mara_str_from_literal("set")),
+		.sym_if = mara_new_symbol(ctx, mara_str_from_literal("if")),
+		.sym_fn = mara_new_symbol(ctx, mara_str_from_literal("fn")),
+		.sym_do = mara_new_symbol(ctx, mara_str_from_literal("do")),
+		.sym_nil = mara_new_symbol(ctx, mara_str_from_literal("nil")),
+		.sym_true = mara_new_symbol(ctx, mara_str_from_literal("true")),
+		.sym_false = mara_new_symbol(ctx, mara_str_from_literal("false")),
+		.sym_import = mara_new_symbol(ctx, mara_str_from_literal("import")),
+		.sym_export = mara_new_symbol(ctx, mara_str_from_literal("export")),
+	};
+
+	error = mara_do_compile(&compile_ctx, zone, options, exprs, result);
+
+	barray_free(ctx->env, compile_ctx.captures);
 	mara_zone_exit(ctx);
 	return error;
 }
