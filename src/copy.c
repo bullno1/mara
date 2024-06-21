@@ -52,18 +52,21 @@ mara_ptr_map_get(mara_ptr_map_t* map, void* key) {
 MARA_PRIVATE mara_error_t*
 mara_deep_copy(
 	mara_exec_ctx_t* ctx,
-	mara_zone_t* zone,
+	mara_zone_t* target_zone,
 	mara_ptr_map_t* copied_objs,
 	mara_value_t value,
 	mara_value_t* result
 ) {
 	mara_obj_t* obj = mara_value_to_obj(value);
-	// A deep copy is always extensive.
-	// Checking for zone level is not needed.
-	// All objects will belong in the target zone and there is no need to be
-	// concerned about arena mask.
+
 	// TODO: rethink the concept of branch
-	if (obj == NULL) {
+	if (
+		obj == NULL
+		|| (
+			obj->zone->branch == target_zone->branch
+			&& obj->zone->level <= target_zone->level
+		)
+	) {
 		*result = value;
 		return NULL;
 	}
@@ -79,21 +82,21 @@ mara_deep_copy(
 		case MARA_OBJ_TYPE_STRING:
 			{
 				mara_str_t* str = (mara_str_t*)obj->body;
-				*result = mara_new_str(ctx, zone, *str);
+				*result = mara_new_str(ctx, target_zone, *str);
 				mara_ptr_map_put(ctx, local_zone, copied_objs, obj, mara_value_to_obj(*result));
 				return NULL;
 			}
 		case MARA_OBJ_TYPE_REF:
 			{
 				mara_obj_ref_t* ref = (mara_obj_ref_t*)obj->body;
-				*result = mara_new_ref(ctx, zone, ref->tag, ref->value);
+				*result = mara_new_ref(ctx, target_zone, ref->tag, ref->value);
 				mara_ptr_map_put(ctx, local_zone, copied_objs, obj, mara_value_to_obj(*result));
 				return NULL;
 			}
 		case MARA_OBJ_TYPE_NATIVE_FN:
 			{
 				mara_native_fn_t* fn = (mara_native_fn_t*)obj->body;
-				*result = mara_new_fn(ctx, zone, *fn);
+				*result = mara_new_fn(ctx, target_zone, *fn);
 				mara_ptr_map_put(ctx, local_zone, copied_objs, obj, mara_value_to_obj(*result));
 				return NULL;
 			}
@@ -102,7 +105,7 @@ mara_deep_copy(
 				mara_obj_list_t* old_list;
 				mara_assert_no_error(mara_unbox_list(ctx, value, &old_list));
 
-				mara_value_t new_list = mara_new_list(ctx, zone, old_list->len);
+				mara_value_t new_list = mara_new_list(ctx, target_zone, old_list->len);
 				mara_ptr_map_put(ctx, local_zone, copied_objs, obj, mara_value_to_obj(new_list));
 				mara_obj_list_t* new_list_obj;
 				mara_assert_no_error(mara_unbox_list(ctx, new_list, &new_list_obj));
@@ -110,8 +113,13 @@ mara_deep_copy(
 				mara_index_t len = new_list_obj->len = old_list->len;
 				mara_value_t* old_elems = old_list->elems;
 				mara_value_t* new_elems = new_list_obj->elems;
+				mara_obj_t* new_list_header = mara_value_to_obj(new_list);
 				for (mara_index_t i = 0; i < len; ++i) {
-					mara_check_error(mara_deep_copy(ctx, zone, copied_objs, old_elems[i], &new_elems[i]));
+					mara_value_t elem_copy;
+					mara_check_error(mara_deep_copy(ctx, target_zone, copied_objs, old_elems[i], &elem_copy));
+
+					new_elems[i] = elem_copy;
+					mara_obj_add_arena_mask(new_list_header, elem_copy);
 				}
 
 				*result = new_list;
@@ -122,7 +130,7 @@ mara_deep_copy(
 				mara_obj_map_t* old_map;
 				mara_assert_no_error(mara_unbox_map(ctx, value, &old_map));
 
-				mara_value_t new_map = mara_new_map(ctx, zone);
+				mara_value_t new_map = mara_new_map(ctx, target_zone);
 				mara_ptr_map_put(ctx, local_zone, copied_objs, obj, mara_value_to_obj(new_map));
 
 				for (
@@ -131,12 +139,40 @@ mara_deep_copy(
 					itr = itr->next
 				) {
 					mara_value_t key_copy, value_copy;
-					mara_check_error(mara_deep_copy(ctx, local_zone, copied_objs, itr->key, &key_copy));
-					mara_check_error(mara_deep_copy(ctx, local_zone, copied_objs, itr->value, &value_copy));
+					mara_check_error(mara_deep_copy(ctx, target_zone, copied_objs, itr->key, &key_copy));
+					mara_check_error(mara_deep_copy(ctx, target_zone, copied_objs, itr->value, &value_copy));
 					mara_assert_no_error(mara_map_set(ctx, new_map, key_copy, value_copy));
 				}
 
 				*result = new_map;
+				return NULL;
+			}
+		case MARA_OBJ_TYPE_MARA_FN:
+			{
+				mara_obj_closure_t* old_closure = (mara_obj_closure_t*)obj->body;
+				mara_index_t num_captures = old_closure->fn->num_captures;
+				mara_obj_t* new_closure_header = mara_alloc_obj(
+					ctx, target_zone,
+					sizeof(mara_obj_closure_t) + sizeof(mara_value_t) * num_captures
+				);
+				new_closure_header->type = MARA_OBJ_TYPE_MARA_FN;
+				mara_ptr_map_put(ctx, local_zone, copied_objs, obj, new_closure_header);
+
+				mara_obj_closure_t* new_closure = (mara_obj_closure_t*)new_closure_header->body;
+				new_closure->fn = old_closure->fn;
+				for (mara_index_t i = 0; i < num_captures; ++i) {
+					mara_value_t capture_copy;
+					mara_check_error(
+						mara_deep_copy(
+							ctx, target_zone, copied_objs,
+							old_closure->captures[i], &capture_copy
+						)
+					);
+					new_closure->captures[i] = capture_copy;
+					mara_obj_add_arena_mask(new_closure_header, capture_copy);
+				}
+
+				*result = mara_obj_to_value(new_closure_header);
 				return NULL;
 			}
 		default:
