@@ -280,6 +280,7 @@ struct mara_env_s {
 	mara_arena_t permanent_arena;
 	mara_strpool_t permanent_strpool;
 	mara_symtab_t symtab;
+	mara_index_t ref_count;
 };
 
 struct mara_exec_ctx_s {
@@ -294,9 +295,8 @@ struct mara_exec_ctx_s {
 	mara_zone_t error_zone;
 
 	mara_value_t current_module;
+	mara_value_t module_loaders;
 	mara_module_options_t current_module_options;
-	mara_module_loader_entry_t* first_loader;
-	mara_module_loader_entry_t* last_loader;
 
 	mara_arena_t debug_info_arena;
 	mara_strpool_t debug_info_strpool;

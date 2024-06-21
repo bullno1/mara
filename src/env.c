@@ -41,8 +41,7 @@ mara_create_env(mara_env_options_t options) {
 
 void
 mara_destroy_env(mara_env_t* env) {
-	mara_symtab_cleanup(env, &env->symtab);
-	mara_zone_cleanup(env, &env->permanent_zone);
+	mara_assert(mara_reset(env), "env is still in use");
 
 	mara_allocator_t allocator = env->options.allocator;
 	for (mara_arena_chunk_t* itr = env->free_chunks; itr != NULL;) {
@@ -66,9 +65,11 @@ mara_begin(mara_env_t* env) {
 		},
 		.control_arena = control_arena,
 		.current_module = mara_nil(),
+		.module_loaders = mara_nil(),
 	};
 	ctx->error_zone.arena = &ctx->error_arena;
 	mara_zone_enter_new(ctx, (mara_zone_options_t){ 0 });
+	env->ref_count += 1;
 	return ctx;
 }
 
@@ -76,7 +77,20 @@ void
 mara_end(mara_exec_ctx_t* ctx) {
 	mara_zone_exit(ctx);
 
-	mara_zone_cleanup(ctx->env, &ctx->error_zone);
-	mara_arena_reset(ctx->env, &ctx->control_arena);
-	mara_arena_reset(ctx->env, &ctx->debug_info_arena);
+	mara_env_t* env = ctx->env;
+	mara_zone_cleanup(env, &ctx->error_zone);
+	mara_arena_reset(env, &ctx->control_arena);
+	mara_arena_reset(env, &ctx->debug_info_arena);
+	env->ref_count -= 1;
+}
+
+bool
+mara_reset(mara_env_t* env) {
+	if (env->ref_count == 0) {
+		mara_symtab_cleanup(env, &env->symtab);
+		mara_zone_cleanup(env, &env->permanent_zone);
+		return true;
+	} else {
+		return false;
+	}
 }

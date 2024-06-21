@@ -156,6 +156,9 @@ mara_begin(mara_env_t* env);
 MARA_API void
 mara_end(mara_exec_ctx_t* ctx);
 
+MARA_API bool
+mara_reset(mara_env_t* env);
+
 // Debug
 
 MARA_API void
@@ -387,9 +390,6 @@ mara_add_module_loader(mara_exec_ctx_t* ctx, mara_value_t fn);
 
 MARA_API void
 mara_add_standard_loader(mara_exec_ctx_t* ctx, mara_module_fs_t fs);
-
-MARA_API void
-mara_reload(mara_env_t* env);
 
 // Function
 
