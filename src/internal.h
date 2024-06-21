@@ -209,12 +209,8 @@ typedef enum mara_opcode_e {
 
 	MARA_OP_CALL,
 	MARA_OP_RETURN,
-	MARA_OP_TAIL_CALL,
 	MARA_OP_JUMP,
 	MARA_OP_JUMP_IF_FALSE,
-
-	MARA_OP_ZONE_ENTER,
-	MARA_OP_ZONE_EXIT,
 
 	MARA_OP_MAKE_CLOSURE,  // Should arena mask the closure
 } mara_opcode_t;
@@ -494,16 +490,10 @@ mara_opcode_to_str(mara_opcode_t opcode) {
 			return "CALL";
 		case MARA_OP_RETURN:
 			return "RETURN";
-		case MARA_OP_TAIL_CALL:
-			return "TAIL_CALL";
 		case MARA_OP_JUMP:
 			return "JUMP";
 		case MARA_OP_JUMP_IF_FALSE:
 			return "JUMP_IF_FALSE";
-		case MARA_OP_ZONE_ENTER:
-			return "ZONE_ENTER";
-		case MARA_OP_ZONE_EXIT:
-			return "ZONE_EXIT";
 		case MARA_OP_MAKE_CLOSURE:
 			return "MAKE_CLOSURE";
 	}

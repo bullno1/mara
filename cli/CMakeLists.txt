@@ -1,6 +1,7 @@
 set(SOURCES
 	"./main.c"
 	"./parse.c"
+	"./compile.c"
 	"./vendor/argparse/argparse.c"
 )
 add_executable(cli "${SOURCES}")

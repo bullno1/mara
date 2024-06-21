@@ -26,14 +26,17 @@ mara_index_t
 mara_symtab_intern(mara_env_t* env, mara_symtab_t* symtab, mara_str_t string) {
 	mara_index_t index_itr = symtab->len > 0 ? 0 : -1;
 	uint64_t hash_itr = mara_XXH3_64bits(string.data, string.len);
-	mara_symtab_node_t* node = NULL;
+	mara_index_t last_node_index = -1;
+	mara_index_t last_hash_itr = -1;
 	for (; index_itr >= 0; hash_itr >>= BHAMT_NUM_BITS) {
-		node = &symtab->nodes[index_itr];
+		mara_symtab_node_t* node = &symtab->nodes[index_itr];
 		if (mara_str_equal(node->key, string)) {
 			break;
 		}
 
 		// Offset all indicies by 1 so we can zero the new node
+		last_node_index = index_itr;
+		last_hash_itr = hash_itr;
 		index_itr = node->children[hash_itr & BHAMT_MASK] - 1;
 	}
 
@@ -69,8 +72,8 @@ mara_symtab_intern(mara_env_t* env, mara_symtab_t* symtab, mara_str_t string) {
 			.data = chars,
 		};
 
-		if (node != NULL) {
-			node->children[hash_itr & BHAMT_MASK] = current_len + 1;
+		if (last_node_index >= 0) {
+			symtab->nodes[last_node_index].children[last_hash_itr & BHAMT_MASK] = current_len + 1;
 		}
 
 		return current_len;

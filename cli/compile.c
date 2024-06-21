@@ -5,9 +5,9 @@
 #include "vendor/argparse/argparse.h"
 
 int
-parse(int argc, const char* argv[], mara_exec_ctx_t* ctx) {
+compile(int argc, const char* argv[], mara_exec_ctx_t* ctx) {
 	const char* const usage[] = {
-		"parse [options] [--] [filename]",
+		"compile [options] [--] [filename]",
 		NULL,
 	};
 	struct argparse_option options[] = {
@@ -18,7 +18,7 @@ parse(int argc, const char* argv[], mara_exec_ctx_t* ctx) {
     argparse_init(&argparse, options, usage, 0);
 	argparse_describe(
 		&argparse,
-		"Parse a file and pretty print the expressions.",
+		"Compile a file and pretty print the result.",
 		"By default, read from stdin.\n"
 		"If filename is `-` it is also treated as stdin."
 	);
@@ -42,7 +42,7 @@ parse(int argc, const char* argv[], mara_exec_ctx_t* ctx) {
 		}
 	}
 
-	mara_value_t result;
+	mara_value_t expr;
 	mara_error_t* error = mara_parse_all(
 		ctx,
 		mara_get_local_zone(ctx),
@@ -51,7 +51,33 @@ parse(int argc, const char* argv[], mara_exec_ctx_t* ctx) {
 			.fn = mara_read_from_file,
 			.userdata = input,
 		},
-		&result
+		&expr
+	);
+
+	if (error != NULL) {
+		mara_print_error(
+			ctx,
+			error,
+			(mara_print_options_t){ 0 },
+			(mara_writer_t){
+				.fn = mara_write_to_file,
+				.userdata = stderr,
+			}
+		);
+
+		exit_code = 1;
+		goto end;
+	}
+
+	mara_value_t fn;
+	error = mara_compile(
+		ctx,
+		mara_get_local_zone(ctx),
+		(mara_compile_options_t){
+			.as_module = true,
+		},
+		expr,
+		&fn
 	);
 
 	if (error != NULL) {
@@ -71,7 +97,7 @@ parse(int argc, const char* argv[], mara_exec_ctx_t* ctx) {
 
 	mara_print_value(
 		ctx,
-		result,
+		fn,
 		(mara_print_options_t){ 0 },
 		(mara_writer_t){
 			.fn = mara_write_to_file,

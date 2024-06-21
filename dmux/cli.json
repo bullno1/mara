@@ -1,0 +1,10 @@
+{
+  "executable": "gdb",
+  "args": ["--interpreter=dap"],
+  "mode": "launch",
+  "config": {
+    "program": "bin/mara",
+    "args": ["compile", "examples/fib.mara"],
+    "stopAtBeginningOfMainSubprogram": true
+  }
+}

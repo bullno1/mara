@@ -108,7 +108,7 @@ mara_map_set(mara_exec_ctx_t* ctx, mara_value_t map, mara_value_t key, mara_valu
 			node = *itr = MARA_ZONE_ALLOC_TYPE(ctx, map_zone, mara_obj_map_node_t);
 			memset(node->children, 0, sizeof(node->children));
 			if (head != NULL) {
-				node->next = head;
+				node->next = head->next;
 				head->next = node;
 			} else {
 				node->next = NULL;

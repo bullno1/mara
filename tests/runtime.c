@@ -5,6 +5,10 @@
 
 static mara_fixture_t fixture;
 
+typedef struct {
+	int num_elements;
+} iterator_state_t;
+
 TEST_SETUP(runtime) {
 	setup_mara_fixture(&fixture);
 }
@@ -30,6 +34,21 @@ TEST(runtime, symbol) {
 
 	mara_value_t abf2 = mara_new_symbol(fixture.ctx, mara_str_from_literal("abf"));
 	ASSERT_EQ(abf, abf2);
+}
+
+static inline mara_error_t*
+iterate_map(mara_exec_ctx_t* ctx, int argc, const mara_value_t* argv, void* userdata, mara_value_t* result) {
+	(void)ctx;
+	(void)argc;
+	(void)argv;
+
+	iterator_state_t* itr_state = userdata;
+
+	if (++itr_state->num_elements > 2) {
+		*result = mara_value_from_bool(false);
+	}
+
+	return NULL;
 }
 
 TEST(runtime, map) {
@@ -63,4 +82,12 @@ TEST(runtime, map) {
 	ASSERT_TRUE(mara_value_is_int(value));
 	MARA_ASSERT_NO_ERROR(ctx, mara_value_to_int(ctx, value, &value_int));
 	ASSERT_EQ(value_int, 2);
+
+	iterator_state_t iterator_state = { 0 };
+	mara_map_foreach(ctx, map, (mara_native_fn_t){
+		.fn = iterate_map,
+		.userdata = &iterator_state,
+	});
+
+	ASSERT_EQ(iterator_state.num_elements, 2);
 }

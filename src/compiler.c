@@ -137,6 +137,9 @@ MARA_PRIVATE mara_error_t*
 mara_compiler_add_argument(mara_compile_ctx_t* ctx, mara_value_t name) {
 	mara_function_scope_t* fn_scope = ctx->function_scope;
 
+	mara_str_t name_str;
+	mara_assert_no_error(mara_value_to_str(ctx->exec_ctx, name, &name_str));
+
 	mara_value_t existing_index;
 	mara_index_t new_index;
 	mara_assert_no_error(mara_map_get(ctx->exec_ctx, fn_scope->args, name, &existing_index));
@@ -386,7 +389,9 @@ mara_compiler_end_function(mara_compile_ctx_t* ctx) {
 		exec_ctx, permanent_zone,
 		sizeof(mara_function_t**) * num_functions, _Alignof(mara_function_t**)
 	);
-	memcpy(functions, fn_scope->functions, sizeof(mara_function_t*) * num_functions);
+	if (fn_scope->functions != NULL) {
+		memcpy(functions, fn_scope->functions, sizeof(mara_function_t*) * num_functions);
+	}
 
 	// Build the final function
 	mara_function_t* function = MARA_ZONE_ALLOC_TYPE(
@@ -489,6 +494,9 @@ mara_compiler_find_name(
 		}
 
 		// Then check arguments
+		mara_str_t name_str;
+		mara_assert_no_error(mara_value_to_str(ctx->exec_ctx, name, &name_str));
+
 		mara_assert_no_error(mara_map_get(exec_ctx, fn_scope->args, name, &index));
 		if (!mara_value_is_nil(index)) {
 			load_opcode = MARA_OP_GET_ARG;
@@ -643,8 +651,10 @@ MARA_PRIVATE mara_error_t*
 mara_compile_if(mara_compile_ctx_t* ctx, mara_obj_list_t* list) {
 	mara_index_t list_len = list->len;
 	if (list_len == 3 || list_len == 4) {
-		mara_index_t label_index;
-		mara_check_error(mara_compiler_add_label(ctx, &label_index));
+		mara_index_t false_label;
+		mara_index_t end_label;
+		mara_check_error(mara_compiler_add_label(ctx, &false_label));
+		mara_check_error(mara_compiler_add_label(ctx, &end_label));
 
 		// Condition
 		mara_compiler_set_debug_info(ctx, list, 1);
@@ -652,21 +662,23 @@ mara_compile_if(mara_compile_ctx_t* ctx, mara_obj_list_t* list) {
 
 		// Conditional jump over true branch
 		mara_compiler_set_debug_info(ctx, list, MARA_DEBUG_INFO_SELF);
-		mara_check_error(mara_compiler_emit(ctx, MARA_OP_JUMP_IF_FALSE, label_index, -1));
+		mara_check_error(mara_compiler_emit(ctx, MARA_OP_JUMP_IF_FALSE, false_label, -1));
 
 		// true branch
 		mara_compiler_set_debug_info(ctx, list, 2);
 		mara_check_error(mara_compile_expression(ctx, list->elems[2]));
+		mara_check_error(mara_compiler_emit(ctx, MARA_OP_JUMP, end_label, 0));
 
 		// false branch
 		mara_compiler_set_debug_info(ctx, list, MARA_DEBUG_INFO_SELF);
-		mara_check_error(mara_compiler_emit(ctx, MARA_OP_LABEL, label_index, 0));
+		mara_check_error(mara_compiler_emit(ctx, MARA_OP_LABEL, false_label, 0));
 		if (list_len == 4) {
 			mara_compiler_set_debug_info(ctx, list, 3);
 			mara_check_error(mara_compile_expression(ctx, list->elems[3]));
 		} else {
-			mara_check_error(mara_compiler_emit(ctx, MARA_OP_NIL, label_index, 1));
+			mara_check_error(mara_compiler_emit(ctx, MARA_OP_NIL, 0, 1));
 		}
+		mara_check_error(mara_compiler_emit(ctx, MARA_OP_LABEL, end_label, 0));
 
 		return NULL;
 	} else {
@@ -736,6 +748,7 @@ mara_compile_fn(mara_compile_ctx_t* ctx, mara_obj_list_t* list) {
 	}
 
 	// Finish the sub function and emit closure
+	mara_check_error(mara_compiler_emit(ctx, MARA_OP_RETURN, 0, 0));
 	mara_function_t* subfunction = mara_compiler_end_function(ctx);
 	mara_index_t function_index = barray_len(fn_scope->functions);
 	barray_push(ctx->exec_ctx->env, fn_scope->functions, subfunction);
