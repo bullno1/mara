@@ -412,6 +412,12 @@ mara_compiler_end_function(mara_compile_ctx_t* ctx) {
 	mara_assert_no_error(
 		mara_map_len(exec_ctx, fn_scope->captures, &function->num_captures)
 	);
+	const mara_source_info_t* debug_info = mara_get_debug_info(
+		ctx->exec_ctx, ctx->debug_key
+	);
+	if (debug_info != NULL) {
+		function->filename = debug_info->filename;
+	}
 
 	ctx->function_scope = fn_scope->parent;
 	mara_zone_restore(exec_ctx, fn_scope->zone_snapshot);
