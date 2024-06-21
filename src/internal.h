@@ -15,6 +15,13 @@
 #define MARA_PRIVATE static inline
 #define mara_assert(cond, msg) assert((cond) && (msg))
 
+#define mara_assert_no_error(op) \
+	do { \
+		mara_error_t* error = op; \
+		(void)error; \
+		mara_assert(error == NULL, "`" #op "` returned error"); \
+	} while (0)
+
 #define MARA_ZONE_ALLOC_TYPE(ctx, zone, type) \
 	mara_zone_alloc_ex((ctx), (zone), sizeof(type), _Alignof(type))
 
