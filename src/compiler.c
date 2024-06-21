@@ -1,8 +1,5 @@
 #include "internal.h"
-#include "mara.h"
-#include "mara/utils.h"
 #include "vm.h"
-#include <stdarg.h>
 
 MARA_PRIVATE void*
 mara_barray_realloc(mara_env_t* env, void* ptr, size_t size);

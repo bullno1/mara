@@ -1,6 +1,5 @@
 #include "internal.h"
 #include "nanoprintf.h"
-#include <stdarg.h>
 
 MARA_PRIVATE void
 mara_putc(int ch, void* ctx) {
