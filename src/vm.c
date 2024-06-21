@@ -184,9 +184,19 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 						fp = stackframe;
 
 						if(next_closure != NULL) {
-							sp = stackframe->stack + next_closure->fn->num_locals;
-							ip = next_closure->fn->instructions;
-							MARA_VM_DERIVE_STATE();
+							if (MARA_EXPECT(next_closure->fn->num_args <= (mara_index_t)operands)) {
+								sp = stackframe->stack + next_closure->fn->num_locals;
+								ip = next_closure->fn->instructions;
+								MARA_VM_DERIVE_STATE();
+							} else {
+								MARA_VM_SAVE_STATE(vm);
+								return mara_errorf(
+									ctx, mara_str_from_literal("core/wrong-arity"),
+									"Function expects %d arguments, got %d",
+									mara_nil(),
+									next_closure->fn->num_args, operands
+								);
+							}
 						} else {
 							sp = NULL;
 							ip = NULL;
