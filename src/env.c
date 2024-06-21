@@ -29,7 +29,7 @@ mara_create_env(mara_env_options_t options) {
 		.options = options,
 		.permanent_zone = {
 			.ref_count = 1,
-			.branch = MARA_ZONE_BRANCH_PERMANENT,
+			.level = -2,
 		},
 	};
 	env->permanent_zone.arena = &env->permanent_arena;
@@ -61,7 +61,7 @@ mara_begin(mara_env_t* env) {
 		.env = env,
 		.error_zone = {
 			.ref_count = 1,
-			.branch = MARA_ZONE_BRANCH_ERROR,
+			.level = -1,
 		},
 		.control_arena = control_arena,
 	};

@@ -180,13 +180,6 @@ typedef struct mara_zone_bookmark_s {
 	mara_arena_snapshot_t control_snapshot;
 } mara_zone_bookmark_t;
 
-// TODO: rethink the concept of branch
-typedef enum mara_zone_branch_e {
-	MARA_ZONE_BRANCH_MAIN,
-	MARA_ZONE_BRANCH_ERROR,
-	MARA_ZONE_BRANCH_PERMANENT,
-} mara_zone_branch_t;
-
 // VM types
 
 typedef enum mara_opcode_e {
@@ -266,7 +259,6 @@ struct mara_stack_frame_s {
 struct mara_zone_s {
 	mara_index_t level;
 	mara_index_t ref_count;
-	mara_zone_branch_t branch;
 	mara_finalizer_t* finalizers;
 	mara_arena_t* arena;
 	mara_source_info_t debug_info;

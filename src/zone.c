@@ -77,7 +77,6 @@ mara_zone_new(mara_exec_ctx_t* ctx, mara_zone_options_t options) {
 
 	*new_zone = (mara_zone_t){
 		.level = current_zone != NULL ? current_zone->level + 1 : 0,
-		.branch = current_zone != NULL ? current_zone->branch : MARA_ZONE_BRANCH_MAIN,
 		.arena = arena_for_zone,
 		.control_snapshot = control_snapshot,
 		.local_snapshot = mara_arena_snapshot(ctx->env, arena_for_zone),
@@ -194,7 +193,7 @@ mara_arena_mask_t
 mara_arena_mask_of_zone(mara_exec_ctx_t* ctx, mara_zone_t* zone) {
 	if (
 		MARA_EXPECT(
-			zone->branch == MARA_ZONE_BRANCH_MAIN
+			zone->level >= 0
 			&& ctx->arenas <= zone->arena
 			&& zone->arena < (ctx->arenas + MARA_NUM_ARENAS)
 		)
