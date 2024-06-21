@@ -449,48 +449,4 @@ mara_strpool_intern(
 
 // VM
 
-MARA_PRIVATE const char*
-mara_opcode_to_str(mara_opcode_t opcode) {
-	switch (opcode) {
-		case MARA_OP_NOP:
-			return "NOP";
-		case MARA_OP_NIL:
-			return "NIL";
-		case MARA_OP_TRUE:
-			return "TRUE";
-		case MARA_OP_FALSE:
-			return "FALSE";
-		case MARA_OP_SMALL_INT:
-			return "SMALL_INT";
-		case MARA_OP_CONSTANT:
-			return "CONSTANT";
-		case MARA_OP_POP:
-			return "POP";
-		case MARA_OP_SET_LOCAL:
-			return "SET_LOCAL";
-		case MARA_OP_GET_LOCAL:
-			return "GET_LOCAL";
-		case MARA_OP_SET_ARG:
-			return "SET_ARG";
-		case MARA_OP_GET_ARG:
-			return "GET_ARG";
-		case MARA_OP_SET_CAPTURE:
-			return "SET_CAPTURE";
-		case MARA_OP_GET_CAPTURE:
-			return "GET_CAPTURE";
-		case MARA_OP_CALL:
-			return "CALL";
-		case MARA_OP_RETURN:
-			return "RETURN";
-		case MARA_OP_JUMP:
-			return "JUMP";
-		case MARA_OP_JUMP_IF_FALSE:
-			return "JUMP_IF_FALSE";
-		case MARA_OP_MAKE_CLOSURE:
-			return "MAKE_CLOSURE";
-	}
-
-	return NULL;
-}
-
 #endif
