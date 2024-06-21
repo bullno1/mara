@@ -226,6 +226,7 @@ typedef uint32_t mara_operand_t;
 
 typedef struct mara_function_s {
 	mara_index_t num_args;
+	mara_index_t num_locals;
 	mara_index_t num_captures;
 	mara_index_t stack_size;
 	mara_index_t num_instructions;
@@ -252,13 +253,12 @@ typedef struct mara_vm_state_s {
 	mara_stack_frame_t* fp;
 	mara_instruction_t* ip;
 	mara_value_t* sp;
-	mara_value_t* bp;
+	mara_value_t* args;
 } mara_vm_state_t;
 
 struct mara_stack_frame_s {
 	mara_obj_closure_t* closure;
 
-	mara_source_info_t* source_info;
 	mara_zone_bookmark_t* zone_bookmark;
 	mara_vm_state_t saved_state;
 

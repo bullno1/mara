@@ -393,6 +393,7 @@ mara_compiler_end_function(mara_compile_ctx_t* ctx) {
 		exec_ctx, target_zone, mara_function_t
 	);
 	*function = (mara_function_t) {
+		.num_locals = fn_scope->max_num_locals,
 		.stack_size = fn_scope->max_num_locals + fn_scope->max_num_temps,
 		.num_instructions = num_instructions,
 		.instructions = instructions,

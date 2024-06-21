@@ -378,7 +378,7 @@ mara_call(
 	mara_zone_t* zone,
 	mara_value_t fn,
 	mara_index_t argc,
-	const mara_value_t* argv,
+	mara_value_t* argv,
 	mara_value_t* result
 );
 

@@ -15,6 +15,7 @@ set(SOURCES
 	"strpool.c"
 	"print.c"
 	"compiler.c"
+	"vm.c"
 )
 
 setup_library(mara ${MARA_STATIC} "${SOURCES}")
