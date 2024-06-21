@@ -17,7 +17,7 @@
 		if (error != NULL) { return error; } \
 	} while (0)
 
-#define MARA_NATIVE_DEBUG_INFO(ctx) \
+#define MARA_ADD_NATIVE_DEBUG_INFO(ctx) \
 	do { \
 		mara_set_debug_info(ctx, (mara_source_info_t){ \
 			.filename = mara_str_from_literal(__FILE__), \
@@ -97,6 +97,33 @@ mara_read_from_file(void* buffer, mara_index_t size, void* userdata) {
 	} else {
 		return (mara_index_t)bytes_read;
 	}
+}
+
+static inline void*
+mara_open_file(mara_str_t filename, void* userdata) {
+	mara_exec_ctx_t* ctx = userdata;
+	char* filename_cstr = mara_zone_alloc_ex(
+		ctx, mara_get_local_zone(ctx), filename.len + 1, _Alignof(char)
+	);
+	filename_cstr[filename.len] = '\0';
+	memcpy(filename_cstr, filename.data, filename.len);
+	return fopen(filename_cstr, "rb");
+}
+
+static inline void
+mara_close_file(void* handle, void* userdata) {
+	(void)userdata;
+	fclose(handle);
+}
+
+static inline mara_module_fs_t
+mara_make_std_fs(mara_exec_ctx_t* ctx) {
+	return (mara_module_fs_t){
+		.open = mara_open_file,
+		.read = mara_read_from_file,
+		.close = mara_close_file,
+		.userdata = ctx,
+	};
 }
 
 #endif

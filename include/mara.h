@@ -41,8 +41,9 @@ typedef struct {
 	void* userdata;
 } mara_allocator_t;
 
+typedef mara_index_t (*mara_read_fn_t)(void* buffer, mara_index_t size, void* userdata);
 typedef struct {
-	mara_index_t (*fn)(void* buffer, mara_index_t size, void* userdata);
+	mara_read_fn_t fn;
 	void* userdata;
 } mara_reader_t;
 
@@ -105,6 +106,19 @@ typedef struct {
 	mara_index_t max_length;
 	mara_index_t indent;
 } mara_print_options_t;
+
+typedef struct {
+	mara_str_t module_name;
+	bool ignore_export;
+} mara_module_options_t;
+
+typedef struct {
+	void* (*open)(mara_str_t filename, void* userdata);
+	mara_read_fn_t read;
+	void (*close)(void* handle, void* userdata);
+
+	void* userdata;
+} mara_module_fs_t;
 
 typedef enum {
 	MARA_VAL_NIL,
@@ -357,15 +371,22 @@ MARA_API mara_error_t*
 mara_import(
 	mara_exec_ctx_t* ctx,
 	mara_str_t module_name,
-	mara_str_t symbol_name,
+	mara_str_t export_name,
 	mara_value_t* result
 );
 
 MARA_API mara_error_t*
-mara_init_module(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_value_t fn);
+mara_init_module(
+	mara_exec_ctx_t* ctx,
+	mara_value_t entry_fn,
+	mara_module_options_t options
+);
 
 MARA_API mara_error_t*
 mara_add_module_loader(mara_exec_ctx_t* ctx, mara_value_t fn);
+
+MARA_API void
+mara_add_standard_loader(mara_exec_ctx_t* ctx, mara_module_fs_t fs);
 
 MARA_API void
 mara_reload(mara_env_t* env);

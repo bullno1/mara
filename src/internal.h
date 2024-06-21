@@ -180,6 +180,12 @@ typedef struct mara_zone_bookmark_s {
 	mara_arena_snapshot_t control_snapshot;
 } mara_zone_bookmark_t;
 
+typedef struct mara_module_loader_entry_s {
+	struct mara_module_loader_entry_s* next;
+
+	mara_value_t loader;
+} mara_module_loader_entry_t;
+
 // VM types
 
 typedef enum mara_opcode_e {
@@ -269,6 +275,7 @@ struct mara_zone_s {
 struct mara_env_s {
 	mara_env_options_t options;
 	mara_arena_chunk_t* free_chunks;
+	mara_value_t module_cache;
 	mara_zone_t permanent_zone;
 	mara_arena_t permanent_arena;
 	mara_strpool_t permanent_strpool;
@@ -285,6 +292,11 @@ struct mara_exec_ctx_s {
 	mara_arena_t error_arena;
 	mara_error_t last_error;
 	mara_zone_t error_zone;
+
+	mara_value_t current_module;
+	mara_module_options_t current_module_options;
+	mara_module_loader_entry_t* first_loader;
+	mara_module_loader_entry_t* last_loader;
 
 	mara_arena_t debug_info_arena;
 	mara_strpool_t debug_info_strpool;
