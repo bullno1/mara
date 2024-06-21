@@ -327,6 +327,16 @@ mara_new_ref(mara_exec_ctx_t* ctx, mara_zone_t* zone, void* tag, void* value) {
 }
 
 mara_value_t
+mara_new_fn(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_native_fn_t fn) {
+	mara_obj_t* obj = mara_alloc_obj(ctx, zone, sizeof(mara_native_fn_t));
+	obj->type = MARA_OBJ_TYPE_NATIVE_FN;
+
+	*(mara_native_fn_t*)obj->body = fn;
+
+	return mara_obj_to_value(obj);
+}
+
+mara_value_t
 mara_tombstone(void) {
 	return nanbox_deleted().as_int64;
 }

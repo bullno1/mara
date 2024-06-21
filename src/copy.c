@@ -133,9 +133,10 @@ mara_deep_copy(
 		default:
 			return mara_errorf(
 				ctx,
-				mara_str_from_literal("core/not-implemented"),
-				"Not implemented",
-				mara_nil()
+				mara_str_from_literal("core/panic"),
+				"Invalid object type: %d",
+				mara_value_from_int(obj->type),
+				obj->type
 			);
 	}
 }
@@ -181,17 +182,23 @@ mara_copy(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_value_t value, mara_valu
 				*result = mara_new_ref(ctx, zone, ref->tag, ref->value);
 				return NULL;
 			}
+		case MARA_OBJ_TYPE_NATIVE_FN:
+			{
+				mara_native_fn_t* fn = (mara_native_fn_t*)obj->body;
+				*result = mara_new_fn(ctx, zone, *fn);
+				return NULL;
+			}
 		case MARA_OBJ_TYPE_LIST:
 		case MARA_OBJ_TYPE_MAP:
 		case MARA_OBJ_TYPE_MARA_FN:
-		case MARA_OBJ_TYPE_NATIVE_FN:
 			return mara_start_deep_copy(ctx, zone, value, result);
 		default:
 			return mara_errorf(
 				ctx,
 				mara_str_from_literal("core/panic"),
-				"Invalid state",
-				mara_nil()
+				"Invalid object type: %d",
+				mara_value_from_int(obj->type),
+				obj->type
 			);
 	}
 }
