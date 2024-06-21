@@ -367,20 +367,10 @@ mara_compiler_end_function(mara_compile_ctx_t* ctx) {
 			sizeof(mara_value_t) * num_constants, _Alignof(mara_value_t)
 		);
 
-		// Without removal, the order of iteration is always the reverse order of insertion
-		mara_index_t out_index = num_constants;
 		for (mara_obj_map_node_t* itr = constant_pool->root; itr != NULL; itr = itr->next) {
-			mara_assert_no_error(
-				mara_copy(exec_ctx, target_zone, itr->key, &constants[--out_index])
-			);
-
 			mara_index_t constant_index;
-			(void)constant_index;
-			mara_assert(
-				mara_value_to_int(exec_ctx, itr->value, &constant_index) == NULL,
-				"Constant pool key is not an integer"
-			);
-			mara_assert(constant_index == out_index, "Constant index mismatch");
+			mara_assert_no_error(mara_value_to_int(exec_ctx, itr->value, &constant_index));
+			mara_assert_no_error(mara_copy(exec_ctx, target_zone, itr->key, &constants[constant_index]));
 		}
 	}
 
@@ -861,7 +851,9 @@ mara_compile_expression(mara_compile_ctx_t* ctx, mara_value_t expr) {
 			mara_value_t lookup_result;
 			mara_map_get(exec_ctx, constant_pool, expr, &lookup_result);
 			if (mara_value_is_int(lookup_result)) {
-				mara_value_to_int(exec_ctx, lookup_result, &constant_index);
+				mara_assert_no_error(
+					mara_value_to_int(exec_ctx, lookup_result, &constant_index)
+				);
 			} else {
 				mara_map_len(exec_ctx, constant_pool, &constant_index);
 				mara_map_set(
@@ -870,7 +862,7 @@ mara_compile_expression(mara_compile_ctx_t* ctx, mara_value_t expr) {
 			}
 		}
 
-		return mara_compiler_emit(ctx, MARA_OP_LOAD, constant_index, 1);
+		return mara_compiler_emit(ctx, MARA_OP_CONSTANT, constant_index, 1);
 	} else if (mara_value_is_symbol(expr)) {
 		mara_opcode_t load_opcode;
 		mara_index_t var_index;

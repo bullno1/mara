@@ -180,9 +180,11 @@ typedef struct mara_zone_bookmark_s {
 	mara_arena_snapshot_t control_snapshot;
 } mara_zone_bookmark_t;
 
+// TODO: rethink the concept of branch
 typedef enum mara_zone_branch_e {
 	MARA_ZONE_BRANCH_MAIN,
 	MARA_ZONE_BRANCH_ERROR,
+	MARA_ZONE_BRANCH_PERMANENT,
 } mara_zone_branch_t;
 
 // VM types
@@ -195,7 +197,7 @@ typedef enum mara_opcode_e {
 	MARA_OP_FALSE,
 	MARA_OP_SMALL_INT,
 
-	MARA_OP_LOAD,
+	MARA_OP_CONSTANT,
 	MARA_OP_POP,
 
 	MARA_OP_SET_LOCAL,
@@ -279,6 +281,7 @@ struct mara_zone_s {
 struct mara_env_s {
 	mara_env_options_t options;
 	mara_arena_chunk_t* free_chunks;
+	mara_zone_t permanent_zone;
 	mara_arena_t permanent_arena;
 	mara_symtab_t symtab;
 };
@@ -470,8 +473,8 @@ mara_opcode_to_str(mara_opcode_t opcode) {
 			return "FALSE";
 		case MARA_OP_SMALL_INT:
 			return "SMALL_INT";
-		case MARA_OP_LOAD:
-			return "LOAD";
+		case MARA_OP_CONSTANT:
+			return "CONSTANT";
 		case MARA_OP_POP:
 			return "POP";
 		case MARA_OP_SET_LOCAL:

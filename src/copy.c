@@ -59,7 +59,6 @@ mara_deep_copy(
 ) {
 	mara_obj_t* obj = mara_value_to_obj(value);
 
-	// TODO: rethink the concept of branch
 	if (
 		obj == NULL
 		|| (
