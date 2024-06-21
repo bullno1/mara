@@ -53,7 +53,7 @@
 typedef MARA_ARENA_MASK_TYPE mara_arena_mask_t;
 
 typedef struct {
-	void (*fn)(mara_exec_ctx_t* ctx, void* userdata);
+	void (*fn)(mara_env_t* env, void* userdata);
 	void* userdata;
 } mara_callback_t;
 
@@ -283,6 +283,7 @@ struct mara_env_s {
 	mara_arena_chunk_t* free_chunks;
 	mara_zone_t permanent_zone;
 	mara_arena_t permanent_arena;
+	mara_strpool_t permanent_strpool;
 	mara_symtab_t symtab;
 };
 
@@ -342,7 +343,7 @@ void
 mara_zone_exit(mara_exec_ctx_t* ctx);
 
 void
-mara_zone_cleanup(mara_exec_ctx_t* ctx, mara_zone_t* zone);
+mara_zone_cleanup(mara_env_t* env, mara_zone_t* zone);
 
 void
 mara_add_finalizer(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_callback_t callback);

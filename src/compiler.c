@@ -256,10 +256,10 @@ mara_compiler_add_label(mara_compile_ctx_t* ctx, mara_index_t* index) {
 }
 
 MARA_PRIVATE void
-mara_compiler_cleanup_function_scope(mara_exec_ctx_t* ctx, void* userdata) {
+mara_compiler_cleanup_function_scope(mara_env_t* env, void* userdata) {
 	mara_function_scope_t* fn_scope = userdata;
-	barray_free(ctx->env, fn_scope->functions);
-	barray_free(ctx->env, fn_scope->instructions);
+	barray_free(env, fn_scope->functions);
+	barray_free(env, fn_scope->instructions);
 }
 
 MARA_PRIVATE void
@@ -292,8 +292,10 @@ mara_compiler_end_function(mara_compile_ctx_t* ctx) {
 	mara_function_scope_t* fn_scope = ctx->function_scope;
 	mara_assert(fn_scope->local_scope == NULL, "Unbalanced local scopes");
 
-	mara_zone_t* target_zone = ctx->zone;
 	mara_exec_ctx_t* exec_ctx = ctx->exec_ctx;
+	mara_env_t* env = exec_ctx->env;
+	mara_zone_t* target_zone = ctx->zone;
+	mara_zone_t* permanent_zone = &env->permanent_zone;
 	mara_zone_t* local_zone = mara_get_local_zone(exec_ctx);
 
 	// Collect label targets
@@ -336,13 +338,13 @@ mara_compiler_end_function(mara_compile_ctx_t* ctx) {
 
 	// Split tagged instructions into 2 arrays
 	mara_instruction_t* instructions = mara_zone_alloc_ex(
-		exec_ctx, target_zone,
+		exec_ctx, permanent_zone,
 		sizeof(mara_instruction_t) * num_instructions, _Alignof(mara_instruction_t)
 	);
 	mara_source_info_t* source_info = NULL;
 	if (!ctx->options.strip_debug_info) {
 		source_info = mara_zone_alloc_ex(
-			exec_ctx, target_zone,
+			exec_ctx, permanent_zone,
 			sizeof(mara_source_info_t) * num_instructions, _Alignof(mara_source_info_t)
 		);
 	}
@@ -351,6 +353,10 @@ mara_compiler_end_function(mara_compile_ctx_t* ctx) {
 		instructions[i] = tagged_instruction.instruction;
 		if (source_info != NULL) {
 			source_info[i] = tagged_instruction.source_info;
+			source_info[i].filename = mara_strpool_intern(
+				exec_ctx->env, &exec_ctx->env->permanent_arena,
+				&env->permanent_strpool, tagged_instruction.source_info.filename
+			);
 		}
 	}
 
@@ -363,24 +369,24 @@ mara_compiler_end_function(mara_compile_ctx_t* ctx) {
 
 		num_constants = constant_pool->len;
 		constants = mara_zone_alloc_ex(
-			exec_ctx, target_zone,
+			exec_ctx, permanent_zone,
 			sizeof(mara_value_t) * num_constants, _Alignof(mara_value_t)
 		);
 
 		for (mara_obj_map_node_t* itr = constant_pool->root; itr != NULL; itr = itr->next) {
 			mara_index_t constant_index;
 			mara_assert_no_error(mara_value_to_int(exec_ctx, itr->value, &constant_index));
-			mara_assert_no_error(mara_copy(exec_ctx, target_zone, itr->key, &constants[constant_index]));
+			mara_assert_no_error(mara_copy(exec_ctx, permanent_zone, itr->key, &constants[constant_index]));
 		}
 	}
 
 	// Sub functions
 	mara_index_t num_functions = barray_len(fn_scope->functions);
 	mara_function_t** functions = mara_zone_alloc_ex(
-		exec_ctx, target_zone,
+		exec_ctx, permanent_zone,
 		sizeof(mara_function_t**) * num_functions, _Alignof(mara_function_t**)
 	);
-	memcpy(functions, fn_scope->functions, sizeof(mara_function_t**) * num_functions);
+	memcpy(functions, fn_scope->functions, sizeof(mara_function_t*) * num_functions);
 
 	// Build the final function
 	mara_function_t* function = MARA_ZONE_ALLOC_TYPE(

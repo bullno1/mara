@@ -27,7 +27,12 @@ mara_create_env(mara_env_options_t options) {
 
 	*env = (mara_env_t){
 		.options = options,
+		.permanent_zone = {
+			.ref_count = 1,
+			.branch = MARA_ZONE_BRANCH_PERMANENT,
+		},
 	};
+	env->permanent_zone.arena = &env->permanent_arena;
 	mara_symtab_init(env, &env->symtab);
 
 	return env;
@@ -36,7 +41,7 @@ mara_create_env(mara_env_options_t options) {
 void
 mara_destroy_env(mara_env_t* env) {
 	mara_symtab_cleanup(env, &env->symtab);
-	mara_arena_reset(env, &env->permanent_arena);
+	mara_zone_cleanup(env, &env->permanent_zone);
 
 	mara_allocator_t allocator = env->options.allocator;
 	for (mara_arena_chunk_t* itr = env->free_chunks; itr != NULL;) {
@@ -69,7 +74,7 @@ void
 mara_end(mara_exec_ctx_t* ctx) {
 	mara_zone_exit(ctx);
 
-	mara_zone_cleanup(ctx, &ctx->error_zone);
+	mara_zone_cleanup(ctx->env, &ctx->error_zone);
 	mara_arena_reset(ctx->env, &ctx->control_arena);
 	mara_arena_reset(ctx->env, &ctx->debug_info_arena);
 }

@@ -2,8 +2,8 @@
 #include <mara/utils.h>
 
 MARA_PRIVATE void
-mara_list_free(mara_exec_ctx_t* ctx, void* userdata) {
-	mara_free(ctx->env->options.allocator, ((mara_obj_list_t*)userdata)->elems);
+mara_list_free(mara_env_t* env, void* userdata) {
+	mara_free(env->options.allocator, ((mara_obj_list_t*)userdata)->elems);
 }
 
 MARA_PRIVATE void

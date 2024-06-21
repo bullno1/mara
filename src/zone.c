@@ -110,7 +110,7 @@ mara_zone_enter(mara_exec_ctx_t* ctx, mara_zone_t* zone) {
 
 	// Reset error
 	ctx->last_error = (mara_error_t){ 0 };
-	mara_zone_cleanup(ctx, &ctx->error_zone);
+	mara_zone_cleanup(ctx->env, &ctx->error_zone);
 }
 
 void
@@ -123,7 +123,7 @@ mara_zone_exit(mara_exec_ctx_t* ctx) {
 	mara_arena_restore(ctx->env, &ctx->control_arena, bookmark->control_snapshot);
 
 	if (--current_zone->ref_count == 0) {
-		mara_zone_cleanup(ctx, current_zone);
+		mara_zone_cleanup(ctx->env, current_zone);
 		mara_arena_restore(ctx->env, &ctx->control_arena, current_zone->control_snapshot);
 	}
 }
@@ -136,16 +136,16 @@ mara_zone_switch(mara_exec_ctx_t* ctx, mara_zone_t* zone) {
 }
 
 void
-mara_zone_cleanup(mara_exec_ctx_t* ctx, mara_zone_t* zone) {
+mara_zone_cleanup(mara_env_t* env, mara_zone_t* zone) {
 	for (
 		mara_finalizer_t* itr = zone->finalizers;
 		itr != NULL;
 		itr = itr->next
 	) {
-		itr->callback.fn(ctx, itr->callback.userdata);
+		itr->callback.fn(env, itr->callback.userdata);
 	}
 
-	mara_arena_restore(ctx->env, zone->arena, zone->local_snapshot);
+	mara_arena_restore(env, zone->arena, zone->local_snapshot);
 }
 
 void
@@ -220,7 +220,7 @@ mara_zone_restore(mara_exec_ctx_t* ctx, mara_zone_snapshot_t snapshot) {
 	mara_finalizer_t* finalizer = zone->finalizers;
 	while (finalizer != snapshot.finalizers) {
 		mara_finalizer_t* next = finalizer->next;
-		finalizer->callback.fn(ctx, finalizer->callback.userdata);
+		finalizer->callback.fn(ctx->env, finalizer->callback.userdata);
 		finalizer = next;
 	}
 
