@@ -27,6 +27,20 @@
 #	define MARA_EXPECT(X) (X)
 #endif
 
+#if defined(__clang__)
+#define MARA_WARNING_PUSH() _Pragma("clang diagnostic push")
+#define MARA_WARNING_POP() _Pragma("clang diagnostic pop")
+#elif defined(__GNUC__)
+#define MARA_WARNING_PUSH() _Pragma("GCC diagnostic push")
+#define MARA_WARNING_POP() _Pragma("GCC diagnostic pop")
+#elif defined(_MSC_VER)
+#define MARA_WARNING_PUSH() _Pragma("warning(push)")
+#define MARA_WARNING_POP() _Pragma("warning(pop)")
+#else
+#define MARA_WARNING_PUSH()
+#define MARA_WARNING_POP()
+#endif
+
 // Common types
 
 typedef MARA_ARENA_MASK_TYPE mara_arena_mask_t;
@@ -209,7 +223,7 @@ typedef struct mara_function_s {
 	mara_instruction_t* instructions;
 
 	mara_str_t filename;
-	mara_source_range_t* source_info;
+	mara_source_info_t* source_info;
 
 	mara_index_t num_constants;
 	mara_value_t* constants;

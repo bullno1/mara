@@ -14,6 +14,7 @@ set(SOURCES
 	"debug_info.c"
 	"strpool.c"
 	"print.c"
+	"compiler.c"
 )
 
 setup_library(mara ${MARA_STATIC} "${SOURCES}")

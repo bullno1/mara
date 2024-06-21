@@ -1,6 +1,21 @@
 #include "internal.h"
 #include "xxhash.h"
 
+MARA_WARNING_PUSH()
+#if defined(__clang__)
+#pragma clang diagnostic ignored "-Wunneeded-internal-declaration"
+#endif
+
+// Sync this list with compiler.c
+static const char* mara_builtin_symbols[] = {
+	"def", "set", "if", "fn", "do", "nil", "true", "false", "import", "export"
+};
+
+MARA_WARNING_POP()
+
+static const size_t MARA_NUM_BUILTIN_SYMBOLS =
+	sizeof(mara_builtin_symbols) / sizeof(mara_builtin_symbols[0]);
+
 void
 mara_symtab_init(mara_env_t* env, mara_symtab_t* symtab) {
 	(void)env;
@@ -28,7 +43,9 @@ mara_symtab_intern(mara_env_t* env, mara_symtab_t* symtab, mara_str_t string) {
 		mara_index_t current_len = symtab->len;
 		mara_index_t current_capacity = symtab->capacity;
 		if (current_len >= symtab->capacity) {
-			mara_index_t new_capacity = current_capacity > 0 ? current_capacity * 2 : 4;
+			mara_index_t new_capacity = current_capacity > 0
+				? current_capacity * 2
+				: MARA_NUM_BUILTIN_SYMBOLS * 2;
 			symtab->nodes = mara_realloc(
 				env->options.allocator,
 				symtab->nodes,
