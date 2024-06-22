@@ -22,67 +22,66 @@ TEST(parser, basic) {
 	);
 
 	mara_str_reader_t str_reader;
-	mara_value_t result;
-	MARA_ASSERT_NO_ERROR(ctx, mara_parse_all(
+	mara_list_t* result;
+	MARA_ASSERT_NO_ERROR(ctx, mara_parse(
 		ctx,
 		mara_get_local_zone(ctx),
-		filename,
+		(mara_parse_options_t){ .filename = filename },
 		mara_init_str_reader(&str_reader, input),
 		&result
 	));
 
 	mara_index_t len;
-	MARA_ASSERT_NO_ERROR(ctx, mara_list_len(ctx, result, &len));
-	ASSERT_EQ(len, 6);
+	ASSERT_EQ(mara_list_len(ctx, result), 6);
 
 	// test
-	mara_value_t value;
-	MARA_ASSERT_NO_ERROR(ctx, mara_list_get(ctx, result, 0, &value));
-	ASSERT_EQ(mara_value_type(value, NULL), MARA_VAL_SYMBOL);
+	mara_value_t value = mara_list_get(ctx, result, 0);
+	ASSERT_EQ(mara_value_type(value, NULL), MARA_VAL_SYM);
 	mara_str_t str;
 	MARA_ASSERT_NO_ERROR(ctx, mara_value_to_str(ctx, value, &str));
 	MARA_ASSERT_STR_EQ(str, mara_str_from_literal("test"));
 
 	// 1.2
-	MARA_ASSERT_NO_ERROR(ctx, mara_list_get(ctx, result, 1, &value));
+	value = mara_list_get(ctx, result, 1);
 	ASSERT_EQ(mara_value_type(value, NULL), MARA_VAL_REAL);
 	double real;
 	MARA_ASSERT_NO_ERROR(ctx, mara_value_to_real(ctx, value, &real));
 	ASSERT_DOUBLE_EQ(real, 1.2);
 
 	// ( ... )
-	MARA_ASSERT_NO_ERROR(ctx, mara_list_get(ctx, result, 2, &value));
+	value = mara_list_get(ctx, result, 2);
 	ASSERT_EQ(mara_value_type(value, NULL), MARA_VAL_LIST);
-	MARA_ASSERT_NO_ERROR(ctx, mara_list_len(ctx, value, &len));
+	mara_list_t* list;
+	MARA_ASSERT_NO_ERROR(ctx, mara_value_to_list(ctx, value, &list));
+	len = mara_list_len(ctx, list);
 	ASSERT_EQ(len, 2);
 	{
-		mara_value_t elem;
-		MARA_ASSERT_NO_ERROR(ctx, mara_list_get(ctx, value, 0, &elem));
+		mara_value_t elem = mara_list_get(ctx, list, 0);
 		ASSERT_EQ(mara_value_type(elem, NULL), MARA_VAL_INT);
 		mara_index_t integer;
 		MARA_ASSERT_NO_ERROR(ctx, mara_value_to_int(ctx, elem, &integer));
 		ASSERT_EQ(integer, -3000);
 
-		MARA_ASSERT_NO_ERROR(ctx, mara_list_get(ctx, value, 1, &elem));
-		ASSERT_EQ(mara_value_type(elem, NULL), MARA_VAL_STRING);
+		elem = mara_list_get(ctx, list, 1);
+		ASSERT_EQ(mara_value_type(elem, NULL), MARA_VAL_STR);
 		MARA_ASSERT_NO_ERROR(ctx, mara_value_to_str(ctx, elem, &str));
 		MARA_ASSERT_STR_EQ(str, mara_str_from_literal("str\n"));
 	}
 
 	// "Hello\t"
-	MARA_ASSERT_NO_ERROR(ctx, mara_list_get(ctx, result, 3, &value));
-	ASSERT_EQ(mara_value_type(value, NULL), MARA_VAL_STRING);
+	value = mara_list_get(ctx, result, 3);
+	ASSERT_EQ(mara_value_type(value, NULL), MARA_VAL_STR);
 	MARA_ASSERT_NO_ERROR(ctx, mara_value_to_str(ctx, value, &str));
 	MARA_ASSERT_STR_EQ(str, mara_str_from_literal("Hello\t"));
 
 	// "what?"
-	MARA_ASSERT_NO_ERROR(ctx, mara_list_get(ctx, result, 4, &value));
-	ASSERT_EQ(mara_value_type(value, NULL), MARA_VAL_SYMBOL);
+	value = mara_list_get(ctx, result, 4);
+	ASSERT_EQ(mara_value_type(value, NULL), MARA_VAL_SYM);
 	MARA_ASSERT_NO_ERROR(ctx, mara_value_to_str(ctx, value, &str));
 	MARA_ASSERT_STR_EQ(str, mara_str_from_literal("what?"));
 
 	// 69
-	MARA_ASSERT_NO_ERROR(ctx, mara_list_get(ctx, result, 5, &value));
+	value = mara_list_get(ctx, result, 5);
 	ASSERT_EQ(mara_value_type(value, NULL), MARA_VAL_INT);
 	mara_index_t integer;
 	MARA_ASSERT_NO_ERROR(ctx, mara_value_to_int(ctx, value, &integer));
@@ -98,11 +97,11 @@ TEST(parser, nested) {
 	);
 
 	mara_str_reader_t str_reader;
-	mara_value_t result;
-	MARA_ASSERT_NO_ERROR(ctx, mara_parse_all(
+	mara_list_t* result;
+	MARA_ASSERT_NO_ERROR(ctx, mara_parse(
 		ctx,
 		mara_get_local_zone(ctx),
-		filename,
+		(mara_parse_options_t){ .filename = filename },
 		mara_init_str_reader(&str_reader, input),
 		&result
 	));

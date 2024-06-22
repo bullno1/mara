@@ -1,5 +1,4 @@
 #include "internal.h"
-#include <string.h>
 
 #if defined(__GNUC__)
 
@@ -53,10 +52,12 @@ mara_zone_new(mara_exec_ctx_t* ctx, mara_zone_options_t options) {
 		}
 
 		// Module system objects are implicitly passed to all zones
-		mara_obj_t* loaders = mara_value_to_obj(ctx->module_loaders);
-		if (loaders != NULL) { arena_mask |= loaders->arena_mask; }
-		mara_obj_t* current_module = mara_value_to_obj(ctx->current_module);
-		if (current_module != NULL) { arena_mask |= current_module->arena_mask; }
+		if (ctx->module_loaders != NULL) {
+			arena_mask |= mara_header_of(ctx->module_loaders)->arena_mask;
+		}
+		if (ctx->current_module != NULL) {
+			arena_mask |= mara_header_of(ctx->current_module)->arena_mask;
+		}
 
 		for (mara_index_t i = 0; i < options.num_marked_zones; ++i) {
 			arena_mask |= mara_arena_mask_of_zone(ctx, options.marked_zones[i]);

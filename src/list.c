@@ -3,13 +3,13 @@
 
 MARA_PRIVATE void
 mara_list_free(mara_env_t* env, void* userdata) {
-	mara_free(env->options.allocator, ((mara_obj_list_t*)userdata)->elems);
+	mara_free(env->options.allocator, ((mara_list_t*)userdata)->elems);
 }
 
 MARA_PRIVATE void
 mara_list_reserve(
 	mara_exec_ctx_t* ctx,
-	mara_obj_list_t* obj,
+	mara_list_t* obj,
 	mara_index_t new_capacity
 ) {
 	mara_assert(new_capacity >= 0, "Invalid capacity");
@@ -42,27 +42,17 @@ mara_list_reserve(
 	obj->capacity = new_capacity;
 }
 
-mara_error_t*
-mara_unbox_list(mara_exec_ctx_t* ctx, mara_value_t value, mara_obj_list_t** result) {
-	if (MARA_EXPECT(mara_value_is_list(value))) {
-		*result = (mara_obj_list_t*)(mara_value_to_obj(value)->body);
-		return NULL;
-	} else {
-		return mara_type_error(ctx, MARA_VAL_LIST, value);
-	}
-}
-
-mara_value_t
+mara_list_t*
 mara_new_list(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_index_t initial_capacity) {
 	mara_obj_t* obj = mara_alloc_obj(
 		ctx,
 		zone,
-		sizeof(mara_obj_list_t)
+		sizeof(mara_list_t)
 	);
 	obj->type = MARA_OBJ_TYPE_LIST;
 
-	mara_obj_list_t* list = (mara_obj_list_t*)obj->body;
-	*list = (mara_obj_list_t){
+	mara_list_t* list = (mara_list_t*)obj->body;
+	*list = (mara_list_t){
 		.capacity = initial_capacity,
 		.len = 0,
 		.in_zone = true,
@@ -74,177 +64,117 @@ mara_new_list(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_index_t initial_capa
 		);
 	}
 
-	return mara_obj_to_value(obj);
+	return list;
 }
 
-mara_error_t*
-mara_list_len(mara_exec_ctx_t* ctx, mara_value_t list, mara_index_t* result) {
-	mara_obj_list_t* obj;
-	mara_check_error(mara_unbox_list(ctx, list, &obj));
-	*result = obj->len;
-	return NULL;
+mara_index_t
+mara_list_len(mara_exec_ctx_t* ctx, mara_list_t* list) {
+	(void)ctx;
+	return list->len;
 }
 
-mara_error_t*
-mara_list_get(mara_exec_ctx_t* ctx, mara_value_t list, mara_index_t index, mara_value_t* result) {
-	mara_obj_list_t* obj;
-	mara_check_error(mara_unbox_list(ctx, list, &obj));
-
-	if (MARA_EXPECT(0 <= index && index < obj->len)) {
-		*result = obj->elems[index];
-		return NULL;
+mara_value_t
+mara_list_get(mara_exec_ctx_t* ctx, mara_list_t* list, mara_index_t index) {
+	(void)ctx;
+	if (MARA_EXPECT(0 <= index && index < list->len)) {
+		return list->elems[index];
 	} else {
-		return mara_errorf(
-			ctx,
-			mara_str_from_literal("core/index-out-of-bound"),
-			"List index out of bound: %d",
-			mara_value_from_int(index),
-			index
-		);
+		return mara_nil();
 	}
 }
 
-mara_error_t*
-mara_list_set(mara_exec_ctx_t* ctx, mara_value_t list, mara_index_t index, mara_value_t value) {
-	mara_obj_list_t* obj;
-	mara_check_error(mara_unbox_list(ctx, list, &obj));
-
-	if (MARA_EXPECT(0 <= index && index < obj->len)) {
-		mara_obj_t* header = mara_container_of(obj, mara_obj_t, body);
-		mara_value_t copy;
-		mara_check_error(mara_copy(ctx, header->zone, value, &copy));
+mara_value_t
+mara_list_set(mara_exec_ctx_t* ctx, mara_list_t* list, mara_index_t index, mara_value_t value) {
+	if (MARA_EXPECT(0 <= index && index < list->len)) {
+		mara_obj_t* header = mara_header_of(list);
+		mara_value_t copy = mara_copy(ctx, header->zone, value);
 		mara_obj_add_arena_mask(header, copy);
-		obj->elems[index] = copy;
-		return NULL;
+		mara_value_t old_value = list->elems[index];
+		list->elems[index] = copy;
+		return old_value;
 	} else {
-		return mara_errorf(
-			ctx,
-			mara_str_from_literal("core/index-out-of-bound"),
-			"List index out of bound: %d",
-			mara_value_from_int(index),
-			index
-		);
+		return mara_nil();
 	}
 }
 
-mara_error_t*
-mara_list_push(mara_exec_ctx_t* ctx, mara_value_t list, mara_value_t value) {
-	mara_obj_list_t* obj;
-	mara_check_error(mara_unbox_list(ctx, list, &obj));
+void
+mara_list_push(mara_exec_ctx_t* ctx, mara_list_t* list, mara_value_t value) {
+	mara_index_t current_capacity = list->capacity;
+	mara_obj_t* header = mara_header_of(list);
 
-	mara_index_t current_capacity = obj->capacity;
-	mara_obj_t* header = mara_container_of(obj, mara_obj_t, body);
+	mara_value_t copy = mara_copy(ctx, header->zone, value);
 
-	mara_value_t copy;
-	mara_check_error(mara_copy(ctx, header->zone, value, &copy));
-
-	if (obj->len >= current_capacity) {
+	if (list->len >= current_capacity) {
 		mara_index_t new_capacity = current_capacity > 0 ? current_capacity * 2 : 4;
-		mara_list_reserve(ctx, obj, new_capacity);
+		mara_list_reserve(ctx, list, new_capacity);
 	}
 
-	obj->elems[obj->len++] = copy;
+	list->elems[list->len++] = copy;
 	mara_obj_add_arena_mask(header, copy);
-	return NULL;
 }
 
-mara_error_t*
-mara_list_delete(mara_exec_ctx_t* ctx, mara_value_t list, mara_index_t index) {
-	mara_obj_list_t* obj;
-	mara_check_error(mara_unbox_list(ctx, list, &obj));
-
-	if (MARA_EXPECT(0 <= index && index < obj->len)) {
+mara_value_t
+mara_list_delete(mara_exec_ctx_t* ctx, mara_list_t* list, mara_index_t index) {
+	(void)ctx;
+	if (MARA_EXPECT(0 <= index && index < list->len)) {
+		mara_value_t old_value = list->elems[index];
 		memmove(
-			obj->elems + index,
-			obj->elems + index + 1,
-			(obj->len - index - 1) * sizeof(mara_value_t)
+			list->elems + index,
+			list->elems + index + 1,
+			(list->len - index - 1) * sizeof(mara_value_t)
 		);
-		obj->len -= 1;
-		return NULL;
+		list->len -= 1;
+		return old_value;
 	} else {
-		return mara_errorf(
-			ctx,
-			mara_str_from_literal("core/index-out-of-bound"),
-			"List index out of bound: %d",
-			mara_value_from_int(index),
-			index
-		);
+		return mara_nil();
 	}
 }
 
-mara_error_t*
-mara_list_quick_delete(mara_exec_ctx_t* ctx, mara_value_t list, mara_index_t index) {
-	mara_obj_list_t* obj;
-	mara_check_error(mara_unbox_list(ctx, list, &obj));
-
-	if (MARA_EXPECT(0 <= index && index < obj->len)) {
-		obj->elems[index] = obj->elems[obj->len - 1];
-		obj->len -= 1;
-		return NULL;
+mara_value_t
+mara_list_quick_delete(mara_exec_ctx_t* ctx, mara_list_t* list, mara_index_t index) {
+	(void)ctx;
+	if (MARA_EXPECT(0 <= index && index < list->len)) {
+		mara_value_t old_value = list->elems[index];
+		list->elems[index] = list->elems[list->len - 1];
+		list->len -= 1;
+		return old_value;
 	} else {
-		return mara_errorf(
-			ctx,
-			mara_str_from_literal("core/index-out-of-bound"),
-			"List index out of bound: %d",
-			mara_value_from_int(index),
-			index
-		);
+		return mara_nil();
 	}
 }
 
-mara_error_t*
-mara_list_resize(mara_exec_ctx_t* ctx, mara_value_t list, mara_index_t new_len) {
-	mara_obj_list_t* obj;
-	mara_check_error(mara_unbox_list(ctx, list, &obj));
-
-	if (new_len < 0) {
-		return mara_errorf(
-			ctx,
-			mara_str_from_literal("core/invalid-arg"),
-			"List size is negative: %d",
-			mara_value_from_int(new_len),
-			new_len
-		);
-	} else if (new_len <= obj->len) {
-		obj->len = new_len;
-		return NULL;
-	} else if (new_len <= obj->capacity) {
-		for (mara_index_t i = obj->len; i < new_len; ++i) {
-			obj->elems[i] = mara_nil();
+void
+mara_list_resize(mara_exec_ctx_t* ctx, mara_list_t* list, mara_index_t new_len) {
+	new_len = mara_max(0, new_len);
+	if (new_len <= list->len) {
+		list->len = new_len;
+	} else if (new_len <= list->capacity) {
+		for (mara_index_t i = list->len; i < new_len; ++i) {
+			list->elems[i] = mara_nil();
 		}
-		obj->len = new_len;
-		return NULL;
+		list->len = new_len;
 	} else {
-		mara_list_reserve(ctx, obj, new_len);
-		for (mara_index_t i = obj->len; i < new_len; ++i) {
-			obj->elems[i] = mara_nil();
+		mara_list_reserve(ctx, list, new_len);
+		for (mara_index_t i = list->len; i < new_len; ++i) {
+			list->elems[i] = mara_nil();
 		}
-		obj->len = new_len;
-		return NULL;
+		list->len = new_len;
 	}
 }
 
 mara_error_t*
-mara_list_foreach(mara_exec_ctx_t* ctx, mara_value_t list, mara_native_fn_t fn) {
-	mara_obj_list_t* obj;
-	mara_check_error(mara_unbox_list(ctx, list, &obj));
-
-	mara_index_t len = obj->len;
+mara_list_foreach(mara_exec_ctx_t* ctx, mara_list_t* list, mara_fn_t* fn) {
+	mara_index_t len = list->len;
+	mara_value_t list_value = mara_value_from_list(list);
 	for (mara_index_t i = 0; i < len; ++i) {
 		mara_value_t args[] = {
-			obj->elems[i],
+			list->elems[i],
 			mara_value_from_int(i),
-			list,
+			list_value,
 		};
 		mara_value_t should_continue = mara_nil();
 		mara_check_error(
-			fn.fn(
-				ctx,
-				sizeof(args) / sizeof(args[0]),
-				args,
-				fn.userdata,
-				&should_continue
-			)
+			mara_call(ctx, ctx->current_zone, fn, mara_count_of(args), args, &should_continue)
 		);
 
 		if (mara_value_is_false(should_continue)) {

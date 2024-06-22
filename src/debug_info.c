@@ -6,7 +6,7 @@
 
 MARA_PRIVATE bool
 mara_debug_info_key_equal(mara_debug_info_key_t lhs, mara_debug_info_key_t rhs) {
-	return lhs.container == rhs.container
+	return lhs.container.internal == rhs.container.internal
 		&& lhs.index == rhs.index;
 }
 

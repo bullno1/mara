@@ -70,9 +70,9 @@ mara_print_omitted_ellipsis(
 }
 
 MARA_PRIVATE void
-mara_print_function(
+mara_print_vm_function(
 	mara_exec_ctx_t* ctx,
-	mara_function_t* fn,
+	mara_vm_function_t* fn,
 	mara_print_options_t options,
 	mara_writer_t output
 ) {
@@ -195,7 +195,7 @@ mara_print_function(
 			mara_index_t num_functions = fn->num_functions;
 			mara_index_t print_len = mara_min(num_functions, options.max_length);
 			for (mara_index_t i = 0; i < print_len; ++i) {
-				mara_print_function(ctx, fn->functions[i], body_options, output);
+				mara_print_vm_function(ctx, fn->functions[i], body_options, output);
 			}
 			mara_print_omitted_ellipsis(output, body_options.indent, num_functions - print_len);
 		}
@@ -219,7 +219,7 @@ mara_do_print_value(
 		mara_print_indented(output, options.indent, "true");
 	} else if (mara_value_is_false(value)) {
 		mara_print_indented(output, options.indent, "false");
-	} else if (mara_value_is_symbol(value) || mara_value_is_str(value)) {
+	} else if (mara_value_is_sym(value) || mara_value_is_str(value)) {
 		// TODO: escape new lines and quotes
 		mara_str_t result = { 0 };
 		mara_value_to_str(ctx, value, &result);
@@ -240,8 +240,8 @@ mara_do_print_value(
 		mara_value_to_real(ctx, value, &result);
 		mara_print_indented(output,options.indent, "%f", result);
 	} else if (mara_value_is_list(value)) {
-		mara_obj_list_t* list;
-		mara_assert_no_error(mara_unbox_list(ctx, value, &list));
+		mara_list_t* list;
+		mara_assert_no_error(mara_value_to_list(ctx, value, &list));
 		debug_key = mara_make_debug_info_key(value, MARA_DEBUG_INFO_SELF);
 
 		if (options.max_depth <= 0) {
@@ -269,8 +269,8 @@ mara_do_print_value(
 			mara_print_indented(output, options.indent, ")");
 		}
 	} else if (mara_value_is_map(value)) {
-		mara_obj_map_t* map;
-		mara_assert_no_error(mara_unbox_map(ctx, value, &map));
+		mara_map_t* map;
+		mara_assert_no_error(mara_value_to_map(ctx, value, &map));
 		if (options.max_depth <= 0) {
 			mara_print_indented(
 				output, options.indent,
@@ -290,7 +290,7 @@ mara_do_print_value(
 				mara_index_t print_len = mara_min(map->len, options.max_length);
 				mara_index_t i = 0;
 				for (
-					mara_obj_map_node_t* node = map->root;
+					mara_map_node_t* node = map->root;
 					i < print_len && node != NULL;
 					++i, node = node->next
 				) {
@@ -305,17 +305,17 @@ mara_do_print_value(
 			}
 			mara_print_indented(output, options.indent, ")");
 		}
-	} else if (mara_value_is_function(value)) {
+	} else if (mara_value_is_fn(value)) {
 		mara_obj_t* obj = mara_value_to_obj(value);
-		if (obj->type == MARA_OBJ_TYPE_NATIVE_FN) {
-			mara_native_fn_t* native_fn = (mara_native_fn_t*)obj->body;
+		if (obj->type == MARA_OBJ_TYPE_NATIVE_CLOSURE) {
+			mara_native_closure_t* closure = (mara_native_closure_t*)obj->body;
 			mara_print_indented(
 				output, options.indent,
-				"(fn (native %p %p))",
-				(void*)native_fn->fn, native_fn->userdata
+				"(native-fn %p %p)",
+				(void*)closure->fn, closure->userdata
 			);
 		} else {
-			mara_obj_closure_t* closure = (mara_obj_closure_t*)obj->body;
+			mara_vm_closure_t* closure = (mara_vm_closure_t*)obj->body;
 			if (options.max_depth <= 0) {
 				mara_print_indented(
 					output, options.indent,
@@ -353,7 +353,7 @@ mara_do_print_value(
 						code_print_options.indent += 1;
 						code_print_options.max_depth -= 1;
 
-						mara_print_function(ctx, closure->fn, code_print_options, output);
+						mara_print_vm_function(ctx, closure->fn, code_print_options, output);
 					}
 				}
 				mara_print_indented(output, options.indent, ")");
@@ -389,7 +389,7 @@ mara_print_value(
 	mara_writer_t output
 ) {
 	mara_set_default_option(&options.max_length, 100);
-	mara_set_default_option(&options.max_depth, 4);
+	mara_set_default_option(&options.max_depth, 7);
 
 	mara_do_print_value(ctx, value, options, mara_make_debug_info_key(mara_nil(), 0), output);
 }

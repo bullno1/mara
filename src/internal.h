@@ -13,6 +13,7 @@
 #define MARA_DEBUG_INFO_SELF ((mara_index_t)-1)
 
 #define MARA_PRIVATE static inline
+// TODO: panic handler for assert cases
 #define mara_assert(cond, msg) assert((cond) && (msg))
 
 #define mara_assert_no_error(op) \
@@ -27,6 +28,9 @@
 
 #define MARA_ARENA_ALLOC_TYPE(env, arena, type) \
 	mara_arena_alloc_ex((env), (arena), sizeof(type), _Alignof(type))
+
+#define mara_container_of(ptr, type, member) \
+	((type*)((char*)ptr - offsetof(type, member)))
 
 #if defined(__GNUC__) || defined(__clang__)
 #	define MARA_EXPECT(X) __builtin_expect(!!(X), 1)
@@ -83,8 +87,8 @@ typedef enum mara_obj_type_e {
 	MARA_OBJ_TYPE_REF,
 	MARA_OBJ_TYPE_LIST,
 	MARA_OBJ_TYPE_MAP,
-	MARA_OBJ_TYPE_MARA_FN,
-	MARA_OBJ_TYPE_NATIVE_FN,
+	MARA_OBJ_TYPE_VM_CLOSURE,
+	MARA_OBJ_TYPE_NATIVE_CLOSURE,
 } mara_obj_type_t;
 
 typedef struct {
@@ -97,27 +101,27 @@ typedef struct {
 typedef struct {
 	void* tag;
 	void* value;
-} mara_obj_ref_t;
+} mara_ref_t;
 
-typedef struct {
+typedef struct mara_map_node_s {
+	mara_value_t key;
+	struct mara_map_node_s* children[BHAMT_NUM_CHILDREN];
+
+	mara_value_t value;
+	struct mara_map_node_s* next;
+} mara_map_node_t;
+
+struct mara_map_s {
+	mara_index_t len;
+	mara_map_node_t* root;
+};
+
+struct mara_list_s {
 	bool in_zone;
 	mara_index_t len;
 	mara_index_t capacity;
 	mara_value_t* elems;
-} mara_obj_list_t;
-
-typedef struct mara_obj_map_node_s {
-	mara_value_t key;
-	struct mara_obj_map_node_s* children[BHAMT_NUM_CHILDREN];
-
-	mara_value_t value;
-	struct mara_obj_map_node_s* next;
-} mara_obj_map_node_t;
-
-typedef struct {
-	mara_index_t len;
-	mara_obj_map_node_t* root;
-} mara_obj_map_t;
+};
 
 typedef struct {
 	mara_value_t container;
@@ -154,13 +158,6 @@ typedef struct {
 	mara_index_t len;
 	mara_symtab_node_t* nodes;
 } mara_symtab_t;
-
-typedef struct {
-	mara_index_t capacity;
-	mara_index_t len;
-	mara_value_t* elems;
-	bool own_memory;
-} mara_list_t;
 
 typedef struct {
 	mara_arena_snapshot_t arena_snapshot;
@@ -235,12 +232,17 @@ typedef struct mara_function_s {
 
 	mara_index_t num_functions;
 	struct mara_function_s** functions;
-} mara_function_t;
+} mara_vm_function_t;
 
-typedef struct mara_obj_closure_s {
-	mara_function_t* fn;
+typedef struct {
+	mara_vm_function_t* fn;
 	mara_value_t captures[];
-} mara_obj_closure_t;
+} mara_vm_closure_t;
+
+typedef struct {
+	mara_native_fn_t fn;
+	void* userdata;
+} mara_native_closure_t;
 
 typedef struct mara_stack_frame_s mara_stack_frame_t;
 
@@ -252,7 +254,7 @@ typedef struct mara_vm_state_s {
 } mara_vm_state_t;
 
 struct mara_stack_frame_s {
-	mara_obj_closure_t* closure;
+	mara_vm_closure_t* closure;
 
 	mara_zone_bookmark_t* zone_bookmark;
 	mara_vm_state_t saved_state;
@@ -275,7 +277,7 @@ struct mara_zone_s {
 struct mara_env_s {
 	mara_env_options_t options;
 	mara_arena_chunk_t* free_chunks;
-	mara_value_t module_cache;
+	mara_map_t* module_cache;
 	mara_zone_t permanent_zone;
 	mara_arena_t permanent_arena;
 	mara_strpool_t permanent_strpool;
@@ -294,8 +296,8 @@ struct mara_exec_ctx_s {
 	mara_error_t last_error;
 	mara_zone_t error_zone;
 
-	mara_value_t current_module;
-	mara_value_t module_loaders;
+	mara_map_t* current_module;
+	mara_list_t* module_loaders;
 	mara_module_options_t current_module_options;
 
 	mara_arena_t debug_info_arena;
@@ -365,6 +367,11 @@ mara_alloc_obj(mara_exec_ctx_t* ctx, mara_zone_t* zone, size_t size);
 mara_obj_t*
 mara_value_to_obj(mara_value_t value);
 
+MARA_PRIVATE mara_obj_t*
+mara_header_of(void* obj) {
+	return mara_container_of(obj, mara_obj_t, body);
+}
+
 mara_value_t
 mara_obj_to_value(mara_obj_t* obj);
 
@@ -394,13 +401,13 @@ mara_value_type_name(mara_value_type_t type) {
 			return "real";
 		case MARA_VAL_BOOL:
 			return "bool";
-		case MARA_VAL_STRING:
+		case MARA_VAL_STR:
 			return "string";
-		case MARA_VAL_SYMBOL:
+		case MARA_VAL_SYM:
 			return "symbol";
 		case MARA_VAL_REF:
 			return "ref";
-		case MARA_VAL_FUNCTION:
+		case MARA_VAL_FN:
 			return "function";
 		case MARA_VAL_LIST:
 			return "list";
@@ -411,16 +418,6 @@ mara_value_type_name(mara_value_type_t type) {
 			return "";
 	}
 }
-
-// List
-
-mara_error_t*
-mara_unbox_list(mara_exec_ctx_t* ctx, mara_value_t value, mara_obj_list_t** result);
-
-// Map
-
-mara_error_t*
-mara_unbox_map(mara_exec_ctx_t* ctx, mara_value_t value, mara_obj_map_t** result);
 
 // Symbol table
 
@@ -451,6 +448,8 @@ mara_put_debug_info(
 const mara_source_info_t*
 mara_get_debug_info(mara_exec_ctx_t* ctx, mara_debug_info_key_t key);
 
+// String pool
+
 mara_str_t
 mara_strpool_intern(
 	mara_env_t* env,
@@ -458,7 +457,5 @@ mara_strpool_intern(
 	mara_strpool_t* strpool,
 	mara_str_t str
 );
-
-// VM
 
 #endif

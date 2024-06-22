@@ -17,7 +17,9 @@
 		if (error != NULL) { return error; } \
 	} while (0)
 
-#define MARA_ADD_NATIVE_DEBUG_INFO(ctx) \
+#define mara_count_of(array) (sizeof((array)) / sizeof((array)[0]))
+
+#define mara_add_native_debug_info(ctx) \
 	do { \
 		mara_set_debug_info(ctx, (mara_source_info_t){ \
 			.filename = mara_str_from_literal(__FILE__), \
@@ -27,9 +29,6 @@
 			} \
 		}); \
 	} while (0)
-
-#define mara_container_of(ptr, type, member) \
-	((type*)((char*)ptr - offsetof(type, member)))
 
 typedef struct mara_str_reader_s {
 	mara_str_t str;

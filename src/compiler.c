@@ -22,15 +22,15 @@ typedef struct {
 typedef struct mara_local_scope_s {
 	struct mara_local_scope_s* parent;
 
-	mara_value_t names;
+	mara_map_t* names;
 } mara_local_scope_t;
 
 typedef struct mara_function_scope_s {
 	struct mara_function_scope_s* parent;
 	mara_zone_snapshot_t zone_snapshot;
 
-	mara_value_t args;
-	mara_value_t captures;
+	mara_map_t* args;
+	mara_map_t* captures;
 
 	mara_index_t num_locals;
 	mara_index_t max_num_locals;
@@ -39,8 +39,8 @@ typedef struct mara_function_scope_s {
 	mara_index_t num_temps;
 	mara_index_t max_num_temps;
 
-	mara_value_t constants;  // a map
-	barray(mara_function_t*) functions;
+	mara_map_t* constants;
+	barray(mara_vm_function_t*) functions;
 	mara_index_t num_labels;
 
 	barray(mara_tagged_instruction_t) instructions;
@@ -92,11 +92,11 @@ mara_compiler_error(
 MARA_PRIVATE void
 mara_compiler_set_debug_info(
 	mara_compile_ctx_t* ctx,
-	mara_obj_list_t* list,
+	mara_list_t* list,
 	mara_index_t index
 ) {
 	ctx->debug_key = mara_make_debug_info_key(
-		mara_obj_to_value(mara_container_of(list, mara_obj_t, body)),
+		mara_value_from_list(list),
 		index
 	);
 }
@@ -127,8 +127,7 @@ mara_compiler_end_local_scope(mara_compile_ctx_t* ctx) {
 	mara_local_scope_t* local_scope = fn_scope->local_scope;
 
 	fn_scope->max_num_locals = mara_max(fn_scope->max_num_locals, fn_scope->num_locals);
-	mara_index_t num_locals_in_scope;
-	mara_assert_no_error(mara_map_len(ctx->exec_ctx, local_scope->names, &num_locals_in_scope));
+	mara_index_t num_locals_in_scope = local_scope->names->len;
 	fn_scope->num_locals -= num_locals_in_scope;
 	fn_scope->local_scope = local_scope->parent;
 }
@@ -137,13 +136,8 @@ MARA_PRIVATE mara_error_t*
 mara_compiler_add_argument(mara_compile_ctx_t* ctx, mara_value_t name) {
 	mara_function_scope_t* fn_scope = ctx->function_scope;
 
-	mara_str_t name_str;
-	mara_assert_no_error(mara_value_to_str(ctx->exec_ctx, name, &name_str));
-
-	mara_value_t existing_index;
-	mara_index_t new_index;
-	mara_assert_no_error(mara_map_get(ctx->exec_ctx, fn_scope->args, name, &existing_index));
-	mara_assert_no_error(mara_map_len(ctx->exec_ctx, fn_scope->args, &new_index));
+	mara_value_t existing_index = mara_map_get(ctx->exec_ctx, fn_scope->args, name);
+	mara_index_t new_index = fn_scope->args->len;
 
 	if (new_index >= MARA_MAX_NAMES) {
 		return mara_compiler_error(
@@ -163,12 +157,10 @@ mara_compiler_add_argument(mara_compile_ctx_t* ctx, mara_value_t name) {
 			name_str.len, name_str.data
 		);
 	} else {
-		mara_assert_no_error(
-			mara_map_set(
-				ctx->exec_ctx,
-				fn_scope->args,
-				name, mara_value_from_int(new_index)
-			)
+		mara_map_set(
+			ctx->exec_ctx,
+			fn_scope->args,
+			name, mara_value_from_int(new_index)
 		);
 		return NULL;
 	}
@@ -178,19 +170,15 @@ MARA_PRIVATE mara_error_t*
 mara_compiler_add_capture(mara_compile_ctx_t* ctx, mara_value_t name, mara_index_t* index) {
 	mara_function_scope_t* fn_scope = ctx->function_scope;
 
-	mara_value_t existing_index;
-	mara_index_t new_index;
-	mara_assert_no_error(mara_map_get(ctx->exec_ctx, fn_scope->captures, name, &existing_index));
-	mara_assert_no_error(mara_map_len(ctx->exec_ctx, fn_scope->captures, &new_index));
+	mara_value_t existing_index = mara_map_get(ctx->exec_ctx, fn_scope->captures, name);
+	mara_index_t new_index = fn_scope->captures->len;
 	mara_assert(mara_value_is_nil(existing_index), "Capture already exists");
 
 	if (MARA_EXPECT(new_index < MARA_MAX_NAMES)) {
-		mara_assert_no_error(
-			mara_map_set(
-				ctx->exec_ctx,
-				fn_scope->captures,
-				name, mara_value_from_int(new_index)
-			)
+		mara_map_set(
+			ctx->exec_ctx,
+			fn_scope->captures,
+			name, mara_value_from_int(new_index)
 		);
 		*index = new_index;
 		return NULL;
@@ -209,8 +197,7 @@ mara_compiler_add_local(mara_compile_ctx_t* ctx, mara_value_t name, mara_index_t
 	mara_function_scope_t* fn_scope = ctx->function_scope;
 	mara_local_scope_t* local_scope = fn_scope->local_scope;
 
-	mara_value_t existing_index;
-	mara_assert_no_error(mara_map_get(ctx->exec_ctx, local_scope->names, name, &existing_index));
+	mara_value_t existing_index = mara_map_get(ctx->exec_ctx, local_scope->names, name);
 
 	if (!mara_value_is_nil(existing_index)) {
 		mara_str_t name_str;
@@ -231,12 +218,10 @@ mara_compiler_add_local(mara_compile_ctx_t* ctx, mara_value_t name, mara_index_t
 		);
 	} else {
 		mara_index_t new_index = *index = fn_scope->num_locals++;
-		mara_assert_no_error(
-			mara_map_set(
-				ctx->exec_ctx,
-				local_scope->names,
-				name, mara_value_from_int(new_index)
-			)
+		mara_map_set(
+			ctx->exec_ctx,
+			local_scope->names,
+			name, mara_value_from_int(new_index)
 		);
 		return NULL;
 	}
@@ -289,7 +274,7 @@ mara_compiler_begin_function(mara_compile_ctx_t* ctx) {
 	mara_compiler_begin_local_scope(ctx);
 }
 
-MARA_PRIVATE mara_function_t*
+MARA_PRIVATE mara_vm_function_t*
 mara_compiler_end_function(mara_compile_ctx_t* ctx) {
 	mara_compiler_end_local_scope(ctx);
 	mara_function_scope_t* fn_scope = ctx->function_scope;
@@ -367,8 +352,7 @@ mara_compiler_end_function(mara_compile_ctx_t* ctx) {
 	mara_index_t num_constants;
 	mara_value_t* constants;
 	{
-		mara_obj_map_t* constant_pool;
-		mara_assert_no_error(mara_unbox_map(exec_ctx, fn_scope->constants, &constant_pool));
+		mara_map_t* constant_pool = fn_scope->constants;
 
 		num_constants = constant_pool->len;
 		constants = mara_zone_alloc_ex(
@@ -376,28 +360,28 @@ mara_compiler_end_function(mara_compile_ctx_t* ctx) {
 			sizeof(mara_value_t) * num_constants, _Alignof(mara_value_t)
 		);
 
-		for (mara_obj_map_node_t* itr = constant_pool->root; itr != NULL; itr = itr->next) {
+		for (mara_map_node_t* itr = constant_pool->root; itr != NULL; itr = itr->next) {
 			mara_index_t constant_index;
 			mara_assert_no_error(mara_value_to_int(exec_ctx, itr->value, &constant_index));
-			mara_assert_no_error(mara_copy(exec_ctx, permanent_zone, itr->key, &constants[constant_index]));
+			constants[constant_index] = mara_copy(exec_ctx, permanent_zone, itr->key);
 		}
 	}
 
 	// Sub functions
 	mara_index_t num_functions = barray_len(fn_scope->functions);
-	mara_function_t** functions = mara_zone_alloc_ex(
+	mara_vm_function_t** functions = mara_zone_alloc_ex(
 		exec_ctx, permanent_zone,
-		sizeof(mara_function_t**) * num_functions, _Alignof(mara_function_t**)
+		sizeof(mara_vm_function_t*) * num_functions, _Alignof(mara_vm_function_t*)
 	);
 	if (fn_scope->functions != NULL) {
-		memcpy(functions, fn_scope->functions, sizeof(mara_function_t*) * num_functions);
+		memcpy(functions, fn_scope->functions, sizeof(mara_vm_function_t*) * num_functions);
 	}
 
 	// Build the final function
-	mara_function_t* function = MARA_ZONE_ALLOC_TYPE(
-		exec_ctx, target_zone, mara_function_t
+	mara_vm_function_t* function = MARA_ZONE_ALLOC_TYPE(
+		exec_ctx, target_zone, mara_vm_function_t
 	);
-	*function = (mara_function_t) {
+	*function = (mara_vm_function_t) {
 		.num_locals = fn_scope->max_num_locals,
 		.stack_size = fn_scope->max_num_locals + fn_scope->max_num_temps,
 		.num_instructions = num_instructions,
@@ -408,12 +392,8 @@ mara_compiler_end_function(mara_compile_ctx_t* ctx) {
 		.num_functions = num_functions,
 		.functions = functions,
 	};
-	mara_assert_no_error(
-		mara_map_len(exec_ctx, fn_scope->args, &function->num_args)
-	);
-	mara_assert_no_error(
-		mara_map_len(exec_ctx, fn_scope->captures, &function->num_captures)
-	);
+	function->num_args = fn_scope->args->len;
+	function->num_captures = fn_scope->captures->len;
 	const mara_source_info_t* debug_info = mara_get_debug_info(
 		ctx->exec_ctx, ctx->debug_key
 	);
@@ -484,9 +464,7 @@ mara_compiler_find_name(
 			local_scope != NULL;
 			local_scope = local_scope->parent
 		) {
-			mara_assert_no_error(
-				mara_map_get(exec_ctx, local_scope->names, name, &index)
-			);
+			index = mara_map_get(exec_ctx, local_scope->names, name);
 			if (!mara_value_is_nil(index)) {
 				load_opcode = MARA_OP_GET_LOCAL;
 				goto end_of_search;
@@ -494,17 +472,14 @@ mara_compiler_find_name(
 		}
 
 		// Then check arguments
-		mara_str_t name_str;
-		mara_assert_no_error(mara_value_to_str(ctx->exec_ctx, name, &name_str));
-
-		mara_assert_no_error(mara_map_get(exec_ctx, fn_scope->args, name, &index));
+		index = mara_map_get(exec_ctx, fn_scope->args, name);
 		if (!mara_value_is_nil(index)) {
 			load_opcode = MARA_OP_GET_ARG;
 			goto end_of_search;
 		}
 
 		// Then check captures
-		mara_assert_no_error(mara_map_get(exec_ctx, fn_scope->captures, name, &index));
+		index = mara_map_get(exec_ctx, fn_scope->captures, name);
 		if (!mara_value_is_nil(index)) {
 			load_opcode = MARA_OP_GET_CAPTURE;
 			goto end_of_search;
@@ -540,7 +515,7 @@ mara_compile_expression(mara_compile_ctx_t* ctx, mara_value_t expr);
 MARA_PRIVATE mara_error_t*
 mara_compile_sequence(
 	mara_compile_ctx_t* ctx,
-	mara_obj_list_t* list,
+	mara_list_t* list,
 	mara_index_t offset
 ) {
 	// There is no statement, only expression.
@@ -559,7 +534,7 @@ mara_compile_sequence(
 }
 
 MARA_PRIVATE mara_error_t*
-mara_compile_call(mara_compile_ctx_t* ctx, mara_obj_list_t* list, mara_value_t fn) {
+mara_compile_call(mara_compile_ctx_t* ctx, mara_list_t* list, mara_value_t fn) {
 	mara_index_t list_len = list->len;
 	for (mara_index_t i = 1; i < list_len; ++i) {
 		mara_compiler_set_debug_info(ctx, list, i);
@@ -574,12 +549,12 @@ mara_compile_call(mara_compile_ctx_t* ctx, mara_obj_list_t* list, mara_value_t f
 }
 
 MARA_PRIVATE mara_error_t*
-mara_compile_def(mara_compile_ctx_t* ctx, mara_obj_list_t* list) {
+mara_compile_def(mara_compile_ctx_t* ctx, mara_list_t* list) {
 	mara_index_t list_len = list->len;
 	if (
 		MARA_EXPECT(
 			(list_len == 2 || list_len == 3)
-			&& mara_value_is_symbol(list->elems[1])
+			&& mara_value_is_sym(list->elems[1])
 		)
 	) {
 		// Compile the assignment block first so it is evaluted before the
@@ -608,10 +583,10 @@ mara_compile_def(mara_compile_ctx_t* ctx, mara_obj_list_t* list) {
 }
 
 MARA_PRIVATE mara_error_t*
-mara_compile_set(mara_compile_ctx_t* ctx, mara_obj_list_t* list) {
+mara_compile_set(mara_compile_ctx_t* ctx, mara_list_t* list) {
 	mara_index_t list_len = list->len;
 
-	if (MARA_EXPECT(list_len == 3 && mara_value_is_symbol(list->elems[1]))) {
+	if (MARA_EXPECT(list_len == 3 && mara_value_is_sym(list->elems[1]))) {
 		mara_compiler_set_debug_info(ctx, list, 1);
 		mara_opcode_t load_opcode;
 		mara_index_t var_index;
@@ -648,7 +623,7 @@ mara_compile_set(mara_compile_ctx_t* ctx, mara_obj_list_t* list) {
 }
 
 MARA_PRIVATE mara_error_t*
-mara_compile_if(mara_compile_ctx_t* ctx, mara_obj_list_t* list) {
+mara_compile_if(mara_compile_ctx_t* ctx, mara_list_t* list) {
 	mara_index_t list_len = list->len;
 	if (list_len == 3 || list_len == 4) {
 		mara_index_t false_label;
@@ -695,22 +670,25 @@ mara_compile_if(mara_compile_ctx_t* ctx, mara_obj_list_t* list) {
 }
 
 MARA_PRIVATE mara_error_t*
-mara_compile_fn(mara_compile_ctx_t* ctx, mara_obj_list_t* list) {
+mara_compile_fn(mara_compile_ctx_t* ctx, mara_list_t* list) {
 	mara_exec_ctx_t* exec_ctx = ctx->exec_ctx;
 	mara_index_t list_len = list->len;
 
 	if (list_len < 2) { goto syntax_error; }
 
+	mara_compiler_set_debug_info(ctx, list, 1);
 	mara_value_t args = list->elems[1];
 	if (!mara_value_is_list(args)) { goto syntax_error; }
 
-	mara_obj_list_t* arg_list;
-	mara_assert_no_error(mara_unbox_list(ctx->exec_ctx, args, &arg_list));
+	mara_list_t* arg_list;
+	mara_assert_no_error(mara_value_to_list(ctx->exec_ctx, args, &arg_list));
 	mara_index_t num_args = arg_list->len;
 	for (mara_index_t i = 0; i < num_args; ++i) {
-		if (!mara_value_is_symbol(arg_list->elems[i])) { goto syntax_error; }
+		mara_compiler_set_debug_info(ctx, arg_list, i);
+		if (!mara_value_is_sym(arg_list->elems[i])) { goto syntax_error; }
 	}
 
+	mara_compiler_set_debug_info(ctx, list, MARA_DEBUG_INFO_SELF);
 	mara_function_scope_t* fn_scope = ctx->function_scope;
 	if (barray_len(fn_scope->functions) >= MARA_MAX_FUNCTIONS) {
 		return mara_compiler_error(
@@ -733,12 +711,11 @@ mara_compile_fn(mara_compile_ctx_t* ctx, mara_obj_list_t* list) {
 	mara_compiler_set_debug_info(ctx, list, MARA_DEBUG_INFO_SELF);
 
 	// Copy the captures to a temporary list
-	mara_obj_map_t* captures;
-	mara_assert_no_error(mara_unbox_map(exec_ctx, ctx->function_scope->captures, &captures));
+	mara_map_t* captures = ctx->function_scope->captures;
 	mara_index_t num_captures = captures->len;
 	barray_resize(ctx->exec_ctx->env, ctx->captures, num_captures);
 	for (
-		mara_obj_map_node_t* itr = captures->root;
+		mara_map_node_t* itr = captures->root;
 		itr != NULL;
 		itr = itr->next
 	) {
@@ -749,7 +726,7 @@ mara_compile_fn(mara_compile_ctx_t* ctx, mara_obj_list_t* list) {
 
 	// Finish the sub function and emit closure
 	mara_check_error(mara_compiler_emit(ctx, MARA_OP_RETURN, 0, 0));
-	mara_function_t* subfunction = mara_compiler_end_function(ctx);
+	mara_vm_function_t* subfunction = mara_compiler_end_function(ctx);
 	mara_index_t function_index = barray_len(fn_scope->functions);
 	barray_push(ctx->exec_ctx->env, fn_scope->functions, subfunction);
 	mara_operand_t operand = ((function_index & 0xff) << 16) | (num_captures & 0xffff);
@@ -782,7 +759,7 @@ syntax_error:
 }
 
 MARA_PRIVATE mara_error_t*
-mara_compile_do(mara_compile_ctx_t* ctx, mara_obj_list_t* list) {
+mara_compile_do(mara_compile_ctx_t* ctx, mara_list_t* list) {
 	mara_compiler_begin_local_scope(ctx);
 	mara_error_t* error = mara_compile_sequence(ctx, list, 1);
 	mara_compiler_end_local_scope(ctx);
@@ -791,8 +768,8 @@ mara_compile_do(mara_compile_ctx_t* ctx, mara_obj_list_t* list) {
 
 MARA_PRIVATE mara_error_t*
 mara_compile_list(mara_compile_ctx_t* ctx, mara_value_t expr) {
-	mara_obj_list_t* list;
-	mara_assert_no_error(mara_unbox_list(ctx->exec_ctx, expr, &list));
+	mara_list_t* list;
+	mara_assert_no_error(mara_value_to_list(ctx->exec_ctx, expr, &list));
 
 	ctx->debug_key = mara_make_debug_info_key(expr, MARA_DEBUG_INFO_SELF);
 
@@ -800,21 +777,21 @@ mara_compile_list(mara_compile_ctx_t* ctx, mara_value_t expr) {
 	if (MARA_EXPECT(list_len > 0)) {
 		mara_value_t first_elem = list->elems[0];
 
-		if (mara_value_is_symbol(first_elem)) {
-			if (first_elem == ctx->sym_def) {
+		if (mara_value_is_sym(first_elem)) {
+			if (first_elem.internal == ctx->sym_def.internal) {
 				return mara_compile_def(ctx, list);
-			} else if (first_elem == ctx->sym_set) {
+			} else if (first_elem.internal == ctx->sym_set.internal) {
 				return mara_compile_set(ctx, list);
-			} else if (first_elem == ctx->sym_if) {
+			} else if (first_elem.internal == ctx->sym_if.internal) {
 				return mara_compile_if(ctx, list);
-			} else if (first_elem == ctx->sym_fn) {
+			} else if (first_elem.internal == ctx->sym_fn.internal) {
 				return mara_compile_fn(ctx, list);
-			} else if (first_elem == ctx->sym_do) {
+			} else if (first_elem.internal == ctx->sym_do.internal) {
 				return mara_compile_do(ctx, list);
 			} else if (
-				first_elem == ctx->sym_nil
-				|| first_elem == ctx->sym_true
-				|| first_elem == ctx->sym_false
+				first_elem.internal == ctx->sym_nil.internal
+				|| first_elem.internal == ctx->sym_true.internal
+				|| first_elem.internal == ctx->sym_false.internal
 			) {
 				ctx->debug_key.index = 0;
 				return mara_compiler_error(
@@ -866,16 +843,15 @@ mara_compile_expression(mara_compile_ctx_t* ctx, mara_value_t expr) {
 	) {
 		mara_index_t constant_index;
 		{
-			mara_value_t constant_pool = ctx->function_scope->constants;
+			mara_map_t* constant_pool = ctx->function_scope->constants;
 
-			mara_value_t lookup_result;
-			mara_map_get(exec_ctx, constant_pool, expr, &lookup_result);
+			mara_value_t lookup_result = mara_map_get(exec_ctx, constant_pool, expr);
 			if (mara_value_is_int(lookup_result)) {
 				mara_assert_no_error(
 					mara_value_to_int(exec_ctx, lookup_result, &constant_index)
 				);
 			} else {
-				mara_map_len(exec_ctx, constant_pool, &constant_index);
+				constant_index = constant_pool->len;
 				mara_map_set(
 					exec_ctx, constant_pool, expr, mara_value_from_int(constant_index)
 				);
@@ -883,7 +859,7 @@ mara_compile_expression(mara_compile_ctx_t* ctx, mara_value_t expr) {
 		}
 
 		return mara_compiler_emit(ctx, MARA_OP_CONSTANT, constant_index, 1);
-	} else if (mara_value_is_symbol(expr)) {
+	} else if (mara_value_is_sym(expr)) {
 		mara_opcode_t load_opcode;
 		mara_index_t var_index;
 		mara_check_error(mara_compiler_find_name(ctx, expr, &load_opcode, &var_index));
@@ -906,31 +882,29 @@ mara_do_compile(
 	mara_compile_ctx_t* ctx,
 	mara_zone_t* zone,
 	mara_compile_options_t options,
-	mara_value_t exprs,
-	mara_value_t* result
+	mara_list_t* exprs,
+	mara_fn_t** result
 ) {
 	mara_compiler_begin_function(ctx);
-	if (options.as_module) {
+	if (!options.standalone) {
 		mara_check_error(mara_compiler_add_argument(ctx, ctx->sym_import));
 		mara_check_error(mara_compiler_add_argument(ctx, ctx->sym_export));
 	}
 
-	mara_obj_list_t* list;
-	mara_check_error(mara_unbox_list(ctx->exec_ctx, exprs, &list));
-	mara_compiler_set_debug_info(ctx, list, MARA_DEBUG_INFO_SELF);
-	mara_check_error(mara_compile_sequence(ctx, list, 0));
+	mara_compiler_set_debug_info(ctx, exprs, MARA_DEBUG_INFO_SELF);
+	mara_check_error(mara_compile_sequence(ctx, exprs, 0));
 
-	mara_compiler_set_debug_info(ctx, list, MARA_DEBUG_INFO_SELF);
+	mara_compiler_set_debug_info(ctx, exprs, MARA_DEBUG_INFO_SELF);
 	mara_check_error(mara_compiler_emit(ctx, MARA_OP_RETURN, 0, 0));
 
-	mara_function_t* function = mara_compiler_end_function(ctx);
+	mara_vm_function_t* function = mara_compiler_end_function(ctx);
 
-	mara_obj_t* obj = mara_alloc_obj(ctx->exec_ctx, zone, sizeof(mara_obj_closure_t));
-	obj->type = MARA_OBJ_TYPE_MARA_FN;
-	mara_obj_closure_t* closure = (mara_obj_closure_t*)obj->body;
+	mara_obj_t* obj = mara_alloc_obj(ctx->exec_ctx, zone, sizeof(mara_vm_closure_t));
+	obj->type = MARA_OBJ_TYPE_VM_CLOSURE;
+	mara_vm_closure_t* closure = (mara_vm_closure_t*)obj->body;
 	closure->fn = function;
 
-	*result = mara_obj_to_value(obj);
+	*result = (mara_fn_t*)obj;
 	return NULL;
 }
 
@@ -939,8 +913,8 @@ mara_compile(
 	mara_exec_ctx_t* ctx,
 	mara_zone_t* zone,
 	mara_compile_options_t options,
-	mara_value_t exprs,
-	mara_value_t* result
+	mara_list_t* exprs,
+	mara_fn_t** result
 ) {
 	mara_error_t* error;
 	mara_zone_enter_new(ctx, (mara_zone_options_t){
@@ -954,16 +928,16 @@ mara_compile(
 		.options = options,
 
 		// Sync this list with symtab.c
-		.sym_def = mara_new_symbol(ctx, mara_str_from_literal("def")),
-		.sym_set = mara_new_symbol(ctx, mara_str_from_literal("set")),
-		.sym_if = mara_new_symbol(ctx, mara_str_from_literal("if")),
-		.sym_fn = mara_new_symbol(ctx, mara_str_from_literal("fn")),
-		.sym_do = mara_new_symbol(ctx, mara_str_from_literal("do")),
-		.sym_nil = mara_new_symbol(ctx, mara_str_from_literal("nil")),
-		.sym_true = mara_new_symbol(ctx, mara_str_from_literal("true")),
-		.sym_false = mara_new_symbol(ctx, mara_str_from_literal("false")),
-		.sym_import = mara_new_symbol(ctx, mara_str_from_literal("import")),
-		.sym_export = mara_new_symbol(ctx, mara_str_from_literal("export")),
+		.sym_def = mara_new_sym(ctx, mara_str_from_literal("def")),
+		.sym_set = mara_new_sym(ctx, mara_str_from_literal("set")),
+		.sym_if = mara_new_sym(ctx, mara_str_from_literal("if")),
+		.sym_fn = mara_new_sym(ctx, mara_str_from_literal("fn")),
+		.sym_do = mara_new_sym(ctx, mara_str_from_literal("do")),
+		.sym_nil = mara_new_sym(ctx, mara_str_from_literal("nil")),
+		.sym_true = mara_new_sym(ctx, mara_str_from_literal("true")),
+		.sym_false = mara_new_sym(ctx, mara_str_from_literal("false")),
+		.sym_import = mara_new_sym(ctx, mara_str_from_literal("import")),
+		.sym_export = mara_new_sym(ctx, mara_str_from_literal("export")),
 	};
 
 	error = mara_do_compile(&compile_ctx, zone, options, exprs, result);

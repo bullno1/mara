@@ -68,22 +68,21 @@ mara_linked_list_push(
 	list->len += 1;
 }
 
-MARA_PRIVATE mara_error_t*
+MARA_PRIVATE mara_list_t*
 mara_linked_list_flatten(
 	mara_exec_ctx_t* ctx,
 	mara_zone_t* zone,
 	mara_str_t filename,
-	mara_linked_list_t* tmp_list,
-	mara_value_t* result
+	mara_linked_list_t* tmp_list
 ) {
 	mara_set_debug_info(ctx, (mara_source_info_t){
 		.filename = filename,
 		.range = tmp_list->source_range,
 	});
-	mara_value_t list = mara_new_list(ctx, zone, tmp_list->len);
+	mara_list_t* list = mara_new_list(ctx, zone, tmp_list->len);
 	mara_put_debug_info(
 		ctx,
-		mara_make_debug_info_key(list, MARA_DEBUG_INFO_SELF),
+		mara_make_debug_info_key(mara_value_from_list(list), MARA_DEBUG_INFO_SELF),
 		(mara_source_info_t){
 			.filename = filename,
 			.range = tmp_list->source_range
@@ -96,20 +95,19 @@ mara_linked_list_flatten(
 		itr = itr->next, ++list_index
 	) {
 		mara_list_node_t* node = mara_container_of(itr, mara_list_node_t, link);
-		mara_check_error(mara_list_push(ctx, list, node->value));
+		mara_list_push(ctx, list, node->value);
 		// TODO: this can be sped up
 		// We push the same filename repeatedly
 		mara_put_debug_info(
 			ctx,
-			mara_make_debug_info_key(list, list_index),
+			mara_make_debug_info_key(mara_value_from_list(list), list_index),
 			(mara_source_info_t){
 			.filename = filename,
 				.range = node->source_range,
 			}
 		);
 	}
-	*result = list;
-	return NULL;
+	return list;
 }
 
 MARA_PRIVATE mara_error_t*
@@ -161,7 +159,7 @@ mara_parse_list(
 				list->source_range.end = token.location.end;
 				return NULL;
 			default:
-				MARA_NATIVE_DEBUG_INFO(ctx);
+				mara_add_native_debug_info(ctx);
 				return mara_errorf(
 					ctx,
 					mara_str_from_literal("core/panic"),
@@ -299,7 +297,7 @@ mara_parse_token(
 				return error;
 			}
 		case MARA_TOK_SYMBOL:
-			*result = mara_new_symbol(ctx, token.lexeme);
+			*result = mara_new_sym(ctx, token.lexeme);
 			return NULL;
 		case MARA_TOK_RIGHT_PAREN:
 			return mara_parser_error(
@@ -318,9 +316,10 @@ mara_parse_token(
 					mara_linked_list_init(&tmp_list, token.location.start);
 					error = mara_parse_list(ctx, zone, lexer, &tmp_list);
 					if (error == NULL) {
-						error = mara_linked_list_flatten(
-							ctx, zone, lexer->filename, &tmp_list, result
+						mara_list_t* list = mara_linked_list_flatten(
+							ctx, zone, lexer->filename, &tmp_list
 						);
+						*result = mara_value_from_list(list);
 					}
 				}
 				mara_arena_restore(ctx->env, local_arena, snapshot);
@@ -335,7 +334,7 @@ mara_parse_token(
 				token.location
 			);
 		default:
-			MARA_NATIVE_DEBUG_INFO(ctx);
+			mara_add_native_debug_info(ctx);
 			return mara_errorf(
 				ctx,
 				mara_str_from_literal("core/panic"),
@@ -346,13 +345,18 @@ mara_parse_token(
 }
 
 MARA_PRIVATE mara_error_t*
-mara_do_parse_all(
+mara_do_parse(
 	mara_exec_ctx_t* ctx,
 	mara_zone_t* zone,
-	mara_str_t filename,
+	mara_parse_options_t options,
 	mara_reader_t reader,
-	mara_value_t* result
+	mara_list_t** result
 ) {
+	mara_str_t filename = options.filename;
+	if (filename.len == 0) {
+		filename = mara_str_from_literal("<unknown>");
+	}
+
 	mara_lexer_t lexer;
 	mara_lexer_init(&lexer, filename, reader);
 
@@ -375,65 +379,31 @@ mara_do_parse_all(
 		if (error != NULL) { break; }
 
 		mara_linked_list_push(ctx, &tmp_list, elem, token.location);
+
+		if (options.parse_one) { break; }
 	}
 
 	if (error == NULL) {
-		error = mara_linked_list_flatten(ctx, zone, filename, &tmp_list, result);
+		*result = mara_linked_list_flatten(ctx, zone, filename, &tmp_list);
 	}
 
 	return error;
 }
 
-
-MARA_PRIVATE mara_error_t*
-mara_do_parse_one(
-	mara_exec_ctx_t* ctx,
-	mara_zone_t* zone,
-	mara_str_t filename,
-	mara_reader_t reader,
-	mara_value_t* result
-) {
-	mara_lexer_t lexer;
-	mara_lexer_init(&lexer, filename, reader);
-	mara_token_t token;
-	mara_check_error(mara_lexer_next(ctx, &lexer, &token));
-	mara_check_error(mara_parse_token(ctx, zone, &lexer, token, result));
-
-	return NULL;
-}
-
 mara_error_t*
-mara_parse_all(
+mara_parse(
 	mara_exec_ctx_t* ctx,
 	mara_zone_t* zone,
-	mara_str_t filename,
+	mara_parse_options_t options,
 	mara_reader_t reader,
-	mara_value_t* result
+	mara_list_t** result
 ) {
 	mara_error_t* error;
 	mara_zone_enter_new(ctx, (mara_zone_options_t){
 		.num_marked_zones = 1,
 		.marked_zones = (mara_zone_t*[]){ zone },
 	});
-	error = mara_do_parse_all(ctx, zone, filename, reader, result);
-	mara_zone_exit(ctx);
-	return error;
-}
-
-mara_error_t*
-mara_parse_one(
-	mara_exec_ctx_t* ctx,
-	mara_zone_t* zone,
-	mara_str_t filename,
-	mara_reader_t reader,
-	mara_value_t* result
-) {
-	mara_error_t* error;
-	mara_zone_enter_new(ctx, (mara_zone_options_t){
-		.num_marked_zones = 1,
-		.marked_zones = (mara_zone_t*[]){ zone },
-	});
-	error = mara_do_parse_one(ctx, zone, filename, reader, result);
+	error = mara_do_parse(ctx, zone, options, reader, result);
 	mara_zone_exit(ctx);
 	return error;
 }

@@ -33,7 +33,10 @@
 typedef struct mara_env_s mara_env_t;
 typedef struct mara_exec_ctx_s mara_exec_ctx_t;
 typedef struct mara_zone_s mara_zone_t;
-typedef uint64_t mara_value_t;
+typedef struct mara_list_s mara_list_t;
+typedef struct mara_map_s mara_map_t;
+typedef struct mara_fn_s mara_fn_t;
+typedef struct { uint64_t internal; } mara_value_t;
 typedef int32_t mara_index_t;
 
 typedef struct {
@@ -85,16 +88,13 @@ typedef struct {
 	mara_stacktrace_t* stacktrace;
 } mara_error_t;
 
-typedef struct {
-	mara_error_t* (*fn)(
-		mara_exec_ctx_t* ctx,
-		mara_index_t argc,
-		const mara_value_t* argv,
-		void* userdata,
-		mara_value_t* result
-	);
-	void* userdata;
-} mara_native_fn_t;
+typedef mara_error_t* (*mara_native_fn_t)(
+	mara_exec_ctx_t* ctx,
+	mara_index_t argc,
+	const mara_value_t* argv,
+	void* userdata,
+	mara_value_t* result
+);
 
 typedef struct {
 	mara_allocator_t allocator;
@@ -125,16 +125,22 @@ typedef enum {
 	MARA_VAL_INT,
 	MARA_VAL_REAL,
 	MARA_VAL_BOOL,
-	MARA_VAL_STRING,
-	MARA_VAL_SYMBOL,
+	MARA_VAL_STR,
+	MARA_VAL_SYM,
 	MARA_VAL_REF,
-	MARA_VAL_FUNCTION,
+	MARA_VAL_FN,
 	MARA_VAL_LIST,
 	MARA_VAL_MAP,
 } mara_value_type_t;
 
 typedef struct {
-	bool as_module;
+	mara_str_t filename;
+	bool parse_one;
+} mara_parse_options_t;
+
+typedef struct {
+	bool standalone;
+	bool skip_prelude;
 	bool strip_debug_info;
 } mara_compile_options_t;
 
@@ -224,13 +230,13 @@ MARA_API bool
 mara_value_is_str(mara_value_t value);
 
 MARA_API bool
-mara_value_is_symbol(mara_value_t value);
+mara_value_is_sym(mara_value_t value);
 
 MARA_API bool
 mara_value_is_ref(mara_value_t value, void* tag);
 
 MARA_API bool
-mara_value_is_function(mara_value_t value);
+mara_value_is_fn(mara_value_t value);
 
 MARA_API bool
 mara_value_is_list(mara_value_t value);
@@ -256,6 +262,15 @@ mara_value_to_str(mara_exec_ctx_t* ctx, mara_value_t value, mara_str_t* result);
 MARA_API mara_error_t*
 mara_value_to_ref(mara_exec_ctx_t* ctx, mara_value_t value, void* tag, void** result);
 
+MARA_API mara_error_t*
+mara_value_to_list(mara_exec_ctx_t* ctx, mara_value_t value, mara_list_t** result);
+
+MARA_API mara_error_t*
+mara_value_to_map(mara_exec_ctx_t* ctx, mara_value_t value, mara_map_t** result);
+
+MARA_API mara_error_t*
+mara_value_to_fn(mara_exec_ctx_t* ctx, mara_value_t value, mara_fn_t** result);
+
 MARA_API mara_value_t
 mara_nil(void);
 
@@ -267,6 +282,15 @@ mara_value_from_int(mara_index_t value);
 
 MARA_API mara_value_t
 mara_value_from_real(double value);
+
+MARA_API mara_value_t
+mara_value_from_list(mara_list_t* list);
+
+MARA_API mara_value_t
+mara_value_from_map(mara_map_t* map);
+
+MARA_API mara_value_t
+mara_value_from_fn(mara_fn_t* fn);
 
 MARA_API mara_value_t
 mara_new_str(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_str_t value);
@@ -288,22 +312,22 @@ mara_new_strv(
 );
 
 MARA_API mara_value_t
-mara_new_symbol(mara_exec_ctx_t* ctx, mara_str_t name);
+mara_new_sym(mara_exec_ctx_t* ctx, mara_str_t name);
 
-MARA_API mara_value_t
-mara_new_fn(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_native_fn_t fn);
+MARA_API mara_fn_t*
+mara_new_fn(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_native_fn_t fn, void* userdata);
 
-MARA_API mara_value_t
+MARA_API mara_list_t*
 mara_new_list(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_index_t initial_capacity);
 
-MARA_API mara_value_t
+MARA_API mara_map_t*
 mara_new_map(mara_exec_ctx_t* ctx, mara_zone_t* zone);
 
 MARA_API mara_value_t
 mara_new_ref(mara_exec_ctx_t* ctx, mara_zone_t* zone, void* tag, void* value);
 
-MARA_API mara_error_t*
-mara_copy(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_value_t value, mara_value_t* result);
+MARA_API mara_value_t
+mara_copy(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_value_t value);
 
 // Error
 
@@ -327,46 +351,46 @@ mara_errorv(
 
 // List
 
-MARA_API mara_error_t*
-mara_list_len(mara_exec_ctx_t* ctx, mara_value_t list, mara_index_t* result);
+MARA_API mara_index_t
+mara_list_len(mara_exec_ctx_t* ctx, mara_list_t* list);
+
+MARA_API mara_value_t
+mara_list_get(mara_exec_ctx_t* ctx, mara_list_t* list, mara_index_t index);
+
+MARA_API mara_value_t
+mara_list_set(mara_exec_ctx_t* ctx, mara_list_t* list, mara_index_t index, mara_value_t value);
+
+MARA_API void
+mara_list_push(mara_exec_ctx_t* ctx, mara_list_t* list, mara_value_t value);
+
+MARA_API mara_value_t
+mara_list_delete(mara_exec_ctx_t* ctx, mara_list_t* list, mara_index_t index);
+
+MARA_API mara_value_t
+mara_list_quick_delete(mara_exec_ctx_t* ctx, mara_list_t* list, mara_index_t index);
+
+MARA_API void
+mara_list_resize(mara_exec_ctx_t* ctx, mara_list_t* list, mara_index_t len);
 
 MARA_API mara_error_t*
-mara_list_get(mara_exec_ctx_t* ctx, mara_value_t list, mara_index_t index, mara_value_t* result);
-
-MARA_API mara_error_t*
-mara_list_set(mara_exec_ctx_t* ctx, mara_value_t list, mara_index_t index, mara_value_t value);
-
-MARA_API mara_error_t*
-mara_list_push(mara_exec_ctx_t* ctx, mara_value_t list, mara_value_t value);
-
-MARA_API mara_error_t*
-mara_list_delete(mara_exec_ctx_t* ctx, mara_value_t list, mara_index_t index);
-
-MARA_API mara_error_t*
-mara_list_quick_delete(mara_exec_ctx_t* ctx, mara_value_t list, mara_index_t index);
-
-MARA_API mara_error_t*
-mara_list_resize(mara_exec_ctx_t* ctx, mara_value_t list, mara_index_t len);
-
-MARA_API mara_error_t*
-mara_list_foreach(mara_exec_ctx_t* ctx, mara_value_t list, mara_native_fn_t fn);
+mara_list_foreach(mara_exec_ctx_t* ctx, mara_list_t* list, mara_fn_t* fn);
 
 // Map
 
-MARA_API mara_error_t*
-mara_map_len(mara_exec_ctx_t* ctx, mara_value_t map, mara_index_t* result);
+MARA_API mara_index_t
+mara_map_len(mara_exec_ctx_t* ctx, mara_map_t* map);
+
+MARA_API mara_value_t
+mara_map_set(mara_exec_ctx_t* ctx, mara_map_t* map, mara_value_t key, mara_value_t value);
+
+MARA_API mara_value_t
+mara_map_get(mara_exec_ctx_t* ctx, mara_map_t* map, mara_value_t key);
+
+MARA_API mara_value_t
+mara_map_delete(mara_exec_ctx_t* ctx, mara_map_t* map, mara_value_t key);
 
 MARA_API mara_error_t*
-mara_map_set(mara_exec_ctx_t* ctx, mara_value_t map, mara_value_t key, mara_value_t value);
-
-MARA_API mara_error_t*
-mara_map_get(mara_exec_ctx_t* ctx, mara_value_t map, mara_value_t key, mara_value_t* result);
-
-MARA_API mara_error_t*
-mara_map_delete(mara_exec_ctx_t* ctx, mara_value_t map, mara_value_t key, mara_value_t* result);
-
-MARA_API mara_error_t*
-mara_map_foreach(mara_exec_ctx_t* ctx, mara_value_t map, mara_native_fn_t fn);
+mara_map_foreach(mara_exec_ctx_t* ctx, mara_map_t* map, mara_fn_t* fn);
 
 // Module
 
@@ -378,18 +402,30 @@ mara_import(
 	mara_value_t* result
 );
 
+MARA_API bool
+mara_export(mara_exec_ctx_t* ctx, mara_str_t export_name, mara_value_t value);
+
 MARA_API mara_error_t*
 mara_init_module(
 	mara_exec_ctx_t* ctx,
-	mara_value_t entry_fn,
-	mara_module_options_t options
+	mara_module_options_t options,
+	mara_fn_t* entry_fn
 );
 
-MARA_API mara_error_t*
-mara_add_module_loader(mara_exec_ctx_t* ctx, mara_value_t fn);
+MARA_API void
+mara_add_module_loader(mara_exec_ctx_t* ctx, mara_fn_t* fn);
 
 MARA_API void
 mara_add_standard_loader(mara_exec_ctx_t* ctx, mara_module_fs_t fs);
+
+MARA_API void
+mara_add_core_module(mara_exec_ctx_t* ctx);
+
+MARA_API mara_error_t*
+mara_enumerate_modules(mara_exec_ctx_t* ctx, mara_fn_t* fn);
+
+MARA_API mara_error_t*
+mara_enumerate_exports(mara_exec_ctx_t* ctx, mara_str_t module_name, mara_fn_t* fn);
 
 // Function
 
@@ -397,7 +433,7 @@ MARA_API mara_error_t*
 mara_call(
 	mara_exec_ctx_t* ctx,
 	mara_zone_t* zone,
-	mara_value_t fn,
+	mara_fn_t* fn,
 	mara_index_t argc,
 	mara_value_t* argv,
 	mara_value_t* result
@@ -407,29 +443,20 @@ MARA_API mara_error_t*
 mara_apply(
 	mara_exec_ctx_t* ctx,
 	mara_zone_t* zone,
-	mara_value_t fn,
-	mara_value_t args,
+	mara_fn_t* fn,
+	mara_list_t* args,
 	mara_value_t* result
 );
 
 // Compile
 
 MARA_API mara_error_t*
-mara_parse_all(
+mara_parse(
 	mara_exec_ctx_t* ctx,
 	mara_zone_t* zone,
-	mara_str_t filename,
+	mara_parse_options_t options,
 	mara_reader_t reader,
-	mara_value_t* result
-);
-
-MARA_API mara_error_t*
-mara_parse_one(
-	mara_exec_ctx_t* ctx,
-	mara_zone_t* zone,
-	mara_str_t filename,
-	mara_reader_t reader,
-	mara_value_t* result
+	mara_list_t** result
 );
 
 MARA_API mara_error_t*
@@ -437,8 +464,8 @@ mara_compile(
 	mara_exec_ctx_t* ctx,
 	mara_zone_t* zone,
 	mara_compile_options_t options,
-	mara_value_t exprs,
-	mara_value_t* result
+	mara_list_t* exprs,
+	mara_fn_t** result
 );
 
 // Serialization

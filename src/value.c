@@ -4,6 +4,16 @@
 
 _Static_assert(sizeof(nanbox_t) == sizeof(mara_value_t), "mara_value_t cannot be nan-boxed");
 
+MARA_PRIVATE mara_value_t
+mara_nanbox_to_value(nanbox_t nanbox) {
+	return (mara_value_t){ .internal = nanbox.as_int64 };
+}
+
+MARA_PRIVATE nanbox_t
+mara_value_to_nanbox(mara_value_t value) {
+	return (nanbox_t){ .as_int64 = value.internal };
+}
+
 mara_error_t*
 mara_type_error(
 	mara_exec_ctx_t* ctx,
@@ -38,7 +48,7 @@ mara_alloc_obj(mara_exec_ctx_t* ctx, mara_zone_t* zone, size_t size) {
 
 mara_obj_t*
 mara_value_to_obj(mara_value_t value) {
-	nanbox_t nanbox = { .as_int64 = value };
+	nanbox_t nanbox = { .as_int64 = value.internal };
 	if (nanbox_is_pointer(nanbox)) {
 		return nanbox_to_pointer(nanbox);
 	} else {
@@ -48,30 +58,30 @@ mara_value_to_obj(mara_value_t value) {
 
 mara_value_t
 mara_obj_to_value(mara_obj_t* obj) {
-	return nanbox_from_pointer(obj).as_int64;
+	return mara_nanbox_to_value(nanbox_from_pointer(obj));
 }
 
 bool
 mara_value_is_nil(mara_value_t value) {
-	nanbox_t nanbox = { .as_int64 = value };
+	nanbox_t nanbox = mara_value_to_nanbox(value);
 	return nanbox_is_null(nanbox);
 }
 
 bool
 mara_value_is_int(mara_value_t value) {
-	nanbox_t nanbox = { .as_int64 = value };
+	nanbox_t nanbox = mara_value_to_nanbox(value);
 	return nanbox_is_int(nanbox);
 }
 
 bool
 mara_value_is_real(mara_value_t value) {
-	nanbox_t nanbox = { .as_int64 = value };
+	nanbox_t nanbox = mara_value_to_nanbox(value);
 	return nanbox_is_double(nanbox);
 }
 
 bool
 mara_value_is_bool(mara_value_t value) {
-	nanbox_t nanbox = { .as_int64 = value };
+	nanbox_t nanbox = mara_value_to_nanbox(value);
 	return nanbox_is_boolean(nanbox);
 }
 
@@ -82,8 +92,8 @@ mara_value_is_str(mara_value_t value) {
 }
 
 bool
-mara_value_is_symbol(mara_value_t value) {
-	nanbox_t nanbox = { .as_int64 = value };
+mara_value_is_sym(mara_value_t value) {
+	nanbox_t nanbox = mara_value_to_nanbox(value);
 	return nanbox_is_aux(nanbox) && nanbox.as_bits.tag == NANBOX_MIN_AUX_TAG;
 }
 
@@ -92,16 +102,16 @@ mara_value_is_ref(mara_value_t value, void* tag) {
 	mara_obj_t* obj = mara_value_to_obj(value);
 	return obj != NULL
 		&& obj->type == MARA_OBJ_TYPE_REF
-		&& ((mara_obj_ref_t*)obj->body)->tag == tag;
+		&& ((mara_ref_t*)obj->body)->tag == tag;
 }
 
 bool
-mara_value_is_function(mara_value_t value) {
+mara_value_is_fn(mara_value_t value) {
 	mara_obj_t* obj = mara_value_to_obj(value);
 	return obj != NULL
 		&& (
-			obj->type == MARA_OBJ_TYPE_MARA_FN
-			|| obj->type == MARA_OBJ_TYPE_NATIVE_FN
+			obj->type == MARA_OBJ_TYPE_VM_CLOSURE
+			|| obj->type == MARA_OBJ_TYPE_NATIVE_CLOSURE
 		);
 }
 
@@ -119,7 +129,7 @@ mara_value_is_map(mara_value_t value) {
 
 mara_value_type_t
 mara_value_type(mara_value_t value, void** tag) {
-	nanbox_t nanbox = { .as_int64 = value };
+	nanbox_t nanbox = mara_value_to_nanbox(value);
 	if (nanbox_is_null(nanbox)) {
 		return MARA_VAL_NIL;
 	} else if (nanbox_is_int(nanbox)) {
@@ -132,20 +142,20 @@ mara_value_type(mara_value_t value, void** tag) {
 		nanbox_is_aux(nanbox)
 		&& nanbox.as_bits.tag == NANBOX_MIN_AUX_TAG
 	) {
-		return MARA_VAL_SYMBOL;
+		return MARA_VAL_SYM;
 	} else if (nanbox_is_pointer(nanbox)) {
 		mara_obj_t* obj = nanbox_to_pointer(nanbox);
 		switch (obj->type) {
 			case MARA_OBJ_TYPE_STRING:
-				return MARA_VAL_STRING;
+				return MARA_VAL_STR;
 			case MARA_OBJ_TYPE_REF:
 				if (tag != NULL) {
-					*tag = ((mara_obj_ref_t*)obj->body)->tag;
+					*tag = ((mara_ref_t*)obj->body)->tag;
 				}
 				return MARA_VAL_REF;
-			case MARA_OBJ_TYPE_MARA_FN:
-			case MARA_OBJ_TYPE_NATIVE_FN:
-				return MARA_VAL_FUNCTION;
+			case MARA_OBJ_TYPE_VM_CLOSURE:
+			case MARA_OBJ_TYPE_NATIVE_CLOSURE:
+				return MARA_VAL_FN;
 			case MARA_OBJ_TYPE_LIST:
 				return MARA_VAL_LIST;
 			case MARA_OBJ_TYPE_MAP:
@@ -162,7 +172,7 @@ mara_value_type(mara_value_t value, void** tag) {
 
 mara_error_t*
 mara_value_to_int(mara_exec_ctx_t* ctx, mara_value_t value, int* result) {
-	nanbox_t nanbox = { .as_int64 = value };
+	nanbox_t nanbox = mara_value_to_nanbox(value);
 	if (MARA_EXPECT(nanbox_is_int(nanbox))) {
 		*result = nanbox_to_int(nanbox);
 		return NULL;
@@ -173,7 +183,7 @@ mara_value_to_int(mara_exec_ctx_t* ctx, mara_value_t value, int* result) {
 
 mara_error_t*
 mara_value_to_real(mara_exec_ctx_t* ctx, mara_value_t value, double* result) {
-	nanbox_t nanbox = { .as_int64 = value };
+	nanbox_t nanbox = mara_value_to_nanbox(value);
 	if (MARA_EXPECT(nanbox_is_double(nanbox))) {
 		*result = nanbox_to_double(nanbox);
 		return NULL;
@@ -184,7 +194,7 @@ mara_value_to_real(mara_exec_ctx_t* ctx, mara_value_t value, double* result) {
 
 mara_error_t*
 mara_value_to_bool(mara_exec_ctx_t* ctx, mara_value_t value, bool* result) {
-	nanbox_t nanbox = { .as_int64 = value };
+	nanbox_t nanbox = mara_value_to_nanbox(value);
 	if (MARA_EXPECT(nanbox_is_boolean(nanbox))) {
 		*result = nanbox_to_boolean(nanbox);
 		return NULL;
@@ -199,8 +209,8 @@ mara_value_to_str(mara_exec_ctx_t* ctx, mara_value_t value, mara_str_t* result) 
 		mara_obj_t* obj = mara_value_to_obj(value);
 		*result = *(mara_str_t*)obj->body;
 		return NULL;
-	} else if (mara_value_is_symbol(value)) {
-		nanbox_t nanbox = { .as_int64 = value };
+	} else if (mara_value_is_sym(value)) {
+		nanbox_t nanbox = mara_value_to_nanbox(value);
 		*result = mara_symtab_lookup(&ctx->env->symtab, nanbox.as_bits.payload);
 		return NULL;
 	} else {
@@ -219,7 +229,7 @@ mara_error_t*
 mara_value_to_ref(mara_exec_ctx_t* ctx, mara_value_t value, void* tag, void** result) {
 	if (MARA_EXPECT(mara_value_is_ref(value, tag))) {
 		mara_obj_t* obj = mara_value_to_obj(value);
-		*result = ((mara_obj_ref_t*)obj->body)->value;
+		*result = ((mara_ref_t*)obj->body)->value;
 		return NULL;
 	} else {
 		return mara_errorf(
@@ -233,24 +243,93 @@ mara_value_to_ref(mara_exec_ctx_t* ctx, mara_value_t value, void* tag, void** re
 	}
 }
 
+mara_error_t*
+mara_value_to_list(mara_exec_ctx_t* ctx, mara_value_t value, mara_list_t** result) {
+	if (MARA_EXPECT(mara_value_is_list(value))) {
+		mara_obj_t* obj = mara_value_to_obj(value);
+		*result = (mara_list_t*)obj->body;
+		return NULL;
+	} else {
+		return mara_errorf(
+			ctx,
+			mara_str_from_literal("core/unexpected-type"),
+			"Expecting %s got %s",
+			mara_nil(),
+			"list",
+			mara_value_type_name(mara_value_type(value, NULL))
+		);
+	}
+}
+
+mara_error_t*
+mara_value_to_map(mara_exec_ctx_t* ctx, mara_value_t value, mara_map_t** result) {
+	if (MARA_EXPECT(mara_value_is_map(value))) {
+		mara_obj_t* obj = mara_value_to_obj(value);
+		*result = (mara_map_t*)obj->body;
+		return NULL;
+	} else {
+		return mara_errorf(
+			ctx,
+			mara_str_from_literal("core/unexpected-type"),
+			"Expecting %s got %s",
+			mara_nil(),
+			"map",
+			mara_value_type_name(mara_value_type(value, NULL))
+		);
+	}
+}
+
+mara_error_t*
+mara_value_to_fn(mara_exec_ctx_t* ctx, mara_value_t value, mara_fn_t** result) {
+	if (MARA_EXPECT(mara_value_is_fn(value))) {
+		mara_obj_t* obj = mara_value_to_obj(value);
+		*result = (mara_fn_t*)obj;
+		return NULL;
+	} else {
+		return mara_errorf(
+			ctx,
+			mara_str_from_literal("core/unexpected-type"),
+			"Expecting %s got %s",
+			mara_nil(),
+			"function",
+			mara_value_type_name(mara_value_type(value, NULL))
+		);
+	}
+}
+
 mara_value_t
 mara_nil(void) {
-	return nanbox_null().as_int64;
+	return mara_nanbox_to_value(nanbox_null());
 }
 
 mara_value_t
 mara_value_from_bool(bool value) {
-	return nanbox_from_boolean(value).as_int64;
+	return mara_nanbox_to_value(nanbox_from_boolean(value));
 }
 
 mara_value_t
 mara_value_from_int(mara_index_t value) {
-	return nanbox_from_int(value).as_int64;
+	return mara_nanbox_to_value(nanbox_from_int(value));
 }
 
 mara_value_t
 mara_value_from_real(double value) {
-	return nanbox_from_double(value).as_int64;
+	return mara_nanbox_to_value(nanbox_from_double(value));
+}
+
+mara_value_t
+mara_value_from_list(mara_list_t* list) {
+	return mara_obj_to_value(mara_container_of(list, mara_obj_t, body));
+}
+
+mara_value_t
+mara_value_from_map(mara_map_t* map) {
+	return mara_obj_to_value(mara_container_of(map, mara_obj_t, body));
+}
+
+mara_value_t
+mara_value_from_fn(mara_fn_t* fn) {
+	return mara_obj_to_value((mara_obj_t*)fn);
 }
 
 mara_str_t
@@ -316,58 +395,61 @@ mara_new_strv(
 
 mara_value_t
 mara_new_ref(mara_exec_ctx_t* ctx, mara_zone_t* zone, void* tag, void* value) {
-	mara_obj_t* obj = mara_alloc_obj(ctx, zone, sizeof(mara_obj_ref_t));
+	mara_obj_t* obj = mara_alloc_obj(ctx, zone, sizeof(mara_ref_t));
 	obj->type = MARA_OBJ_TYPE_REF;
 
-	mara_obj_ref_t* ref = (mara_obj_ref_t*)obj->body;
+	mara_ref_t* ref = (mara_ref_t*)obj->body;
 	ref->tag = tag;
 	ref->value = value;
 
 	return mara_obj_to_value(obj);
 }
 
-mara_value_t
-mara_new_fn(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_native_fn_t fn) {
+mara_fn_t*
+mara_new_fn(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_native_fn_t fn, void* userdata) {
 	// TODO: Implement light native function like Lua
 	// if userdata == NULL, use a light representation.
 	// Intern the function pointer in the permanent zone.
-	mara_obj_t* obj = mara_alloc_obj(ctx, zone, sizeof(mara_native_fn_t));
-	obj->type = MARA_OBJ_TYPE_NATIVE_FN;
+	mara_obj_t* obj = mara_alloc_obj(ctx, zone, sizeof(mara_native_closure_t));
+	obj->type = MARA_OBJ_TYPE_NATIVE_CLOSURE;
 
-	*(mara_native_fn_t*)obj->body = fn;
+	mara_native_closure_t* closure = (mara_native_closure_t*)obj->body;
+	closure->fn = fn;
+	closure->userdata = userdata;
 
-	return mara_obj_to_value(obj);
+	// Point to the header so we can differentiate between mara and native closures
+	return (mara_fn_t*)obj;
 }
 
 mara_value_t
 mara_tombstone(void) {
-	return nanbox_deleted().as_int64;
+	return mara_nanbox_to_value(nanbox_deleted());
 }
 
 bool
 mara_value_is_tombstone(mara_value_t value) {
-	return nanbox_is_deleted((nanbox_t){ .as_int64 = value });
+	return nanbox_is_deleted(mara_value_to_nanbox(value));
 }
 
 bool
 mara_value_is_true(mara_value_t value) {
-	return nanbox_is_true((nanbox_t){ .as_int64 = value });
+	return nanbox_is_true(mara_value_to_nanbox(value));
 }
 
 bool
 mara_value_is_false(mara_value_t value) {
-	return nanbox_is_false((nanbox_t){ .as_int64 = value });
+	return nanbox_is_false(mara_value_to_nanbox(value));
 }
 
 mara_value_t
-mara_new_symbol(mara_exec_ctx_t* ctx, mara_str_t name) {
+mara_new_sym(mara_exec_ctx_t* ctx, mara_str_t name) {
 	mara_env_t* env = ctx->env;
 	mara_index_t id = mara_symtab_intern(ctx->env, &env->symtab, name);
 
 	nanbox_t nanbox = {
 		.as_bits = { .payload = id, .tag = NANBOX_MIN_AUX_TAG },
 	};
-	return nanbox.as_int64;
+	return mara_nanbox_to_value(nanbox);
 }
 
 void

@@ -42,11 +42,13 @@ compile(int argc, const char* argv[], mara_exec_ctx_t* ctx) {
 		}
 	}
 
-	mara_value_t expr;
-	mara_error_t* error = mara_parse_all(
+	mara_list_t* expr;
+	mara_error_t* error = mara_parse(
 		ctx,
 		mara_get_local_zone(ctx),
-		mara_str_from_cstr(filename),
+		(mara_parse_options_t) {
+			.filename = mara_str_from_cstr(filename)
+		},
 		(mara_reader_t){
 			.fn = mara_read_from_file,
 			.userdata = input,
@@ -69,13 +71,11 @@ compile(int argc, const char* argv[], mara_exec_ctx_t* ctx) {
 		goto end;
 	}
 
-	mara_value_t fn;
+	mara_fn_t* fn;
 	error = mara_compile(
 		ctx,
 		mara_get_local_zone(ctx),
-		(mara_compile_options_t){
-			.as_module = true,
-		},
+		(mara_compile_options_t){ 0 },
 		expr,
 		&fn
 	);
@@ -97,7 +97,7 @@ compile(int argc, const char* argv[], mara_exec_ctx_t* ctx) {
 
 	mara_print_value(
 		ctx,
-		fn,
+		mara_value_from_fn(fn),
 		(mara_print_options_t){ 0 },
 		(mara_writer_t){
 			.fn = mara_write_to_file,

@@ -26,8 +26,7 @@ mara_errorv(
 	char* type_str = mara_zone_alloc_ex(ctx, &ctx->error_zone, type.len, _Alignof(char));
 	memcpy(type_str, type.data, type.len);
 
-	mara_value_t extra_copy;
-	mara_copy(ctx, &ctx->error_zone, extra, &extra_copy),
+	mara_value_t extra_copy = mara_copy(ctx, &ctx->error_zone, extra);
 	ctx->last_error = (mara_error_t){
 		.type = {
 			.len = type.len,

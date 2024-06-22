@@ -31,7 +31,6 @@ mara_create_env(mara_env_options_t options) {
 			.ref_count = 1,
 			.level = -2,
 		},
-		.module_cache = mara_nil(),
 	};
 	env->permanent_zone.arena = &env->permanent_arena;
 	mara_symtab_init(env, &env->symtab);
@@ -64,8 +63,7 @@ mara_begin(mara_env_t* env) {
 			.level = -1,
 		},
 		.control_arena = control_arena,
-		.current_module = mara_nil(),
-		.module_loaders = mara_nil(),
+		.current_module_options.module_name = mara_str_from_literal("."),
 	};
 	ctx->error_zone.arena = &ctx->error_arena;
 	mara_zone_enter_new(ctx, (mara_zone_options_t){ 0 });
