@@ -100,6 +100,9 @@ typedef mara_error_t* (*mara_native_fn_t)(
 typedef struct {
 	mara_allocator_t allocator;
 	size_t alloc_chunk_size;
+
+	mara_index_t max_stackframes;
+	mara_index_t max_stack;
 } mara_env_options_t;
 
 typedef struct {

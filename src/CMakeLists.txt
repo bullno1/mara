@@ -16,7 +16,6 @@ set(SOURCES
 	"print.c"
 	"compiler.c"
 	"vm.c"
-	"vm_dispatch.c"
 	"module.c"
 	"core_module.c"
 )

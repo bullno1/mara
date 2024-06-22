@@ -22,6 +22,14 @@ mara_create_env(mara_env_options_t options) {
 		options.alloc_chunk_size = 4096 * 4;
 	}
 
+	if (options.max_stack <= 0) {
+		options.max_stack = 512;
+	}
+
+	if (options.max_stackframes <= 0) {
+		options.max_stackframes = 512;
+	}
+
 	mara_env_t* env = mara_malloc(options.allocator, sizeof(mara_env_t));
 	mara_assert(env != NULL, "Out of memory");
 
@@ -66,6 +74,24 @@ mara_begin(mara_env_t* env) {
 		.current_module_options.module_name = mara_str_from_literal("."),
 	};
 	ctx->error_zone.arena = &ctx->error_arena;
+	ctx->zones = mara_arena_alloc_ex(
+		env,
+		&ctx->control_arena,
+		sizeof(mara_zone_t) * env->options.max_stackframes,
+		_Alignof(mara_zone_t)
+	);
+	ctx->stack_frames = mara_arena_alloc_ex(
+		env,
+		&ctx->control_arena,
+		sizeof(mara_stack_frame_t) * env->options.max_stackframes,
+		_Alignof(mara_stack_frame_t)
+	);
+	ctx->stack = mara_arena_alloc_ex(
+		env,
+		&ctx->control_arena,
+		sizeof(mara_value_t) * env->options.max_stack,
+		_Alignof(mara_value_t)
+	);
 	mara_zone_enter_new(ctx, (mara_zone_options_t){ 0 });
 	env->ref_count += 1;
 	return ctx;

@@ -33,7 +33,7 @@
 	((type*)((char*)ptr - offsetof(type, member)))
 
 #if defined(__GNUC__) || defined(__clang__)
-#	define MARA_EXPECT(X) __builtin_expect(!!(X), 1)
+#	define MARA_EXPECT(X) __builtin_expect((X), 1)
 #else
 #	define MARA_EXPECT(X) (X)
 #endif
@@ -257,25 +257,24 @@ typedef struct mara_vm_state_s {
 struct mara_stack_frame_s {
 	mara_vm_closure_t* closure;
 
-	mara_arena_snapshot_t control_snapshot;
 	mara_zone_bookmark_t* zone_bookmark;
 	mara_zone_t* return_zone;
 	mara_vm_state_t saved_state;
 	mara_source_info_t native_debug_info;
 
-	mara_value_t stack[];
+	mara_value_t* stack;
 };
 
 // Public types
 
 struct mara_zone_s {
 	mara_index_t level;
+	mara_index_t index;
 	mara_index_t ref_count;
 	mara_finalizer_t* finalizers;
 	mara_arena_t* arena;
 	mara_source_info_t debug_info;
 	mara_arena_snapshot_t local_snapshot;
-	mara_arena_snapshot_t control_snapshot;
 };
 
 struct mara_env_s {
@@ -307,6 +306,15 @@ struct mara_exec_ctx_s {
 	mara_arena_t debug_info_arena;
 	mara_strpool_t debug_info_strpool;
 	mara_debug_info_map_t debug_info_map;
+
+	mara_index_t num_zones;
+	mara_zone_t* zones;
+	mara_index_t stack_size;
+	mara_value_t* stack;
+	mara_value_t* orig_stack;
+	mara_index_t num_stack_frames;
+	mara_stack_frame_t* stack_frames;
+	mara_zone_bookmark_t* zone_bookmarks;
 
 	mara_vm_state_t vm_state;
 };

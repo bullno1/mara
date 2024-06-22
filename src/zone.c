@@ -26,8 +26,8 @@ MARA_PRIVATE mara_zone_t*
 mara_zone_new(mara_exec_ctx_t* ctx, mara_zone_options_t options) {
 	mara_zone_t* current_zone = ctx->current_zone;
 
-	mara_arena_snapshot_t control_snapshot = mara_arena_snapshot(ctx->env, &ctx->control_arena);
-	mara_zone_t* new_zone = MARA_ARENA_ALLOC_TYPE(ctx->env, &ctx->control_arena, mara_zone_t);
+	mara_index_t zone_index = ctx->num_zones++;
+	mara_zone_t* new_zone = &ctx->zones[zone_index];
 	mara_assert(new_zone != NULL, "Out of memory");
 
 	// Find an arena for this new zone.
@@ -83,9 +83,10 @@ mara_zone_new(mara_exec_ctx_t* ctx, mara_zone_options_t options) {
 	}
 
 	*new_zone = (mara_zone_t){
+		// TODO: level might just be index
 		.level = current_zone != NULL ? current_zone->level + 1 : 0,
+		.index = zone_index,
 		.arena = arena_for_zone,
-		.control_snapshot = control_snapshot,
 		.local_snapshot = mara_arena_snapshot(ctx->env, arena_for_zone),
 	};
 
@@ -130,7 +131,7 @@ mara_zone_exit(mara_exec_ctx_t* ctx) {
 
 	if (--current_zone->ref_count == 0) {
 		mara_zone_cleanup(ctx->env, current_zone);
-		mara_arena_restore(ctx->env, &ctx->control_arena, current_zone->control_snapshot);
+		ctx->num_zones = current_zone->index;
 	}
 }
 

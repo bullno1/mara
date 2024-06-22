@@ -1,7 +1,6 @@
 #include "rktest.h"
 #include <mara.h>
 #include <mara/utils.h>
-#include <mara/bind.h>
 #include "common.h"
 
 static mara_fixture_t fixture;
