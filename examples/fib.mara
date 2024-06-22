@@ -1,6 +1,6 @@
 (def + (import "core" "+"))
 (def - (import "core" "-"))
-(def < (import "core" "<"))
+(def <= (import "core" "<="))
 (def list/new (import "core" "list/new"))
 (def list/push (import "core" "list/push"))
 (def list/set (import "core" "list/set"))
@@ -15,10 +15,10 @@
 
 (def fib-box (make-box))
 (def fib (fn (n)
-           (if (< n 1)
+           (if (<= n 1)
              n
              (+ ((unbox fib-box) (- n 1))
                 ((unbox fib-box) (- n 2))))))
 (set-box fib-box fib)
 
-(fib 4)
+(fib 34)

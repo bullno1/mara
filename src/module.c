@@ -82,7 +82,8 @@ mara_internal_init_module(
 	mara_exec_ctx_t* ctx,
 	mara_module_options_t options,
 	mara_fn_t* entry_fn,
-	mara_map_t** result
+	mara_map_t** module_map_out,
+	mara_value_t* entry_result_out
 ) {
 	// Avoid allocation in the permanent zone until the module is confirmed
 	mara_zone_t* local_zone = ctx->current_zone;
@@ -129,7 +130,8 @@ mara_internal_init_module(
 				mara_map_set(ctx, module, mara_new_sym(ctx, mara_str_from_literal("*main*")), entry_result);
 				mara_map_set(ctx, mara_get_module_cache(ctx), module_name, mara_value_from_map(module));
 			}
-			*result = module;
+			*entry_result_out = entry_result;
+			*module_map_out = module;
 		} else {
 			mara_map_set(ctx, mara_get_module_cache(ctx), module_name, mara_nil());
 		}
@@ -156,11 +158,14 @@ mara_init_module(
 	mara_value_t* result
 ) {
 	mara_map_t* module_map;
-	mara_error_t* error = mara_internal_init_module(ctx, options, entry_fn, &module_map);
+	mara_value_t entry_result;
+	mara_error_t* error = mara_internal_init_module(
+		ctx,
+		options, entry_fn,
+		&module_map, &entry_result
+	);
 	if (error == NULL) {
-		*result = mara_map_get(
-			ctx, module_map, mara_new_sym(ctx, mara_str_from_literal("*main*"))
-		);
+		*result = entry_result;
 	}
 
 	return error;
@@ -269,8 +274,13 @@ mara_import(
 				.module_name = module_name,
 			};
 			mara_map_t* module;
+			mara_value_t module_main;
 			mara_check_error(
-				mara_internal_init_module(ctx, module_options, module_entry, &module)
+				mara_internal_init_module(
+					ctx,
+					module_options, module_entry,
+					&module, &module_main
+				)
 			);
 
 			mara_value_t export = mara_map_get(ctx, module, export_name_sym);

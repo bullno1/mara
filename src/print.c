@@ -157,7 +157,7 @@ mara_print_vm_function(
 						mara_print_indented(output, body_options.indent, "(JUMP_IF_FALSE %d)", (int16_t)operands);
 						break;
 					case MARA_OP_MAKE_CLOSURE:
-						mara_print_indented(output, body_options.indent, "(MAKE_CLOSURE %d, %d)",
+						mara_print_indented(output, body_options.indent, "(MAKE_CLOSURE %d %d)",
 							(uint8_t)(operands >> 16) & 0xff,
 							operands & 0xffff
 						);

@@ -39,7 +39,7 @@ mara_realloc(mara_allocator_t allocator, void* ptr, size_t new_size) {
 void*
 mara_arena_alloc_ex(mara_env_t* env, mara_arena_t* arena, size_t size, size_t alignment) {
 	void* mem = mara_alloc_from_chunk(arena->current_chunk, size, alignment);
-	if (mem != NULL) {
+	if (MARA_EXPECT(mem != NULL)) {
 		return mem;
 	} else {
 		size_t configured_chunk_size = env->options.alloc_chunk_size;

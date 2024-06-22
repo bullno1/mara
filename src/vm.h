@@ -21,4 +21,13 @@ mara_encode_instruction(
 	return (((uint32_t)opcode & 0xff) << 24) | (operands & 0x00ffffff);
 }
 
+mara_stack_frame_t*
+mara_vm_alloc_stack_frame(mara_exec_ctx_t* ctx, mara_vm_closure_t* closure, mara_vm_state_t vm_state);
+
+void
+mara_vm_pop_stack_frame(mara_exec_ctx_t* ctx, mara_stack_frame_t* check_stackframe);
+
+mara_error_t*
+mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result);
+
 #endif

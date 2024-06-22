@@ -185,30 +185,31 @@ typedef struct mara_module_loader_entry_s {
 
 // VM types
 
+#define MARA_OPCODE(X) \
+	X(NOP) \
+	X(NIL) \
+	X(TRUE) \
+	X(FALSE) \
+	X(SMALL_INT) \
+	X(CONSTANT) \
+	X(POP) \
+	X(SET_LOCAL) \
+	X(GET_LOCAL) \
+	X(SET_ARG) \
+	X(GET_ARG) \
+	X(SET_CAPTURE) \
+	X(GET_CAPTURE) \
+	X(CALL) \
+	X(RETURN) \
+	X(JUMP) \
+	X(JUMP_IF_FALSE) \
+	X(MAKE_CLOSURE) \
+
+#define MARA_DEFINE_OPCODE_ENUM(X) \
+	MARA_OP_##X,
+
 typedef enum mara_opcode_e {
-	MARA_OP_NOP,
-
-	MARA_OP_NIL,
-	MARA_OP_TRUE,
-	MARA_OP_FALSE,
-	MARA_OP_SMALL_INT,
-
-	MARA_OP_CONSTANT,
-	MARA_OP_POP,
-
-	MARA_OP_SET_LOCAL,
-	MARA_OP_GET_LOCAL,
-	MARA_OP_SET_ARG,
-	MARA_OP_GET_ARG,
-	MARA_OP_SET_CAPTURE,
-	MARA_OP_GET_CAPTURE,
-
-	MARA_OP_CALL,
-	MARA_OP_RETURN,
-	MARA_OP_JUMP,
-	MARA_OP_JUMP_IF_FALSE,
-
-	MARA_OP_MAKE_CLOSURE,  // Should arena mask the closure
+	MARA_OPCODE(MARA_DEFINE_OPCODE_ENUM)
 } mara_opcode_t;
 
 // 8 bits for opcode
