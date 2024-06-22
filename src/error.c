@@ -35,10 +35,51 @@ mara_errorv(
 		.message = mara_vsnprintf(ctx, &ctx->error_zone, fmt, args),
 		.extra = extra_copy,
 	};
-	if (
-		ctx->vm_state.fp == NULL
-		&& ctx->current_zone->debug_info.filename.data != NULL
-	) {
+
+	if (ctx->vm_state.fp != NULL) {
+		mara_index_t num_frames = 0;
+		for (
+			mara_stack_frame_t* itr = ctx->vm_state.fp;
+			itr != NULL;
+			itr = itr->saved_state.fp
+		) {
+			++num_frames;
+		}
+
+		mara_stacktrace_t* stacktrace = mara_zone_alloc_ex(
+			ctx,
+			&ctx->error_zone,
+			sizeof(mara_stacktrace_t) + sizeof(mara_source_info_t),
+			sizeof(mara_stacktrace_t)
+		);
+		stacktrace->len = num_frames;
+
+		mara_index_t frame_index = 0;
+		mara_vm_state_t vm_state = ctx->vm_state;
+		for (
+			mara_stack_frame_t* itr = ctx->vm_state.fp;
+			itr != NULL;
+			itr = itr->saved_state.fp, ++frame_index
+		) {
+			mara_source_info_t* frame = &stacktrace->frames[frame_index];
+			mara_vm_closure_t* closure = itr->closure;
+			if (closure == NULL) {
+				*frame = itr->native_debug_info;
+			} else if (closure->fn->source_info != NULL) {
+				mara_source_info_t* debug_info = closure->fn->source_info;
+				mara_index_t instruction_offset = vm_state.ip - closure->fn->instructions - 1;
+				*frame = debug_info[instruction_offset];
+			} else {
+				*frame = (mara_source_info_t){
+					.filename = itr->closure->fn->filename,
+				};
+			}
+
+			vm_state = itr->saved_state;
+		}
+
+		ctx->last_error.stacktrace = stacktrace;
+	} else if (ctx->current_zone->debug_info.filename.data != NULL) {
 		mara_stacktrace_t* stacktrace = mara_zone_alloc_ex(
 			ctx,
 			&ctx->error_zone,

@@ -258,6 +258,7 @@ struct mara_stack_frame_s {
 
 	mara_zone_bookmark_t* zone_bookmark;
 	mara_vm_state_t saved_state;
+	mara_source_info_t native_debug_info;
 
 	mara_value_t stack[];
 };

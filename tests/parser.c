@@ -44,7 +44,7 @@ TEST(parser, basic) {
 	// 1.2
 	value = mara_list_get(ctx, result, 1);
 	ASSERT_EQ(mara_value_type(value, NULL), MARA_VAL_REAL);
-	double real;
+	mara_real_t real;
 	MARA_ASSERT_NO_ERROR(ctx, mara_value_to_real(ctx, value, &real));
 	ASSERT_DOUBLE_EQ(real, 1.2);
 

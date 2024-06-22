@@ -85,6 +85,15 @@ mara_print_vm_function(
 		body_options.indent += 2;
 		body_options.max_depth -= 1;
 
+		mara_print_indented(output, options.indent + 1, "(info\n");
+		{
+			mara_print_indented(output, body_options.indent, "num-args %d\n", fn->num_args);
+			mara_print_indented(output, body_options.indent, "num-locals %d\n", fn->num_locals);
+			mara_print_indented(output, body_options.indent, "num-captures %d\n", fn->num_captures);
+			mara_print_indented(output, body_options.indent, "stack-size %d\n", fn->stack_size);
+		}
+		mara_print_indented(output, options.indent + 1, ")\n");
+
 		mara_print_indented(output, options.indent + 1, "(instructions\n");
 		{
 			mara_index_t num_instructions = fn->num_instructions;
@@ -236,7 +245,7 @@ mara_do_print_value(
 		mara_value_to_int(ctx, value, &result);
 		mara_print_indented(output,options.indent, "%d", result);
 	} else if (mara_value_is_real(value)) {
-		double result;
+		mara_real_t result;
 		mara_value_to_real(ctx, value, &result);
 		mara_print_indented(output,options.indent, "%f", result);
 	} else if (mara_value_is_list(value)) {
@@ -414,9 +423,22 @@ mara_print_error(
 		++i
 	) {
 		mara_source_info_t* src_info = &error->stacktrace->frames[i];
+		const char* first_connector = " ";
+		const char* second_connector = "├";
+		if (i == 0) {
+			first_connector = "└";
+			if (i < error->stacktrace->len - 1) {
+				second_connector = "┬";
+			} else {
+				second_connector = "─";
+			}
+		} else if (i == error->stacktrace->len - 1) {
+			second_connector = "└";
+		}
+
 		mara_fprintf(
-			output, "%s─%.*s:%d:%d:%d - %d:%d:%d\n",
-			i < error->stacktrace->len - 1 ? "├" : "└",
+			output, "%s%s%.*s:%d:%d:%d - %d:%d:%d\n",
+			first_connector, second_connector,
 			src_info->filename.len, src_info->filename.data,
 			src_info->range.start.line, src_info->range.start.col, src_info->range.start.byte_offset,
 			src_info->range.end.line, src_info->range.end.col, src_info->range.end.byte_offset

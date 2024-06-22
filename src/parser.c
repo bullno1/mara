@@ -220,7 +220,7 @@ mara_parse_token(
 			}
 		case MARA_TOK_REAL:
 			{
-				double value;
+				mara_real_t value;
 				mara_index_t error;
 				mara_arena_snapshot_t snapshot = mara_arena_snapshot(ctx->env, local_arena);
 				{

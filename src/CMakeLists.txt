@@ -17,6 +17,7 @@ set(SOURCES
 	"compiler.c"
 	"vm.c"
 	"module.c"
+	"core_module.c"
 )
 
 setup_library(mara ${MARA_STATIC} "${SOURCES}")

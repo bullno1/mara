@@ -19,6 +19,9 @@ mara_vm_alloc_stack_frame(mara_exec_ctx_t* ctx, mara_vm_closure_t* closure, mara
 			sizeof(mara_stack_frame_t), _Alignof(mara_stack_frame_t)
 		);
 		stackframe->closure = NULL;
+		stackframe->native_debug_info = (mara_source_info_t){
+			.filename = mara_str_from_literal("<native>")
+		};
 	}
 
 	stackframe->saved_state = vm_state;
@@ -26,13 +29,14 @@ mara_vm_alloc_stack_frame(mara_exec_ctx_t* ctx, mara_vm_closure_t* closure, mara
 	return stackframe;
 }
 
-MARA_PRIVATE void
+MARA_PRIVATE mara_stack_frame_t*
 mara_vm_push_stack_frame(mara_exec_ctx_t* ctx, mara_vm_closure_t* closure) {
 	mara_stack_frame_t* stackframe = mara_vm_alloc_stack_frame(ctx, closure, ctx->vm_state);
 	mara_vm_state_t* vm = &ctx->vm_state;
 	vm->fp = stackframe;
 	vm->sp = closure != NULL ? stackframe->stack + closure->fn->num_locals: NULL;
 	vm->ip = closure != NULL ? closure->fn->instructions : NULL;
+	return stackframe;
 }
 
 MARA_PRIVATE void
@@ -94,7 +98,8 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 	MARA_VM_DERIVE_STATE();
 
 	while (true) {
-		mara_instruction_t instruction = (*ip)++;
+		mara_instruction_t instruction = *ip;
+		++ip;
 		mara_opcode_t opcode;
 		mara_operand_t operands;
 		mara_decode_instruction(instruction, &opcode, &operands);
@@ -355,6 +360,7 @@ mara_call(
 		|| obj->type == MARA_OBJ_TYPE_NATIVE_CLOSURE,
 		"Invalid object type"
 	);
+	mara_source_info_t debug_info = ctx->current_zone->debug_info;
 	// Change the return zone if needed
 	bool switch_return_zone = zone != ctx->current_zone;
 	if (switch_return_zone) {
@@ -368,7 +374,8 @@ mara_call(
 	});
 
 	// This stack frame ensures that the VM will return here
-	mara_vm_push_stack_frame(ctx, NULL);
+	mara_stack_frame_t* stackframe = mara_vm_push_stack_frame(ctx, NULL);
+	stackframe->native_debug_info = debug_info;
 
 	mara_error_t* error = NULL;
 	if (obj->type == MARA_OBJ_TYPE_NATIVE_CLOSURE) {

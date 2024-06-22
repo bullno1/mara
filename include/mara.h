@@ -38,6 +38,7 @@ typedef struct mara_map_s mara_map_t;
 typedef struct mara_fn_s mara_fn_t;
 typedef struct { uint64_t internal; } mara_value_t;
 typedef int32_t mara_index_t;
+typedef double mara_real_t;
 
 typedef struct {
 	void* (*fn)(void* ptr, size_t size, void* userdata);
@@ -248,10 +249,10 @@ MARA_API mara_value_type_t
 mara_value_type(mara_value_t value, void** tag);
 
 MARA_API mara_error_t*
-mara_value_to_int(mara_exec_ctx_t* ctx, mara_value_t value, int* result);
+mara_value_to_int(mara_exec_ctx_t* ctx, mara_value_t value, mara_index_t* result);
 
 MARA_API mara_error_t*
-mara_value_to_real(mara_exec_ctx_t* ctx, mara_value_t value, double* result);
+mara_value_to_real(mara_exec_ctx_t* ctx, mara_value_t value, mara_real_t* result);
 
 MARA_API mara_error_t*
 mara_value_to_bool(mara_exec_ctx_t* ctx, mara_value_t value, bool* result);
@@ -281,7 +282,7 @@ MARA_API mara_value_t
 mara_value_from_int(mara_index_t value);
 
 MARA_API mara_value_t
-mara_value_from_real(double value);
+mara_value_from_real(mara_real_t value);
 
 MARA_API mara_value_t
 mara_value_from_list(mara_list_t* list);
@@ -367,7 +368,7 @@ MARA_API mara_value_t
 mara_list_delete(mara_exec_ctx_t* ctx, mara_list_t* list, mara_index_t index);
 
 MARA_API mara_value_t
-mara_list_quick_delete(mara_exec_ctx_t* ctx, mara_list_t* list, mara_index_t index);
+mara_list_swap_delete(mara_exec_ctx_t* ctx, mara_list_t* list, mara_index_t index);
 
 MARA_API void
 mara_list_resize(mara_exec_ctx_t* ctx, mara_list_t* list, mara_index_t len);

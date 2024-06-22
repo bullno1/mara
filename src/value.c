@@ -171,10 +171,13 @@ mara_value_type(mara_value_t value, void** tag) {
 }
 
 mara_error_t*
-mara_value_to_int(mara_exec_ctx_t* ctx, mara_value_t value, int* result) {
+mara_value_to_int(mara_exec_ctx_t* ctx, mara_value_t value, mara_index_t* result) {
 	nanbox_t nanbox = mara_value_to_nanbox(value);
 	if (MARA_EXPECT(nanbox_is_int(nanbox))) {
 		*result = nanbox_to_int(nanbox);
+		return NULL;
+	} else if (nanbox_is_double(nanbox)) {
+		*result = (mara_index_t)nanbox_to_double(nanbox);
 		return NULL;
 	} else {
 		return mara_type_error(ctx, MARA_VAL_INT, value);
@@ -182,10 +185,13 @@ mara_value_to_int(mara_exec_ctx_t* ctx, mara_value_t value, int* result) {
 }
 
 mara_error_t*
-mara_value_to_real(mara_exec_ctx_t* ctx, mara_value_t value, double* result) {
+mara_value_to_real(mara_exec_ctx_t* ctx, mara_value_t value, mara_real_t* result) {
 	nanbox_t nanbox = mara_value_to_nanbox(value);
 	if (MARA_EXPECT(nanbox_is_double(nanbox))) {
 		*result = nanbox_to_double(nanbox);
+		return NULL;
+	} else if (nanbox_is_int(nanbox)) {
+		*result = (mara_real_t)nanbox_to_int(nanbox);
 		return NULL;
 	} else {
 		return mara_type_error(ctx, MARA_VAL_REAL, value);
@@ -313,23 +319,29 @@ mara_value_from_int(mara_index_t value) {
 }
 
 mara_value_t
-mara_value_from_real(double value) {
+mara_value_from_real(mara_real_t value) {
 	return mara_nanbox_to_value(nanbox_from_double(value));
 }
 
 mara_value_t
 mara_value_from_list(mara_list_t* list) {
-	return mara_obj_to_value(mara_container_of(list, mara_obj_t, body));
+	return list != NULL
+		? mara_obj_to_value(mara_container_of(list, mara_obj_t, body))
+		: mara_nil();
 }
 
 mara_value_t
 mara_value_from_map(mara_map_t* map) {
-	return mara_obj_to_value(mara_container_of(map, mara_obj_t, body));
+	return map != NULL
+		? mara_obj_to_value(mara_container_of(map, mara_obj_t, body))
+		: mara_nil();
 }
 
 mara_value_t
 mara_value_from_fn(mara_fn_t* fn) {
-	return mara_obj_to_value((mara_obj_t*)fn);
+	return fn != NULL
+		? mara_obj_to_value((mara_obj_t*)fn)
+		: mara_nil();
 }
 
 mara_str_t

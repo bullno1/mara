@@ -48,9 +48,9 @@
 
 #define MARA_INLINE_SOURCE \
 	mara_str_from_literal((__FILE__ "(" MARA_LINE_STRING ")"))
-#define MARA_LINE_STRING MARA_STRINGIFY(__LINE__)
-#define MARA_STRINGIFY(x) MARA_STRINGIFY2(x)
-#define MARA_STRINGIFY2(x) #x
+#define MARA_LINE_STRING MARA_TEST_STRINGIFY(__LINE__)
+#define MARA_TEST_STRINGIFY(x) MARA_TEST_STRINGIFY2(x)
+#define MARA_TEST_STRINGIFY2(x) #x
 
 typedef struct {
 	mara_env_t* env;

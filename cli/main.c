@@ -27,9 +27,13 @@ parse(int argc, const char* argv[], mara_exec_ctx_t* ctx);
 int
 compile(int argc, const char* argv[], mara_exec_ctx_t* ctx);
 
+int
+exec(int argc, const char* argv[], mara_exec_ctx_t* ctx);
+
 static const char *const usages[] = {
     "mara [common-options] parse [command-options] <args>",
     "mara [common-options] compile [command-options] <args>",
+    "mara [common-options] exec [command-options] <args>",
 	NULL
 };
 
@@ -38,6 +42,7 @@ main(int argc, const char* argv[]) {
 	subcommand_t subcommands[] = {
 		{ "parse", parse },
 		{ "compile", compile },
+		{ "exec", exec },
 	};
 
 	struct argparse_option options[] = {

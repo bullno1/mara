@@ -24,8 +24,8 @@
 		mara_set_debug_info(ctx, (mara_source_info_t){ \
 			.filename = mara_str_from_literal(__FILE__), \
 			.range = { \
-				.start = { .line = __LINE__, .col = 1, .byte_offset = -1 }, \
-				.end = { .line = __LINE__, .col = 0, .byte_offset = -1 }, \
+				.start = { .line = __LINE__, .col = 1, .byte_offset = 0 }, \
+				.end = { .line = __LINE__, .col = 1, .byte_offset = 0 }, \
 			} \
 		}); \
 	} while (0)

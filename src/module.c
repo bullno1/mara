@@ -1,5 +1,15 @@
 #include "internal.h"
 
+MARA_PRIVATE mara_map_t*
+mara_get_module_cache(mara_exec_ctx_t* ctx) {
+	mara_env_t* env = ctx->env;
+	if (env->module_cache == NULL) {
+		env->module_cache = mara_new_map(ctx, &env->permanent_zone);
+	}
+
+	return env->module_cache;
+}
+
 MARA_PRIVATE mara_error_t*
 mara_internal_import(
 	mara_exec_ctx_t* ctx,
@@ -77,16 +87,11 @@ mara_internal_init_module(
 	// Avoid allocation in the permanent zone until the module is confirmed
 	mara_zone_t* local_zone = ctx->current_zone;
 
-	mara_env_t* env = ctx->env;
-	if (env->module_cache == NULL) {
-		env->module_cache = mara_new_map(ctx, &env->permanent_zone);
-	}
-
 	mara_value_t module_name = mara_nil();
 	mara_value_t existing_module = mara_nil();
 	if (!options.ignore_export) {
 		module_name = mara_new_sym(ctx, options.module_name);
-		existing_module = mara_map_get(ctx, env->module_cache, module_name);
+		existing_module = mara_map_get(ctx, mara_get_module_cache(ctx), module_name);
 	}
 
 	if (MARA_EXPECT(mara_value_is_nil(existing_module))) {
@@ -96,7 +101,7 @@ mara_internal_init_module(
 
 		// Mark the module as being loaded
 		if (!options.ignore_export) {
-			mara_map_set(ctx, env->module_cache, module_name, mara_value_from_bool(false));
+			mara_map_set(ctx, mara_get_module_cache(ctx), module_name, mara_value_from_bool(false));
 		}
 
 		// Userdata cannot be safely used as module code may save these functions
@@ -122,11 +127,11 @@ mara_internal_init_module(
 			// TODO: maybe cache the symbol?
 			if (!options.ignore_export) {
 				mara_map_set(ctx, module, mara_new_sym(ctx, mara_str_from_literal("*main*")), entry_result);
-				mara_map_set(ctx, env->module_cache, module_name, mara_value_from_map(module));
+				mara_map_set(ctx, mara_get_module_cache(ctx), module_name, mara_value_from_map(module));
 			}
 			*result = module;
 		} else {
-			mara_map_set(ctx, env->module_cache, module_name, mara_nil());
+			mara_map_set(ctx, mara_get_module_cache(ctx), module_name, mara_nil());
 		}
 
 		return error;
@@ -195,7 +200,9 @@ mara_import(
 	mara_value_t module_name_sym = mara_new_sym(ctx, module_name);
 	mara_value_t export_name_sym = mara_new_sym(ctx, export_name);
 
-	mara_value_t existing_module = mara_map_get(ctx, ctx->env->module_cache, module_name_sym);
+	mara_value_t existing_module = mara_map_get(
+		ctx, mara_get_module_cache(ctx), module_name_sym
+	);
 
 	if (MARA_EXPECT(mara_value_is_map(existing_module))) {
 		mara_map_t* module_map;
@@ -310,7 +317,7 @@ mara_export(mara_exec_ctx_t* ctx, mara_str_t export_name, mara_value_t value) {
 			&& !ctx->current_module_options.ignore_export
 		)
 	) {
-		mara_map_set(ctx, ctx->env->module_cache, export_name_sym, value);
+		mara_map_set(ctx, ctx->current_module, export_name_sym, value);
 		return true;
 	} else {
 		return false;

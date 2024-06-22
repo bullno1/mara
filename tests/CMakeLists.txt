@@ -2,6 +2,7 @@ set(SOURCES
 	"./main.c"
 	"./parser.c"
 	"./runtime.c"
+	"./bind.c"
 )
 add_executable(tests "${SOURCES}")
 

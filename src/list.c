@@ -131,7 +131,7 @@ mara_list_delete(mara_exec_ctx_t* ctx, mara_list_t* list, mara_index_t index) {
 }
 
 mara_value_t
-mara_list_quick_delete(mara_exec_ctx_t* ctx, mara_list_t* list, mara_index_t index) {
+mara_list_swap_delete(mara_exec_ctx_t* ctx, mara_list_t* list, mara_index_t index) {
 	(void)ctx;
 	if (MARA_EXPECT(0 <= index && index < list->len)) {
 		mara_value_t old_value = list->elems[index];
