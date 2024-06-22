@@ -73,7 +73,9 @@ mara_begin(mara_env_t* env) {
 
 void
 mara_end(mara_exec_ctx_t* ctx) {
-	mara_zone_exit(ctx);
+	while (ctx->current_zone != NULL) {
+		mara_zone_exit(ctx);
+	}
 
 	mara_env_t* env = ctx->env;
 	mara_zone_cleanup(env, &ctx->error_zone);
