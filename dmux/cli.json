@@ -4,7 +4,7 @@
   "mode": "launch",
   "config": {
     "program": "bin/mara",
-    "args": ["compile", "examples/fib.mara"],
+    "args": ["exec", "examples/fib.mara"],
     "stopAtBeginningOfMainSubprogram": true
   }
 }

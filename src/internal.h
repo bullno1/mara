@@ -256,7 +256,9 @@ typedef struct mara_vm_state_s {
 struct mara_stack_frame_s {
 	mara_vm_closure_t* closure;
 
+	mara_arena_snapshot_t control_snapshot;
 	mara_zone_bookmark_t* zone_bookmark;
+	mara_zone_t* return_zone;
 	mara_vm_state_t saved_state;
 	mara_source_info_t native_debug_info;
 

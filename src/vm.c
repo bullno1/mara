@@ -3,6 +3,7 @@
 
 MARA_PRIVATE mara_stack_frame_t*
 mara_vm_alloc_stack_frame(mara_exec_ctx_t* ctx, mara_vm_closure_t* closure, mara_vm_state_t vm_state) {
+	mara_arena_snapshot_t control_snapshot = mara_arena_snapshot(ctx->env, &ctx->control_arena);
 	mara_stack_frame_t* stackframe;
 	if (closure != NULL) {
 		mara_index_t stack_size = closure->fn->stack_size + 1;  // +1 for sentinel
@@ -26,6 +27,8 @@ mara_vm_alloc_stack_frame(mara_exec_ctx_t* ctx, mara_vm_closure_t* closure, mara
 
 	stackframe->saved_state = vm_state;
 	stackframe->zone_bookmark = ctx->current_zone_bookmark;
+	stackframe->control_snapshot = control_snapshot;
+	stackframe->return_zone = ctx->current_zone;
 	return stackframe;
 }
 
@@ -40,15 +43,18 @@ mara_vm_push_stack_frame(mara_exec_ctx_t* ctx, mara_vm_closure_t* closure) {
 }
 
 MARA_PRIVATE void
-mara_vm_pop_stack_frame(mara_exec_ctx_t* ctx) {
+mara_vm_pop_stack_frame(mara_exec_ctx_t* ctx, mara_stack_frame_t* check_stackframe) {
+	(void)check_stackframe;
 	mara_vm_state_t* vm = &ctx->vm_state;
 	mara_stack_frame_t* stackframe = vm->fp;
+	mara_assert(check_stackframe == vm->fp, "Unmatched stackframe");
 	*vm = stackframe->saved_state;
 
 	mara_zone_bookmark_t* bookmark = stackframe->zone_bookmark;
 	while (ctx->current_zone_bookmark != bookmark) {
 		mara_zone_exit(ctx);
 	}
+	mara_arena_restore(ctx->env, &ctx->control_arena, stackframe->control_snapshot);
 }
 
 MARA_PRIVATE mara_error_t*
@@ -98,11 +104,25 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 	MARA_VM_DERIVE_STATE();
 
 	while (true) {
+		mara_assert(sp <= fp->stack + closure->fn->stack_size, "Stack overflow");
+		mara_assert((fp->stack + closure->fn->num_locals) <= sp, "Stack underflow");
+
 		mara_instruction_t instruction = *ip;
 		++ip;
 		mara_opcode_t opcode;
 		mara_operand_t operands;
 		mara_decode_instruction(instruction, &opcode, &operands);
+
+#if 0
+		mara_source_info_t* source_info = closure->fn->source_info;
+		mara_source_info_t instruction_source = source_info[ip - 1 - closure->fn->instructions];
+		printf(
+			"Execute %d %d @%d:%d - %d:%d\n",
+			opcode, operands,
+			instruction_source.range.start.line, instruction_source.range.start.col,
+			instruction_source.range.end.line, instruction_source.range.end.col
+		);
+#endif
 
 		// TODO: computed goto and switched goto
 		switch (opcode) {
@@ -172,8 +192,15 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 							next_closure = NULL;
 						}
 
-						sp -= operands;
 						mara_zone_t* return_zone = ctx->current_zone;
+
+						// New stack frame
+						sp -= operands;
+						mara_vm_state_t frame_state;
+						MARA_VM_SAVE_STATE(&frame_state);
+						mara_stack_frame_t* stackframe = mara_vm_alloc_stack_frame(
+							ctx, next_closure, frame_state
+						);
 
 						mara_zone_enter_new(
 							ctx, (mara_zone_options_t){
@@ -182,16 +209,10 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 							}
 						);
 
-						mara_vm_state_t frame_state;
-						MARA_VM_SAVE_STATE(&frame_state);
-						mara_stack_frame_t* stackframe = mara_vm_alloc_stack_frame(
-							ctx, next_closure, frame_state
-						);
-						args = sp;
-						fp = stackframe;
-
 						if(next_closure != NULL) {
 							if (MARA_EXPECT(next_closure->fn->num_args <= (mara_index_t)operands)) {
+								args = sp;
+								fp = stackframe;
 								sp = stackframe->stack + next_closure->fn->num_locals;
 								ip = next_closure->fn->instructions;
 								MARA_VM_DERIVE_STATE();
@@ -205,6 +226,8 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 								);
 							}
 						} else {
+							args = sp;
+							fp = stackframe;
 							sp = NULL;
 							ip = NULL;
 							MARA_VM_SAVE_STATE(vm);
@@ -221,8 +244,7 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 							);
 							mara_value_t result_copy = mara_copy(ctx, return_zone, result);
 
-							mara_vm_pop_stack_frame(ctx);
-							mara_zone_exit(ctx);
+							mara_vm_pop_stack_frame(ctx, stackframe);
 							MARA_VM_LOAD_STATE(vm);
 							*sp = stack_top = result_copy;
 						}
@@ -240,22 +262,23 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 				continue;
 			case MARA_OP_RETURN:
 				{
-					mara_zone_bookmark_t* zone_bookmark = fp->zone_bookmark;
+					mara_stack_frame_t* stackframe = fp;
+					mara_zone_bookmark_t* zone_bookmark = stackframe->zone_bookmark;
 					mara_value_t result_copy = mara_copy(
 						ctx,
-						// Stackframe is created inside the new zone
-						zone_bookmark->previous_zone,
+						stackframe->return_zone,
 						stack_top
 					);
 
 					// Load previous state
-					mara_vm_state_t* saved_state = &fp->saved_state;
+					mara_vm_state_t* saved_state = &stackframe->saved_state;
 					MARA_VM_LOAD_STATE(saved_state);
+					// Rollback zone changes
 					while (ctx->current_zone_bookmark != zone_bookmark) {
 						mara_zone_exit(ctx);
 					}
-					// Exit once more out of the call's zone
-					mara_zone_exit(ctx);
+					// Destroy the stackframe
+					mara_arena_restore(ctx->env, &ctx->control_arena, stackframe->control_snapshot);
 
 					if (fp->closure != NULL) {
 						MARA_VM_DERIVE_STATE();
@@ -361,36 +384,45 @@ mara_call(
 		"Invalid object type"
 	);
 	mara_source_info_t debug_info = ctx->current_zone->debug_info;
-	// Change the return zone if needed
-	bool switch_return_zone = zone != ctx->current_zone;
-	if (switch_return_zone) {
-		mara_zone_enter(ctx, zone);
-	}
 
-	// Enter new zone for function body
-	mara_zone_enter_new(ctx, (mara_zone_options_t){
-		.argc = argc,
-		.argv = argv,
-	});
-
-	// This stack frame ensures that the VM will return here
+	// This stack frame ensures that the VM will return here.
+	// It will also undo all the zone changes when it's popped.
 	mara_stack_frame_t* stackframe = mara_vm_push_stack_frame(ctx, NULL);
 	stackframe->native_debug_info = debug_info;
 
+	// Change the return zone if needed
+	if (zone != ctx->current_zone) {
+		mara_zone_enter(ctx, zone);
+	}
+
 	mara_error_t* error = NULL;
 	if (obj->type == MARA_OBJ_TYPE_NATIVE_CLOSURE) {
-		*result = mara_nil();  // Ensure that it is initialized
+		mara_zone_enter_new(ctx, (mara_zone_options_t){
+			.argc = argc,
+			.argv = argv,
+		});
+
+		mara_value_t return_value = mara_nil();
 		mara_native_closure_t* closure = (mara_native_closure_t*)obj->body;
-		error = closure->fn(ctx, argc, argv, closure->userdata, result);
+		error = closure->fn(ctx, argc, argv, closure->userdata, &return_value);
+		if (error == NULL) {
+			// Copy in case the function allocates in its local zone
+			*result = mara_copy(ctx, zone, return_value);
+		}
 	} else {
 		mara_vm_closure_t* closure = (mara_vm_closure_t*)obj->body;
 		mara_vm_function_t* mara_fn = closure->fn;
 		if (MARA_EXPECT(mara_fn->num_args <= argc)) {
 			mara_vm_push_stack_frame(ctx, closure);
+
+			mara_zone_enter_new(ctx, (mara_zone_options_t){
+				.argc = argc,
+				.argv = argv,
+			});
+
 			ctx->vm_state.args = argv;
+			// The VM always copy the result into the return zone
 			error = mara_vm_execute(ctx, result);
-			// No stack frame popping.
-			// The VM will return to the `closure = NULL` stack frame above
 		} else {
 			error = mara_errorf(
 				ctx, mara_str_from_literal("core/wrong-arity"),
@@ -401,11 +433,7 @@ mara_call(
 		}
 	}
 
-	mara_vm_pop_stack_frame(ctx);
-	mara_zone_exit(ctx);
-	if (switch_return_zone) {
-		mara_zone_exit(ctx);
-	}
+	mara_vm_pop_stack_frame(ctx, stackframe);
 
 	return error;
 }

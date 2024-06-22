@@ -152,10 +152,18 @@ mara_error_t*
 mara_init_module(
 	mara_exec_ctx_t* ctx,
 	mara_module_options_t options,
-	mara_fn_t* entry_fn
+	mara_fn_t* entry_fn,
+	mara_value_t* result
 ) {
-	mara_map_t* result;
-	return mara_internal_init_module(ctx, options, entry_fn, &result);
+	mara_map_t* module_map;
+	mara_error_t* error = mara_internal_init_module(ctx, options, entry_fn, &module_map);
+	if (error == NULL) {
+		*result = mara_map_get(
+			ctx, module_map, mara_new_sym(ctx, mara_str_from_literal("*main*"))
+		);
+	}
+
+	return error;
 }
 
 void

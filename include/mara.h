@@ -410,7 +410,8 @@ MARA_API mara_error_t*
 mara_init_module(
 	mara_exec_ctx_t* ctx,
 	mara_module_options_t options,
-	mara_fn_t* entry_fn
+	mara_fn_t* entry_fn,
+	mara_value_t* result
 );
 
 MARA_API void

@@ -97,13 +97,15 @@ exec(int argc, const char* argv[], mara_exec_ctx_t* ctx) {
 
 	mara_add_native_debug_info(ctx);
 	mara_add_core_module(ctx);
+	mara_value_t module_result;
 	error = mara_init_module(
 		ctx,
 		(mara_module_options_t){
 			.ignore_export = true,
 			.module_name = mara_str_from_literal("*main*"),
 		},
-		fn
+		fn,
+		&module_result
 	);
 
 	if (error != NULL) {
@@ -121,6 +123,15 @@ exec(int argc, const char* argv[], mara_exec_ctx_t* ctx) {
 		goto end;
 	}
 
+	mara_print_value(
+		ctx,
+		module_result,
+		(mara_print_options_t){ 0 },
+		(mara_writer_t){
+			.fn = mara_write_to_file,
+			.userdata = stdout,
+		}
+	);
 end:
 	if (input != stdin && input != NULL) {
 		fclose(input);

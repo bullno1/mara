@@ -427,7 +427,9 @@ mara_compiler_emit(
 	mara_function_scope_t* fn_scope = ctx->function_scope;
 	barray_push(ctx->exec_ctx->env, fn_scope->instructions, tagged_instruction);
 	fn_scope->num_temps += temp_delta;
+	mara_assert(fn_scope->num_temps >= 0, "Stack underflow");
 	fn_scope->max_num_temps = mara_max(fn_scope->max_num_temps, fn_scope->num_temps);
+
 	if (MARA_EXPECT(barray_len(fn_scope->instructions) <= MARA_MAX_INSTRUCTIONS)) {
 		return NULL;
 	} else {
@@ -545,7 +547,8 @@ mara_compile_call(mara_compile_ctx_t* ctx, mara_list_t* list, mara_value_t fn) {
 	mara_check_error(mara_compile_expression(ctx, fn));
 
 	mara_compiler_set_debug_info(ctx, list, MARA_DEBUG_INFO_SELF);
-	return mara_compiler_emit(ctx, MARA_OP_CALL, list_len - 1, -list_len);
+	mara_index_t num_args = list_len - 1;
+	return mara_compiler_emit(ctx, MARA_OP_CALL, num_args, -num_args);
 }
 
 MARA_PRIVATE mara_error_t*
@@ -829,11 +832,11 @@ MARA_PRIVATE mara_error_t*
 mara_compile_expression(mara_compile_ctx_t* ctx, mara_value_t expr) {
 	mara_exec_ctx_t* exec_ctx = ctx->exec_ctx;
 
-	if (mara_value_is_nil(expr)) {
+	if (expr.internal == ctx->sym_nil.internal) {
 		return mara_compiler_emit(ctx, MARA_OP_NIL, 0, 1);
-	} else if (mara_value_is_true(expr)) {
+	} else if (expr.internal == ctx->sym_true.internal) {
 		return mara_compiler_emit(ctx, MARA_OP_TRUE, 0, 1);
-	} else if (mara_value_is_false(expr)) {
+	} else if (expr.internal == ctx->sym_false.internal) {
 		return mara_compiler_emit(ctx, MARA_OP_FALSE, 0, 1);
 	} else if (
 		mara_value_is_str(expr)

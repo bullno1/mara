@@ -1,12 +1,24 @@
 (def + (import "core" "+"))
 (def - (import "core" "-"))
 (def < (import "core" "<"))
+(def list/new (import "core" "list/new"))
+(def list/push (import "core" "list/push"))
+(def list/set (import "core" "list/set"))
+(def list/get (import "core" "list/get"))
 
-(def fib)
-(set fib (fn (n)
+(def make-box (fn ()
+                (def box (list/new 1))
+                (list/push box nil)
+                box))
+(def set-box (fn (box value) (list/set box 0 value)))
+(def unbox (fn (box) (list/get box 0)))
+
+(def fib-box (make-box))
+(def fib (fn (n)
            (if (< n 1)
              n
-             (+ (fib (- n 1))
-                (fib (- n 2))))))
+             (+ ((unbox fib-box) (- n 1))
+                ((unbox fib-box) (- n 2))))))
+(set-box fib-box fib)
 
 (fib 4)

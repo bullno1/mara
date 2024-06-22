@@ -155,6 +155,16 @@ MARA_PRIVATE MARA_FUNCTION(mara_core_list_set) {
 	MARA_RETURN(mara_list_set(ctx, list, index, value));
 }
 
+MARA_PRIVATE MARA_FUNCTION(mara_core_list_get) {
+	(void)userdata;
+	mara_add_native_debug_info(ctx);
+	MARA_FN_CHECK_ARITY(2);
+	MARA_FN_ARG(mara_list_t*, list, 0);
+	MARA_FN_ARG(mara_index_t, index, 1);
+
+	MARA_RETURN(mara_list_get(ctx, list, index));
+}
+
 MARA_PRIVATE MARA_FUNCTION(mara_core_module_entry) {
 	(void)argv;
 	(void)userdata;
@@ -172,6 +182,7 @@ MARA_PRIVATE MARA_FUNCTION(mara_core_module_entry) {
 	MARA_EXPORT_FN(list/len, mara_core_list_len, NULL);
 	MARA_EXPORT_FN(list/push, mara_core_list_push, NULL);
 	MARA_EXPORT_FN(list/set, mara_core_list_set, NULL);
+	MARA_EXPORT_FN(list/get, mara_core_list_get, NULL);
 
 	MARA_RETURN(mara_value_from_bool(true));
 }
