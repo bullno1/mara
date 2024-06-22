@@ -138,7 +138,7 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 				*(++sp) = stack_top = mara_value_from_bool(false);
 				continue;
 			case MARA_OP_SMALL_INT:
-				*(++sp) = stack_top = mara_value_from_int((uint16_t)(operands & 0xffff));
+				*(++sp) = stack_top = mara_value_from_int((int16_t)(operands & 0xffff));
 				continue;
 			case MARA_OP_CONSTANT:
 				// Constants come from permanent zone so copying is needed

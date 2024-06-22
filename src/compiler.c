@@ -170,8 +170,9 @@ MARA_PRIVATE mara_error_t*
 mara_compiler_add_capture(mara_compile_ctx_t* ctx, mara_value_t name, mara_index_t* index) {
 	mara_function_scope_t* fn_scope = ctx->function_scope;
 
-	mara_value_t existing_index = mara_map_get(ctx->exec_ctx, fn_scope->captures, name);
 	mara_index_t new_index = fn_scope->captures->len;
+	mara_value_t existing_index = mara_map_get(ctx->exec_ctx, fn_scope->captures, name);
+	(void)existing_index;
 	mara_assert(mara_value_is_nil(existing_index), "Capture already exists");
 
 	if (MARA_EXPECT(new_index < MARA_MAX_NAMES)) {
@@ -829,6 +830,27 @@ mara_compile_list(mara_compile_ctx_t* ctx, mara_value_t expr) {
 }
 
 MARA_PRIVATE mara_error_t*
+mara_compile_constant(mara_compile_ctx_t* ctx, mara_value_t expr) {
+	mara_exec_ctx_t* exec_ctx = ctx->exec_ctx;
+	mara_index_t constant_index;
+	mara_map_t* constant_pool = ctx->function_scope->constants;
+
+	mara_value_t lookup_result = mara_map_get(exec_ctx, constant_pool, expr);
+	if (mara_value_is_int(lookup_result)) {
+		mara_assert_no_error(
+			mara_value_to_int(exec_ctx, lookup_result, &constant_index)
+		);
+	} else {
+		constant_index = constant_pool->len;
+		mara_map_set(
+			exec_ctx, constant_pool, expr, mara_value_from_int(constant_index)
+		);
+	}
+
+	return mara_compiler_emit(ctx, MARA_OP_CONSTANT, constant_index, 1);
+}
+
+MARA_PRIVATE mara_error_t*
 mara_compile_expression(mara_compile_ctx_t* ctx, mara_value_t expr) {
 	mara_exec_ctx_t* exec_ctx = ctx->exec_ctx;
 
@@ -840,28 +862,20 @@ mara_compile_expression(mara_compile_ctx_t* ctx, mara_value_t expr) {
 		return mara_compiler_emit(ctx, MARA_OP_FALSE, 0, 1);
 	} else if (
 		mara_value_is_str(expr)
-		// TODO: use MARA_OP_SMALL_INT
 		|| mara_value_is_int(expr)
 		|| mara_value_is_real(expr)
 	) {
-		mara_index_t constant_index;
-		{
-			mara_map_t* constant_pool = ctx->function_scope->constants;
-
-			mara_value_t lookup_result = mara_map_get(exec_ctx, constant_pool, expr);
-			if (mara_value_is_int(lookup_result)) {
-				mara_assert_no_error(
-					mara_value_to_int(exec_ctx, lookup_result, &constant_index)
-				);
+		if (mara_value_is_int(expr)) {
+			mara_index_t constant;
+			mara_assert_no_error(mara_value_to_int(exec_ctx, expr, &constant));
+			if (INT16_MIN <= constant && constant <= INT16_MAX) {
+				return mara_compiler_emit(ctx, MARA_OP_SMALL_INT, (int16_t)(constant & 0xffff), 1);
 			} else {
-				constant_index = constant_pool->len;
-				mara_map_set(
-					exec_ctx, constant_pool, expr, mara_value_from_int(constant_index)
-				);
+				return mara_compile_constant(ctx, expr);
 			}
+		} else {
+			return mara_compile_constant(ctx, expr);
 		}
-
-		return mara_compiler_emit(ctx, MARA_OP_CONSTANT, constant_index, 1);
 	} else if (mara_value_is_sym(expr)) {
 		mara_opcode_t load_opcode;
 		mara_index_t var_index;
