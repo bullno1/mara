@@ -190,12 +190,8 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 
 #define MARA_VM_DERIVE_STATE() \
 	do { \
-		stack_top = *sp; \
-		locals = fp->stack; \
 		closure = fp->closure; \
-		captures = closure->captures; \
-		constants = closure->fn->constants; \
-		functions = closure->fn->functions; \
+		function = closure->fn; \
 		closure_header = mara_container_of(closure, mara_obj_t, body); \
 	} while (0)
 
@@ -205,12 +201,11 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 	mara_value_t* args;
 
 	mara_vm_closure_t* closure;
-	mara_value_t* captures;
-	mara_value_t* locals;
-	mara_value_t* constants;
-	mara_vm_function_t** functions;
+	mara_vm_function_t* function;
 	mara_obj_t* closure_header;
-	mara_value_t stack_top;
+	// Cache the stack top in a local var.
+	// This has been shown through profiling to improve performance.
+	mara_value_t stack_top = mara_tombstone();
 
 	mara_vm_state_t* vm = &ctx->vm_state;
 	MARA_VM_LOAD_STATE(vm);
@@ -240,17 +235,17 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
         MARA_END_OP()
         MARA_BEGIN_OP(CONSTANT)
             // Constants come from permanent zone so copying is needed
-            *(++sp) = stack_top = mara_copy(ctx, ctx->current_zone, constants[operands]);
+            *(++sp) = stack_top = mara_copy(ctx, ctx->current_zone, function->constants[operands]);
         MARA_END_OP()
         MARA_BEGIN_OP(POP)
             sp -= operands;
             stack_top = *sp;
         MARA_END_OP()
         MARA_BEGIN_OP(SET_LOCAL)
-            locals[operands] = stack_top;
+            fp->stack[operands] = stack_top;
         MARA_END_OP()
         MARA_BEGIN_OP(GET_LOCAL)
-            *(++sp) = stack_top = locals[operands];
+            *(++sp) = stack_top = fp->stack[operands];
         MARA_END_OP()
         MARA_BEGIN_OP(SET_ARG)
             // TODO: Rethink this opcode
@@ -264,12 +259,12 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
         MARA_BEGIN_OP(SET_CAPTURE)
             {
                 mara_value_t value_copy = mara_copy(ctx, closure_header->zone, stack_top);
-                captures[operands] = value_copy;
+                closure->captures[operands] = value_copy;
                 mara_obj_add_arena_mask(closure_header, value_copy);
             }
         MARA_END_OP()
         MARA_BEGIN_OP(GET_CAPTURE)
-            *(++sp) = stack_top = captures[operands];
+            *(++sp) = stack_top = closure->captures[operands];
         MARA_END_OP()
         MARA_BEGIN_OP(CALL)
             {
@@ -424,7 +419,7 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
                 );
                 new_obj->type = MARA_OBJ_TYPE_VM_CLOSURE;
                 mara_vm_closure_t* new_closure = (mara_vm_closure_t*)new_obj->body;
-                new_closure->fn = functions[function_index];
+                new_closure->fn = function->functions[function_index];
                 for (mara_index_t i = 0; i < num_captures; ++i) {
                     mara_instruction_t capture_instruction = ip[i];
                     mara_opcode_t capture_opcode;
@@ -437,10 +432,10 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
                             captured_value = args[capture_operand];
                             break;
                         case MARA_OP_GET_LOCAL:
-                            captured_value = locals[capture_operand];
+                            captured_value = fp->stack[capture_operand];
                             break;
                         case MARA_OP_GET_CAPTURE:
-                            captured_value = captures[capture_operand];
+                            captured_value = closure->captures[capture_operand];
                             break;
                         default:
                             mara_assert(false, "Illegal closure pseudo instruction");
@@ -454,6 +449,10 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
                 ip += num_captures;
             }
         MARA_END_OP()
+		// TODO: safety checks
+		// * Illegal instruction
+		// * Stack over/under flow when creating frames
+		// *                       when executing to catch miscompilation
 #if 0
         default:
             MARA_VM_SAVE_STATE(vm);
