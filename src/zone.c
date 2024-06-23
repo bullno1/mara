@@ -30,64 +30,13 @@ mara_zone_new(mara_exec_ctx_t* ctx, mara_zone_options_t options) {
 	mara_zone_t* new_zone = &ctx->zones[zone_index];
 	mara_assert(new_zone != NULL, "Out of memory");
 
-	// Find an arena for this new zone.
-	// It cannot be used by:
-	//
-	// * The previous zone
-	// * Any marked zones
-	// * Any objects passed as arguments
-	mara_arena_t* arena_for_zone = NULL;
-	{
-		mara_arena_mask_t arena_mask = 0;
-
-		if (current_zone != NULL) {
-			arena_mask |= mara_arena_mask_of_zone(ctx, current_zone);
-		}
-
-		for (mara_index_t i = 0; i < options.argc; ++i) {
-			mara_obj_t* obj = mara_value_to_obj(options.argv[i]);
-			if (obj == NULL) { continue; }
-
-			arena_mask |= obj->arena_mask;
-		}
-
-		// Module system objects are implicitly passed to all zones
-		if (ctx->module_loaders != NULL) {
-			arena_mask |= mara_header_of(ctx->module_loaders)->arena_mask;
-		}
-		if (ctx->current_module != NULL) {
-			arena_mask |= mara_header_of(ctx->current_module)->arena_mask;
-		}
-
-		for (mara_index_t i = 0; i < options.num_marked_zones; ++i) {
-			arena_mask |= mara_arena_mask_of_zone(ctx, options.marked_zones[i]);
-		}
-
-		mara_arena_mask_t free_mask = ~arena_mask;
-		if (MARA_EXPECT(free_mask != 0)) {
-			mara_index_t arena_index = mara_ffs(free_mask);
-			mara_assert(arena_index < (mara_index_t)MARA_NUM_ARENAS, "Index out of bound");
-			arena_for_zone = &ctx->arenas[arena_index];
-		} else {
-			// Alloc a new arena with its metadata in the control arena.
-			// This will be automatically cleaned up when this zone exit due
-			// to control_snapshot.
-			// The problem is that it grabs a brand new chunk which increases
-			// peak memory usage.
-			mara_arena_t* arena = MARA_ARENA_ALLOC_TYPE(
-				ctx->env, &ctx->control_arena, mara_arena_t
-			);
-			*arena = (mara_arena_t){ 0 };
-			arena_for_zone = arena;
-		}
-	}
-
 	*new_zone = (mara_zone_t){
 		// TODO: level might just be index
 		.level = current_zone != NULL ? current_zone->level + 1 : 0,
 		.index = zone_index,
-		.arena = arena_for_zone,
-		.local_snapshot = mara_arena_snapshot(ctx->env, arena_for_zone),
+		// TODO: combine parent, level, index
+		.parent = current_zone,
+		.options = options,
 	};
 
 	return new_zone;
@@ -147,7 +96,9 @@ mara_zone_cleanup(mara_env_t* env, mara_zone_t* zone) {
 		itr->callback.fn(env, itr->callback.userdata);
 	}
 
-	mara_arena_restore(env, zone->arena, zone->local_snapshot);
+	if (zone->arena != NULL) {
+		mara_arena_restore(env, zone->arena, zone->local_snapshot);
+	}
 }
 
 void
@@ -162,12 +113,14 @@ mara_add_finalizer(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_callback_t call
 
 void*
 mara_zone_alloc(mara_exec_ctx_t* ctx, mara_zone_t* zone, size_t size) {
-	return mara_arena_alloc(ctx->env, zone->arena, size);
+	mara_arena_t* arena = mara_get_zone_arena(ctx, zone);
+	return mara_arena_alloc(ctx->env, arena, size);
 }
 
 void*
 mara_zone_alloc_ex(mara_exec_ctx_t* ctx, mara_zone_t* zone, size_t size, size_t alignment) {
-	return mara_arena_alloc_ex(ctx->env, zone->arena, size, alignment);
+	mara_arena_t* arena = mara_get_zone_arena(ctx, zone);
+	return mara_arena_alloc_ex(ctx->env, arena, size, alignment);
 }
 
 mara_zone_t*
@@ -194,14 +147,15 @@ mara_get_zone_of(mara_exec_ctx_t* ctx, mara_value_t value) {
 
 mara_arena_mask_t
 mara_arena_mask_of_zone(mara_exec_ctx_t* ctx, mara_zone_t* zone) {
+	mara_arena_t* zone_arena = mara_get_zone_arena(ctx, zone);
 	if (
 		MARA_EXPECT(
 			zone->level >= 0
-			&& ctx->arenas <= zone->arena
-			&& zone->arena < (ctx->arenas + MARA_NUM_ARENAS)
+			&& ctx->arenas <= zone_arena
+			&& zone_arena < (ctx->arenas + MARA_NUM_ARENAS)
 		)
 	) {
-		return 1 << (zone->arena - ctx->arenas);
+		return 1 << (zone_arena - ctx->arenas);
 	} else {
 		return 0;
 	}
@@ -210,8 +164,9 @@ mara_arena_mask_of_zone(mara_exec_ctx_t* ctx, mara_zone_t* zone) {
 mara_zone_snapshot_t
 mara_zone_snapshot(mara_exec_ctx_t* ctx) {
 	mara_zone_t* zone = mara_get_local_zone(ctx);
+	mara_arena_t* zone_arena = mara_get_zone_arena(ctx, zone);
 	return (mara_zone_snapshot_t){
-		.arena_snapshot = mara_arena_snapshot(ctx->env, zone->arena),
+		.arena_snapshot = mara_arena_snapshot(ctx->env, zone_arena),
 		.finalizers = zone->finalizers,
 	};
 }
@@ -228,4 +183,68 @@ mara_zone_restore(mara_exec_ctx_t* ctx, mara_zone_snapshot_t snapshot) {
 
 	zone->finalizers = snapshot.finalizers;
 	mara_arena_restore(ctx->env, zone->arena, snapshot.arena_snapshot);
+}
+
+mara_arena_t*
+mara_get_zone_arena(mara_exec_ctx_t* ctx, mara_zone_t* zone) {
+	if (zone->arena != NULL) {
+		return zone->arena;
+	} else {
+		mara_zone_t* current_zone = zone->parent;
+		mara_zone_options_t options = zone->options;
+		// Find an arena for this new zone.
+		// It cannot be used by:
+		//
+		// * The previous zone
+		// * Any marked zones
+		// * Any objects passed as arguments
+		mara_arena_t* arena_for_zone = NULL;
+		{
+			mara_arena_mask_t arena_mask = 0;
+
+			if (current_zone != NULL) {
+				arena_mask |= mara_arena_mask_of_zone(ctx, current_zone);
+			}
+
+			for (mara_index_t i = 0; i < options.argc; ++i) {
+				mara_obj_t* obj = mara_value_to_obj(options.argv[i]);
+				if (obj == NULL) { continue; }
+
+				arena_mask |= obj->arena_mask;
+			}
+
+			// Module system objects are implicitly passed to all zones
+			if (ctx->module_loaders != NULL) {
+				arena_mask |= mara_header_of(ctx->module_loaders)->arena_mask;
+			}
+			if (ctx->current_module != NULL) {
+				arena_mask |= mara_header_of(ctx->current_module)->arena_mask;
+			}
+
+			for (mara_index_t i = 0; i < options.num_marked_zones; ++i) {
+				arena_mask |= mara_arena_mask_of_zone(ctx, options.marked_zones[i]);
+			}
+
+			mara_arena_mask_t free_mask = ~arena_mask;
+			if (MARA_EXPECT(free_mask != 0)) {
+				mara_index_t arena_index = mara_ffs(free_mask);
+				mara_assert(arena_index < (mara_index_t)MARA_NUM_ARENAS, "Index out of bound");
+				arena_for_zone = &ctx->arenas[arena_index];
+			} else {
+				// Alloc a new arena with its metadata in the control arena.
+				// This will be automatically cleaned up when this zone exit due
+				// to control_snapshot.
+				// The problem is that it grabs a brand new chunk which increases
+				// peak memory usage.
+				mara_arena_t* arena = MARA_ARENA_ALLOC_TYPE(
+					ctx->env, &ctx->control_arena, mara_arena_t
+				);
+				*arena = (mara_arena_t){ 0 };
+				arena_for_zone = arena;
+			}
+		}
+		zone->arena = arena_for_zone;
+		zone->local_snapshot = mara_arena_snapshot(ctx->env, arena_for_zone);
+		return zone->arena;
+	}
 }

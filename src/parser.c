@@ -178,7 +178,7 @@ mara_parse_token(
 	mara_token_t token,
 	mara_value_t* result
 ) {
-	mara_arena_t* local_arena = mara_get_local_zone(ctx)->arena;
+	mara_arena_t* local_arena = mara_get_zone_arena(ctx, mara_get_local_zone(ctx));
 
 	switch (token.type) {
 		case MARA_TOK_INT:
