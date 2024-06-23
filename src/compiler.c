@@ -79,7 +79,7 @@ mara_compiler_error(
 	...
 ) {
 	const mara_source_info_t* debug_info = mara_get_debug_info(ctx->exec_ctx, ctx->debug_key);
-	if (debug_info != NULL) { mara_set_debug_info(ctx->exec_ctx, *debug_info); }
+	if (debug_info != NULL) { mara_set_debug_info(ctx->exec_ctx, debug_info); }
 
 	va_list args;
 	va_start(args, extra);

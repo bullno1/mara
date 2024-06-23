@@ -10,13 +10,14 @@ mara_lexer_error(
 	mara_value_t extra,
 	...
 ) {
-	mara_set_debug_info(ctx, (mara_source_info_t){
+	lexer->debug_info = (mara_source_info_t){
 		.filename = lexer->filename,
 		.range = {
 			.start = lexer->capturing ? lexer->capture_start_pos : lexer->current_pos,
 			.end = lexer->current_pos,
 		},
-	});
+	};
+	mara_set_debug_info(ctx, &lexer->debug_info);
 
 	va_list args;
 	va_start(args, extra);

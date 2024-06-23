@@ -21,13 +21,14 @@
 
 #define mara_add_native_debug_info(ctx) \
 	do { \
-		mara_set_debug_info(ctx, (mara_source_info_t){ \
+		static mara_source_info_t native_debug_info = { \
 			.filename = mara_str_from_literal(__FILE__), \
 			.range = { \
 				.start = { .line = __LINE__, .col = 1, .byte_offset = 0 }, \
 				.end = { .line = __LINE__, .col = 1, .byte_offset = 0 }, \
 			} \
-		}); \
+		}; \
+		mara_set_debug_info(ctx, &native_debug_info); \
 	} while (0)
 
 typedef struct mara_str_reader_s {

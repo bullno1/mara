@@ -8,6 +8,7 @@ typedef struct {
 	mara_source_pos_t capture_start_pos;
 	mara_str_t filename;
 	mara_reader_t src;
+	mara_source_info_t debug_info;
 	size_t capture_len;
 	bool capturing;
 	char read_buf;

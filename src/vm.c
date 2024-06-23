@@ -17,9 +17,10 @@ mara_vm_alloc_stack_frame(mara_exec_ctx_t* ctx, mara_vm_closure_t* closure, mara
 	} else {
 		stackframe = &ctx->stack_frames[ctx->num_stack_frames++];
 		stackframe->closure = NULL;
-		stackframe->native_debug_info = (mara_source_info_t){
-			.filename = mara_str_from_literal("<native>")
+		static mara_source_info_t default_debug_info = {
+			.filename = mara_str_from_literal("<native>"),
 		};
+		stackframe->native_debug_info = &default_debug_info;
 	}
 
 	stackframe->saved_state = vm_state;
@@ -81,7 +82,7 @@ mara_call(
 		|| obj->type == MARA_OBJ_TYPE_NATIVE_CLOSURE,
 		"Invalid object type"
 	);
-	mara_source_info_t debug_info = ctx->current_zone->debug_info;
+	const mara_source_info_t* debug_info = ctx->current_zone->debug_info;
 
 	// This stack frame ensures that the VM will return here.
 	// It will also undo all the zone changes when it's popped.

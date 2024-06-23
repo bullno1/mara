@@ -259,7 +259,7 @@ struct mara_stack_frame_s {
 	mara_zone_bookmark_t* zone_bookmark;
 	mara_zone_t* return_zone;
 	mara_vm_state_t saved_state;
-	mara_source_info_t native_debug_info;
+	const mara_source_info_t* native_debug_info;
 
 	mara_value_t* stack;
 };
@@ -272,7 +272,7 @@ struct mara_zone_s {
 	mara_index_t ref_count;
 	mara_finalizer_t* finalizers;
 	mara_arena_t* arena;
-	mara_source_info_t debug_info;
+	const mara_source_info_t* debug_info;
 	mara_arena_snapshot_t local_snapshot;
 
 	mara_zone_t* parent;

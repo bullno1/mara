@@ -20,6 +20,14 @@ typedef struct {
 	mara_source_range_t source_range;
 } mara_linked_list_t;
 
+MARA_PRIVATE void
+mara_parser_set_debug_info(mara_exec_ctx_t* ctx, mara_source_info_t debug_info) {
+	// TODO: create a context per parser
+	static mara_source_info_t parser_debug_info;
+	parser_debug_info = debug_info;
+	mara_set_debug_info(ctx, &parser_debug_info);
+}
+
 MARA_PRIVATE mara_error_t*
 mara_parser_error(
 	mara_exec_ctx_t* ctx,
@@ -29,7 +37,7 @@ mara_parser_error(
 	mara_source_range_t range,
 	...
 ) {
-	mara_set_debug_info(ctx, (mara_source_info_t){
+	mara_parser_set_debug_info(ctx, (mara_source_info_t){
 		.filename = lexer->filename,
 		.range = range,
 	});
@@ -75,7 +83,7 @@ mara_linked_list_flatten(
 	mara_str_t filename,
 	mara_linked_list_t* tmp_list
 ) {
-	mara_set_debug_info(ctx, (mara_source_info_t){
+	mara_parser_set_debug_info(ctx, (mara_source_info_t){
 		.filename = filename,
 		.range = tmp_list->source_range,
 	});

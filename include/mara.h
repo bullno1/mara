@@ -178,7 +178,7 @@ mara_reset(mara_env_t* env);
 // Debug
 
 MARA_API void
-mara_set_debug_info(mara_exec_ctx_t* ctx, mara_source_info_t debug_info);
+mara_set_debug_info(mara_exec_ctx_t* ctx, const mara_source_info_t* debug_info);
 
 MARA_API void
 mara_print_value(

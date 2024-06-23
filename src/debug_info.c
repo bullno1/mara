@@ -11,7 +11,7 @@ mara_debug_info_key_equal(mara_debug_info_key_t lhs, mara_debug_info_key_t rhs) 
 }
 
 void
-mara_set_debug_info(mara_exec_ctx_t* ctx, mara_source_info_t debug_info) {
+mara_set_debug_info(mara_exec_ctx_t* ctx, const mara_source_info_t* debug_info) {
 	ctx->current_zone->debug_info = debug_info;
 	mara_stack_frame_t* current_frame = ctx->vm_state.fp;
 	if (current_frame != NULL) {
