@@ -171,7 +171,7 @@ mara_deep_copy(
 MARA_PRIVATE mara_value_t
 mara_start_deep_copy(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_value_t value) {
 	// value is not included because we are not modifying it
-	mara_zone_enter_new(ctx, (mara_zone_options_t){
+	mara_zone_enter_new(ctx, &(mara_zone_options_t){
 		.num_marked_zones = 1,
 		.marked_zones = (mara_zone_t*[]){ zone },
 	});

@@ -98,7 +98,8 @@ mara_begin(mara_env_t* env) {
 		sizeof(mara_zone_bookmark_t) * env->options.max_stackframes,
 		_Alignof(mara_zone_bookmark_t)
 	);
-	mara_zone_enter_new(ctx, (mara_zone_options_t){ 0 });
+	static mara_zone_options_t initial_options = { 0 };
+	mara_zone_enter_new(ctx, &initial_options);
 	env->ref_count += 1;
 	return ctx;
 }

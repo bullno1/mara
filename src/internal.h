@@ -276,7 +276,7 @@ struct mara_zone_s {
 	mara_arena_snapshot_t local_snapshot;
 
 	mara_zone_t* parent;
-	mara_zone_options_t options;
+	mara_zone_options_t* options;
 };
 
 struct mara_env_s {
@@ -350,7 +350,7 @@ mara_arena_reset(mara_env_t* env, mara_arena_t* arena);
 // Zone
 
 void
-mara_zone_enter_new(mara_exec_ctx_t* ctx, mara_zone_options_t options);
+mara_zone_enter_new(mara_exec_ctx_t* ctx, mara_zone_options_t* options);
 
 void
 mara_zone_enter(mara_exec_ctx_t* ctx, mara_zone_t* zone);

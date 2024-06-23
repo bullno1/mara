@@ -399,7 +399,7 @@ mara_parse(
 	mara_list_t** result
 ) {
 	mara_error_t* error;
-	mara_zone_enter_new(ctx, (mara_zone_options_t){
+	mara_zone_enter_new(ctx, &(mara_zone_options_t){
 		.num_marked_zones = 1,
 		.marked_zones = (mara_zone_t*[]){ zone },
 	});

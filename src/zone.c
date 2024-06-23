@@ -23,7 +23,7 @@ mara_ffs(uint32_t mask) {
 #endif
 
 MARA_PRIVATE mara_zone_t*
-mara_zone_new(mara_exec_ctx_t* ctx, mara_zone_options_t options) {
+mara_zone_new(mara_exec_ctx_t* ctx, mara_zone_options_t* options) {
 	mara_zone_t* current_zone = ctx->current_zone;
 
 	mara_index_t zone_index = ctx->num_zones++;
@@ -43,7 +43,7 @@ mara_zone_new(mara_exec_ctx_t* ctx, mara_zone_options_t options) {
 }
 
 void
-mara_zone_enter_new(mara_exec_ctx_t* ctx, mara_zone_options_t options) {
+mara_zone_enter_new(mara_exec_ctx_t* ctx, mara_zone_options_t* options) {
 	mara_zone_enter(ctx, mara_zone_new(ctx, options));
 }
 
@@ -191,7 +191,7 @@ mara_get_zone_arena(mara_exec_ctx_t* ctx, mara_zone_t* zone) {
 		return zone->arena;
 	} else {
 		mara_zone_t* current_zone = zone->parent;
-		mara_zone_options_t options = zone->options;
+		mara_zone_options_t* options = zone->options;
 		// Find an arena for this new zone.
 		// It cannot be used by:
 		//
@@ -206,8 +206,8 @@ mara_get_zone_arena(mara_exec_ctx_t* ctx, mara_zone_t* zone) {
 				arena_mask |= mara_arena_mask_of_zone(ctx, current_zone);
 			}
 
-			for (mara_index_t i = 0; i < options.argc; ++i) {
-				mara_obj_t* obj = mara_value_to_obj(options.argv[i]);
+			for (mara_index_t i = 0; i < options->argc; ++i) {
+				mara_obj_t* obj = mara_value_to_obj(options->argv[i]);
 				if (obj == NULL) { continue; }
 
 				arena_mask |= obj->arena_mask;
@@ -221,8 +221,8 @@ mara_get_zone_arena(mara_exec_ctx_t* ctx, mara_zone_t* zone) {
 				arena_mask |= mara_header_of(ctx->current_module)->arena_mask;
 			}
 
-			for (mara_index_t i = 0; i < options.num_marked_zones; ++i) {
-				arena_mask |= mara_arena_mask_of_zone(ctx, options.marked_zones[i]);
+			for (mara_index_t i = 0; i < options->num_marked_zones; ++i) {
+				arena_mask |= mara_arena_mask_of_zone(ctx, options->marked_zones[i]);
 			}
 
 			mara_arena_mask_t free_mask = ~arena_mask;

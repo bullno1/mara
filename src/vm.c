@@ -97,7 +97,7 @@ mara_call(
 	if (obj->type == MARA_OBJ_TYPE_NATIVE_CLOSURE) {
 		mara_native_closure_t* closure = (mara_native_closure_t*)obj->body;
 		if (!closure->options.no_alloc) {
-			mara_zone_enter_new(ctx, (mara_zone_options_t){
+			mara_zone_enter_new(ctx, &(mara_zone_options_t){
 				.argc = argc,
 				.argv = argv,
 			});
@@ -115,7 +115,7 @@ mara_call(
 		if (MARA_EXPECT(mara_fn->num_args <= argc)) {
 			mara_vm_push_stack_frame(ctx, closure);
 
-			mara_zone_enter_new(ctx, (mara_zone_options_t){
+			mara_zone_enter_new(ctx, &(mara_zone_options_t){
 				.argc = argc,
 				.argv = argv,
 			});
@@ -302,7 +302,7 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
                     if(next_closure != NULL) {
                         if (MARA_EXPECT(next_closure->fn->num_args <= (mara_index_t)operands)) {
 							mara_zone_enter_new(
-								ctx, (mara_zone_options_t){
+								ctx, &(mara_zone_options_t){
 									.argc = operands,
 									.argv = sp,
 								}
@@ -326,7 +326,7 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
                         mara_native_closure_t* native_closure = (mara_native_closure_t*)fn->body;
 						if (!native_closure->options.no_alloc) {
 							mara_zone_enter_new(
-								ctx, (mara_zone_options_t){
+								ctx, &(mara_zone_options_t){
 									.argc = operands,
 									.argv = sp,
 								}
