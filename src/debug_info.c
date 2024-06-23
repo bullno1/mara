@@ -19,6 +19,14 @@ mara_set_debug_info(mara_exec_ctx_t* ctx, mara_source_info_t debug_info) {
 	}
 }
 
+MARA_PRIVATE void
+normalize_key(mara_value_t container, mara_index_t index, mara_debug_info_key_t* key) {
+	// Padding bytes might not be zeroed when using initializer
+	memset(key, 0, sizeof(*key));
+	key->container = container;
+	key->index = index;
+}
+
 void
 mara_put_debug_info(
 	mara_exec_ctx_t* ctx,
@@ -36,7 +44,9 @@ mara_put_debug_info(
 	mara_debug_info_node_t* free_node;
 	mara_debug_info_node_t* node;
 	(void)free_node;
-	BHAMT_HASH_TYPE hash = mara_XXH3_64bits(&key, sizeof(key));
+	mara_debug_info_key_t normalized_key;
+	normalize_key(key.container, key.index, &normalized_key);
+	BHAMT_HASH_TYPE hash = mara_XXH3_64bits(&normalized_key, sizeof(normalized_key));
 	BHAMT_SEARCH(ctx->debug_info_map.root, itr, node, free_node, hash, key);
 
 	if (node == NULL) {
@@ -52,7 +62,9 @@ mara_get_debug_info(mara_exec_ctx_t* ctx, mara_debug_info_key_t key) {
 	if (mara_value_is_nil(key.container)) { return NULL; }
 
 	mara_debug_info_node_t* node;
-	BHAMT_HASH_TYPE hash = mara_XXH3_64bits(&key, sizeof(key));
+	mara_debug_info_key_t normalized_key;
+	normalize_key(key.container, key.index, &normalized_key);
+	BHAMT_HASH_TYPE hash = mara_XXH3_64bits(&normalized_key, sizeof(normalized_key));
 	BHAMT_GET(ctx->debug_info_map.root, node, hash, key);
 
 	return node != NULL ? &node->debug_info : NULL;
@@ -60,11 +72,9 @@ mara_get_debug_info(mara_exec_ctx_t* ctx, mara_debug_info_key_t key) {
 
 mara_debug_info_key_t
 mara_make_debug_info_key(mara_value_t container, mara_index_t index) {
-	// Padding bytes might not be zeroed when using initializer
-	mara_debug_info_key_t debug_key;
-	memset(&debug_key, 0, sizeof(debug_key));
-	debug_key.container = container;
-	debug_key.index = index;
-
-	return debug_key;
+	// Padding bytes will be zeroed in the respective get/set function instead
+	return (mara_debug_info_key_t){
+		.container = container,
+		.index = index,
+	};
 }
