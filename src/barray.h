@@ -126,7 +126,8 @@ barray_do_resize(BARRAY_CTX_TYPE ctx, void* array, size_t new_len, size_t elem_s
 	size_t current_capacity = header != NULL ? header->capacity : 0;
 
 	if (new_len <= current_capacity) {
-		header->len = new_len;
+		// Special case when resize 0 to 0
+		if (header != NULL) { header->len = new_len; }
 		return array;
 	} else {
 		barray_header_t* new_header = BARRAY_REALLOC(
