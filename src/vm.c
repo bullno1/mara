@@ -154,40 +154,48 @@ mara_call(
 	return error;
 }
 
+// VM dispatch loop
+// It has to be here so that certain functions are inlined
+
 #if defined(__GNUC__) || defined(__clang__)
-#   define MARA_MAKE_DISPATCH_TABLE(X) &&MARA_OP_##X,
-#   define MARA_DISPATCH_NEXT() \
-        do { \
-            mara_instruction_t instruction = *ip; \
-            ++ip; \
-            mara_decode_instruction(instruction, &opcode, &operands); \
-        } while (0); \
-        goto *dispatch_table[opcode];
-#   define MARA_BEGIN_DISPATCH(OPCODE) \
-        static void* dispatch_table[] = { \
-            MARA_OPCODE(MARA_MAKE_DISPATCH_TABLE) \
-        }; \
-        MARA_DISPATCH_NEXT()
-#   define MARA_BEGIN_OP(NAME) MARA_OP_##NAME: {
-#   define MARA_END_OP() MARA_DISPATCH_NEXT() }
-#   define MARA_END_DISPATCH()
+#	define MARA_MAKE_DISPATCH_TABLE(X) &&MARA_OP_##X,
+#	define MARA_DISPATCH_NEXT() \
+		do { \
+			mara_instruction_t instruction = *ip; \
+			++ip; \
+			mara_decode_instruction(instruction, &opcode, &operands); \
+		} while (0); \
+		goto *dispatch_table[opcode];
+#	define MARA_BEGIN_DISPATCH(OPCODE) \
+		static void* dispatch_table[] = { \
+			MARA_OPCODE(MARA_MAKE_DISPATCH_TABLE) \
+		}; \
+		MARA_DISPATCH_NEXT()
+#	define MARA_BEGIN_OP(NAME) MARA_OP_##NAME: {
+#	define MARA_END_OP() MARA_DISPATCH_NEXT() }
+#	define MARA_END_DISPATCH()
 #	define MARA_DISPATCH_OP(NAME, OPERANDS) \
 		do { \
 			operands = OPERANDS; \
 			goto MARA_OP_##NAME; \
 		} while (0)
 #else
-#   define MARA_BEGIN_DISPATCH(OPCODE) \
-        while (true) { \
-            mara_assert(sp <= fp->stack + closure->fn->stack_size, "Stack overflow"); \
-            mara_assert((fp->stack + closure->fn->num_locals) <= sp, "Stack underflow"); \
-            mara_instruction_t instruction = *ip; \
-            ++ip; \
-            mara_decode_instruction(instruction, &opcode, &operands); \
-            switch (opcode) {
-#   define MARA_BEGIN_OP(NAME) case MARA_OP_##NAME: {
-#   define MARA_END_OP() } continue;
-#   define MARA_END_DISPATCH() }}
+#	define MARA_DISPATCH_ENTRY(X) \
+		case MARA_OP_##X: goto MARA_OP_##X;
+#	define MARA_DISPATCH_NEXT() \
+		do { \
+			mara_instruction_t instruction = *ip; \
+			++ip; \
+			mara_decode_instruction(instruction, &opcode, &operands); \
+		} while (0); \
+		switch (opcode) { \
+			MARA_OPCODE(MARA_DISPATCH_ENTRY) \
+		}
+#	define MARA_BEGIN_DISPATCH(OPCODE) \
+		MARA_DISPATCH_NEXT()
+#	define MARA_BEGIN_OP(NAME) MARA_OP_##NAME: {
+#	define MARA_END_OP() MARA_DISPATCH_NEXT() }
+#	define MARA_END_DISPATCH()
 #	define MARA_DISPATCH_OP(NAME, OPERANDS) \
 		do { \
 			operands = OPERANDS; \
@@ -291,9 +299,6 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
             *(++sp) = stack_top = closure->captures[operands];
         MARA_END_OP()
         MARA_BEGIN_OP(CALL)
-#ifdef _MSC_VER
-		MARA_OP_CALL:
-#endif
 			sp -= operands;
 
 			if (MARA_EXPECT(mara_value_is_obj(stack_top))) {
