@@ -709,7 +709,11 @@ mara_compile_minus(mara_compile_ctx_t* ctx, mara_list_t* list) {
 	}
 
 	mara_compiler_set_debug_info(ctx, list, MARA_DEBUG_INFO_SELF);
-	return mara_compiler_emit(ctx, MARA_OP_MINUS, list_len - 1, -(list_len - 2));
+	if (list_len == 2) {
+		return mara_compiler_emit(ctx, MARA_OP_NEG, 0, 0);
+	} else {
+		return mara_compiler_emit(ctx, MARA_OP_SUB, list_len - 1, -(list_len - 2));
+	}
 }
 
 MARA_PRIVATE mara_error_t*

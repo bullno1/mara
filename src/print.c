@@ -183,8 +183,11 @@ mara_print_vm_function(
 					case MARA_OP_PLUS:
 						mara_print_indented(output, body_options.indent, "(PLUS %d)", operands);
 						break;
-					case MARA_OP_MINUS:
-						mara_print_indented(output, body_options.indent, "(MINUS %d)", operands);
+					case MARA_OP_SUB:
+						mara_print_indented(output, body_options.indent, "(SUB %d)", operands);
+						break;
+					case MARA_OP_NEG:
+						mara_print_indented(output, body_options.indent, "(NEG)");
 						break;
 				}
 

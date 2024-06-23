@@ -63,48 +63,58 @@ MARA_PRIVATE MARA_FUNCTION(mara_intrin_plus) {
 	}
 }
 
-MARA_PRIVATE MARA_FUNCTION(mara_intrin_minus) {
+MARA_PRIVATE MARA_FUNCTION(mara_intrin_neg) {
+	(void)argc;
 	(void)userdata;
+	if (mara_value_is_int(argv[0])) {
+		MARA_FN_ARG(mara_index_t, value, 0);
+		MARA_RETURN(-value);
+	} else if (mara_value_is_real(argv[0])) {
+		MARA_FN_ARG(mara_real_t, value, 0);
+		MARA_RETURN(-value);
+	} else {
+		return mara_errorf(
+			ctx,
+			mara_str_from_literal("core/unexpected-type"),
+			"Expecting number",
+			mara_value_from_int(0)
+		);
+	}
+}
+
+MARA_PRIVATE MARA_FUNCTION(mara_intrin_sub) {
+	(void)userdata;
+	if (mara_value_is_int(argv[0])) {
+		MARA_FN_ARG(mara_index_t, acc, 0);
+		for (mara_index_t i = 1; i < argc; ++i) {
+			MARA_FN_ARG(mara_index_t, value, i);
+			acc -= value;
+		}
+		MARA_RETURN(acc);
+	} else if (mara_value_is_real(argv[0])) {
+		MARA_FN_ARG(mara_real_t, acc, 0);
+		for (mara_index_t i = 1; i < argc; ++i) {
+			MARA_FN_ARG(mara_real_t, value, i);
+			acc -= value;
+		}
+		MARA_RETURN(acc);
+	} else {
+		return mara_errorf(
+			ctx,
+			mara_str_from_literal("core/unexpected-type"),
+			"Expecting number",
+			mara_value_from_int(0)
+		);
+	}
+}
+
+MARA_PRIVATE MARA_FUNCTION(mara_intrin_minus) {
 	mara_add_native_debug_info(ctx);
 	MARA_FN_CHECK_ARITY(1);
 
 	if (argc == 1) {
-		if (mara_value_is_int(argv[0])) {
-			MARA_FN_ARG(mara_index_t, value, 0);
-			MARA_RETURN(-value);
-		} else if (mara_value_is_real(argv[0])) {
-			MARA_FN_ARG(mara_real_t, value, 0);
-			MARA_RETURN(-value);
-		} else {
-			return mara_errorf(
-				ctx,
-				mara_str_from_literal("core/unexpected-type"),
-				"Expecting number",
-				mara_value_from_int(0)
-			);
-		}
+		return mara_intrin_neg(ctx, argc, argv, userdata, result);
 	} else {
-		if (mara_value_is_int(argv[0])) {
-			MARA_FN_ARG(mara_index_t, acc, 0);
-			for (mara_index_t i = 1; i < argc; ++i) {
-				MARA_FN_ARG(mara_index_t, value, i);
-				acc -= value;
-			}
-			MARA_RETURN(acc);
-		} else if (mara_value_is_real(argv[0])) {
-			MARA_FN_ARG(mara_real_t, acc, 0);
-			for (mara_index_t i = 1; i < argc; ++i) {
-				MARA_FN_ARG(mara_real_t, value, i);
-				acc -= value;
-			}
-			MARA_RETURN(acc);
-		} else {
-			return mara_errorf(
-				ctx,
-				mara_str_from_literal("core/unexpected-type"),
-				"Expecting number",
-				mara_value_from_int(0)
-			);
-		}
+		return mara_intrin_sub(ctx, argc, argv, userdata, result);
 	}
 }
