@@ -1,6 +1,3 @@
-(def + (import "core" "+"))
-(def - (import "core" "-"))
-(def <= (import "core" "<="))
 (def list/new (import "core" "list/new"))
 (def list/push (import "core" "list/push"))
 (def list/set (import "core" "list/set"))

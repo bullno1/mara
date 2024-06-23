@@ -180,6 +180,12 @@ mara_print_vm_function(
 					case MARA_OP_GTE:
 						mara_print_indented(output, body_options.indent, "(GTE)");
 						break;
+					case MARA_OP_PLUS:
+						mara_print_indented(output, body_options.indent, "(PLUS %d)", operands);
+						break;
+					case MARA_OP_MINUS:
+						mara_print_indented(output, body_options.indent, "(MINUS %d)", operands);
+						break;
 				}
 
 				if (fn->source_info != NULL) {

@@ -487,6 +487,24 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 				return error;
 			}
         MARA_END_OP()
+        MARA_BEGIN_OP(PLUS)
+			sp -= operands - 1;
+			if (MARA_EXPECT((error = mara_intrin_plus(ctx, operands, sp, NULL, &stack_top)) == NULL)) {
+				*sp = stack_top;
+			} else {
+				MARA_VM_SAVE_STATE(vm);
+				return error;
+			}
+        MARA_END_OP()
+        MARA_BEGIN_OP(MINUS)
+			sp -= operands - 1;
+			if (MARA_EXPECT((error = mara_intrin_minus(ctx, operands, sp, NULL, &stack_top)) == NULL)) {
+				*sp = stack_top;
+			} else {
+				MARA_VM_SAVE_STATE(vm);
+				return error;
+			}
+        MARA_END_OP()
 		// Super instructions
         MARA_BEGIN_OP(CALL_CAPTURE)
 			mara_operand_t capture_index = operands & 0xffff;

@@ -208,6 +208,8 @@ typedef struct mara_module_loader_entry_s {
 	X(LTE) \
 	X(GT) \
 	X(GTE) \
+	X(PLUS) \
+	X(MINUS) \
 
 #define MARA_DEFINE_OPCODE_ENUM(X) \
 	MARA_OP_##X,
