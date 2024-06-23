@@ -516,9 +516,21 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 		// Super instructions
         MARA_BEGIN_OP(CALL_CAPTURE)
 			mara_operand_t capture_index = operands & 0xffff;
-			mara_operand_t num_args = (operands >> 16) & 0xff;
+			mara_operand_t arity = (operands >> 16) & 0xff;
             *(++sp) = stack_top = closure->captures[capture_index];
-			MARA_DISPATCH_OP(CALL, num_args);
+			MARA_DISPATCH_OP(CALL, arity);
+        MARA_END_OP()
+        MARA_BEGIN_OP(CALL_ARG)
+			mara_operand_t arg_index = operands & 0xffff;
+			mara_operand_t arity = (operands >> 16) & 0xff;
+            *(++sp) = stack_top = args[arg_index];
+			MARA_DISPATCH_OP(CALL, arity);
+        MARA_END_OP()
+        MARA_BEGIN_OP(CALL_LOCAL)
+			mara_operand_t local_index = operands & 0xffff;
+			mara_operand_t arity = (operands >> 16) & 0xff;
+            *(++sp) = stack_top = fp->stack[local_index];
+			MARA_DISPATCH_OP(CALL, arity);
         MARA_END_OP()
 invalid_type:
 			MARA_VM_SAVE_STATE(vm);

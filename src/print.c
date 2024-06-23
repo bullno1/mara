@@ -168,6 +168,18 @@ mara_print_vm_function(
 							operands & 0xffff
 						);
 						break;
+					case MARA_OP_CALL_ARG:
+						mara_print_indented(output, body_options.indent, "(CALL_ARG %d %d)",
+							(uint8_t)(operands >> 16) & 0xff,
+							operands & 0xffff
+						);
+						break;
+					case MARA_OP_CALL_LOCAL:
+						mara_print_indented(output, body_options.indent, "(CALL_LOCAL %d %d)",
+							(uint8_t)(operands >> 16) & 0xff,
+							operands & 0xffff
+						);
+						break;
 					case MARA_OP_LT:
 						mara_print_indented(output, body_options.indent, "(LT)");
 						break;

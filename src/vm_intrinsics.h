@@ -38,8 +38,7 @@ MARA_PRIVATE MARA_FUNCTION(mara_intrin_plus) {
 
 	if (argc == 0) {
 		MARA_RETURN(0);
-	}
-	if (mara_value_is_int(argv[0])) {
+	} else if (mara_value_is_int(argv[0])) {
 		mara_index_t total = 0;
 		for (mara_index_t i = 0; i < argc; ++i) {
 			MARA_FN_ARG(mara_index_t, value, i);
