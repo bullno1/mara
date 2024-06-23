@@ -9,6 +9,7 @@ mara_barray_realloc(mara_env_t* env, void* ptr, size_t size);
 #include "barray.h"
 
 #define MARA_MAX_NAMES UINT16_MAX
+#define MARA_MAX_ARGS UINT8_MAX
 #define MARA_OP_LABEL UINT8_MAX
 #define MARA_MAX_LABELS UINT16_MAX
 #define MARA_MAX_FUNCTIONS UINT8_MAX
@@ -139,7 +140,7 @@ mara_compiler_add_argument(mara_compile_ctx_t* ctx, mara_value_t name) {
 	mara_value_t existing_index = mara_map_get(ctx->exec_ctx, fn_scope->args, name);
 	mara_index_t new_index = fn_scope->args->len;
 
-	if (new_index >= MARA_MAX_NAMES) {
+	if (new_index >= MARA_MAX_ARGS) {
 		return mara_compiler_error(
 			ctx,
 			mara_str_from_literal("core/limit-reached/max-arguments"),
@@ -302,6 +303,40 @@ mara_compiler_end_function(mara_compile_ctx_t* ctx) {
 				mara_decode_instruction(next_instruction.instruction, &opcode, &operands);
 
 				if (opcode == MARA_OP_POP && operands == 1) {
+					i += 1;
+					continue;
+				}
+			}
+
+			fn_scope->instructions[out_index++] = tagged_instruction;
+		}
+		num_instructions = out_index;
+	}
+
+	// Super instructions
+	{
+		mara_index_t out_index = 0;
+		for (mara_index_t i = 0; i < num_instructions; ++i) {
+			mara_opcode_t opcode;
+			mara_operand_t operands;
+			mara_tagged_instruction_t tagged_instruction = fn_scope->instructions[i];
+			mara_decode_instruction(tagged_instruction.instruction, &opcode, &operands);
+
+			if (opcode == MARA_OP_GET_CAPTURE && i < num_instructions) {
+				mara_opcode_t next_opcode;
+				mara_operand_t next_operands;
+				mara_tagged_instruction_t next_instruction = fn_scope->instructions[i + 1];
+				mara_decode_instruction(next_instruction.instruction, &next_opcode, &next_operands);
+
+				if (next_opcode == MARA_OP_CALL) {
+					mara_tagged_instruction_t super_instruction = {
+						.instruction = mara_encode_instruction(
+							MARA_OP_CALL_CAPTURE,
+							((next_operands & 0xff) << 16) | (operands & 0xffff)
+						),
+						.source_info = next_instruction.source_info,
+					};
+					fn_scope->instructions[out_index++] = super_instruction;
 					i += 1;
 					continue;
 				}
@@ -563,6 +598,15 @@ mara_compile_sequence(
 MARA_PRIVATE mara_error_t*
 mara_compile_call(mara_compile_ctx_t* ctx, mara_list_t* list, mara_value_t fn) {
 	mara_index_t list_len = list->len;
+	if (list_len - 1 > MARA_MAX_ARGS) {
+		return mara_compiler_error(
+			ctx,
+			mara_str_from_literal("core/limit-reached/max-arguments"),
+			"Function call has too many arguments",
+			mara_nil()
+		);
+	}
+
 	for (mara_index_t i = 1; i < list_len; ++i) {
 		mara_compiler_set_debug_info(ctx, list, i);
 		mara_check_error(mara_compile_expression(ctx, list->elems[i]));

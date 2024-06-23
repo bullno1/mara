@@ -162,6 +162,12 @@ mara_print_vm_function(
 							operands & 0xffff
 						);
 						break;
+					case MARA_OP_CALL_CAPTURE:
+						mara_print_indented(output, body_options.indent, "(CALL_CAPTURE %d %d)",
+							(uint8_t)(operands >> 16) & 0xff,
+							operands & 0xffff
+						);
+						break;
 				}
 
 				if (fn->source_info != NULL) {
