@@ -184,7 +184,7 @@ mara_start_deep_copy(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_value_t value
 mara_value_t
 mara_copy(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_value_t value) {
 	mara_obj_t* obj = mara_value_to_obj(value);
-	if (obj == NULL || obj->zone->level <= zone->level) {
+	if (MARA_EXPECT(obj == NULL || obj->zone->level <= zone->level)) {
 		return value;
 	}
 
