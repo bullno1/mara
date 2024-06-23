@@ -287,12 +287,36 @@ mara_compiler_end_function(mara_compile_ctx_t* ctx) {
 	mara_zone_t* permanent_zone = &env->permanent_zone;
 	mara_zone_t* local_zone = mara_get_local_zone(exec_ctx);
 
+	// Remove NIL POP pairs
+	mara_index_t num_instructions = barray_len(fn_scope->instructions);
+	{
+		mara_index_t out_index = 0;
+		for (mara_index_t i = 0; i < num_instructions; ++i) {
+			mara_opcode_t opcode;
+			mara_operand_t operands;
+			mara_tagged_instruction_t tagged_instruction = fn_scope->instructions[i];
+			mara_decode_instruction(tagged_instruction.instruction, &opcode, &operands);
+
+			if (opcode == MARA_OP_NIL && i < num_instructions) {
+				mara_tagged_instruction_t next_instruction = fn_scope->instructions[i + 1];
+				mara_decode_instruction(next_instruction.instruction, &opcode, &operands);
+
+				if (opcode == MARA_OP_POP && operands == 1) {
+					i += 1;
+					continue;
+				}
+			}
+
+			fn_scope->instructions[out_index++] = tagged_instruction;
+		}
+		num_instructions = out_index;
+	}
+
 	// Collect label targets
 	mara_index_t* jump_targets = mara_zone_alloc_ex(
 		exec_ctx, local_zone,
 		sizeof(mara_index_t) * fn_scope->num_labels, _Alignof(mara_index_t)
 	);
-	mara_index_t num_instructions = barray_len(fn_scope->instructions);
 	{
 		mara_index_t out_index = 0;
 		for (mara_index_t i = 0; i < num_instructions; ++i) {
