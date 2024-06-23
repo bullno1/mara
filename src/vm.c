@@ -1,5 +1,6 @@
 #include "internal.h"
 #include "vm.h"
+#include "vm_intrinsics.h"
 
 MARA_PRIVATE mara_error_t*
 mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result);
@@ -222,6 +223,7 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 	mara_stack_frame_t* fp;
 	mara_value_t* sp;
 	mara_value_t* args;
+	mara_error_t* error;
 
 	mara_vm_closure_t* closure;
 	mara_vm_function_t* function;
@@ -343,20 +345,20 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 					MARA_VM_SAVE_STATE(vm);
 
 					mara_value_t result = mara_nil();
-					mara_error_t* call_error = native_closure->fn(
+					error = native_closure->fn(
 						ctx,
 						operands, args,
 						native_closure->options.userdata,
 						&result
 					);
-					if (MARA_EXPECT(call_error == NULL)) {
+					if (MARA_EXPECT(error == NULL)) {
 						mara_value_t result_copy = mara_copy(ctx, return_zone, result);
 
 						mara_vm_pop_stack_frame(ctx, stackframe);
 						MARA_VM_LOAD_STATE(vm);
 						*sp = stack_top = result_copy;
 					} else {
-						return call_error;
+						return error;
 					}
 				} else {
 					goto invalid_type;
@@ -448,6 +450,44 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 			*(++sp) = stack_top = mara_obj_to_value(new_obj);
 			ip += num_captures;
         MARA_END_OP()
+		// Intrinsics
+		MARA_BEGIN_OP(LT)
+			sp -= 1;
+			if (MARA_EXPECT((error = mara_intrin_lt(ctx, 2, sp, NULL, &stack_top)) == NULL)) {
+				*sp = stack_top;
+			} else {
+				MARA_VM_SAVE_STATE(vm);
+				return error;
+			}
+        MARA_END_OP()
+        MARA_BEGIN_OP(LTE)
+			sp -= 1;
+			if (MARA_EXPECT((error = mara_intrin_lte(ctx, 2, sp, NULL, &stack_top)) == NULL)) {
+				*sp = stack_top;
+			} else {
+				MARA_VM_SAVE_STATE(vm);
+				return error;
+			}
+        MARA_END_OP()
+        MARA_BEGIN_OP(GT)
+			sp -= 1;
+			if (MARA_EXPECT((error = mara_intrin_gt(ctx, 2, sp, NULL, &stack_top)) == NULL)) {
+				*sp = stack_top;
+			} else {
+				MARA_VM_SAVE_STATE(vm);
+				return error;
+			}
+        MARA_END_OP()
+        MARA_BEGIN_OP(GTE)
+			sp -= 1;
+			if (MARA_EXPECT((error = mara_intrin_gte(ctx, 2, sp, NULL, &stack_top)) == NULL)) {
+				*sp = stack_top;
+			} else {
+				MARA_VM_SAVE_STATE(vm);
+				return error;
+			}
+        MARA_END_OP()
+		// Super instructions
         MARA_BEGIN_OP(CALL_CAPTURE)
 			mara_operand_t capture_index = operands & 0xffff;
 			mara_operand_t num_args = (operands >> 16) & 0xff;

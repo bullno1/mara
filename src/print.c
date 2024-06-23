@@ -168,6 +168,18 @@ mara_print_vm_function(
 							operands & 0xffff
 						);
 						break;
+					case MARA_OP_LT:
+						mara_print_indented(output, body_options.indent, "(LT)");
+						break;
+					case MARA_OP_LTE:
+						mara_print_indented(output, body_options.indent, "(LTE)");
+						break;
+					case MARA_OP_GT:
+						mara_print_indented(output, body_options.indent, "(GT)");
+						break;
+					case MARA_OP_GTE:
+						mara_print_indented(output, body_options.indent, "(GTE)");
+						break;
 				}
 
 				if (fn->source_info != NULL) {

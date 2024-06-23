@@ -69,6 +69,13 @@ typedef struct {
 	mara_value_t sym_false;
 	mara_value_t sym_import;
 	mara_value_t sym_export;
+	// Intrinsics
+	mara_value_t sym_lt;
+	mara_value_t sym_lte;
+	mara_value_t sym_gt;
+	mara_value_t sym_gte;
+	mara_value_t sym_plus;
+	mara_value_t sym_minus;
 } mara_compile_ctx_t;
 
 MARA_PRIVATE MARA_PRINTF_LIKE(3, 5) mara_error_t*
@@ -621,6 +628,40 @@ mara_compile_call(mara_compile_ctx_t* ctx, mara_list_t* list, mara_value_t fn) {
 }
 
 MARA_PRIVATE mara_error_t*
+mara_compile_bin_ops(mara_compile_ctx_t* ctx, mara_list_t* list) {
+	mara_index_t list_len = list->len;
+	if (list_len != 3) {
+		return mara_compiler_error(
+			ctx,
+			mara_str_from_literal("core/syntax-error"),
+			"Operator requires 2 arguments",
+			mara_nil()
+		);
+	}
+
+	mara_compiler_set_debug_info(ctx, list, 1);
+	mara_check_error(mara_compile_expression(ctx, list->elems[1]));
+
+	mara_compiler_set_debug_info(ctx, list, 2);
+	mara_check_error(mara_compile_expression(ctx, list->elems[2]));
+
+	mara_compiler_set_debug_info(ctx, list, MARA_DEBUG_INFO_SELF);
+	mara_value_t first_elem = list->elems[0];
+	if (first_elem.internal == ctx->sym_lt.internal) {
+		return mara_compiler_emit(ctx, MARA_OP_LT, 0, -1);
+	} else if (first_elem.internal == ctx->sym_lte.internal) {
+		return mara_compiler_emit(ctx, MARA_OP_LTE, 0, -1);
+	} else if (first_elem.internal == ctx->sym_gt.internal) {
+		return mara_compiler_emit(ctx, MARA_OP_GT, 0, -1);
+	} else if (first_elem.internal == ctx->sym_gte.internal) {
+		return mara_compiler_emit(ctx, MARA_OP_GTE, 0, -1);
+	}
+
+	mara_assert(false, "Invalid binop");
+	return NULL;
+}
+
+MARA_PRIVATE mara_error_t*
 mara_compile_def(mara_compile_ctx_t* ctx, mara_list_t* list) {
 	mara_index_t list_len = list->len;
 	if (
@@ -861,6 +902,13 @@ mara_compile_list(mara_compile_ctx_t* ctx, mara_value_t expr) {
 			} else if (first_elem.internal == ctx->sym_do.internal) {
 				return mara_compile_do(ctx, list);
 			} else if (
+				first_elem.internal == ctx->sym_lt.internal
+				|| first_elem.internal == ctx->sym_lte.internal
+				|| first_elem.internal == ctx->sym_gt.internal
+				|| first_elem.internal == ctx->sym_gte.internal
+			) {
+				return mara_compile_bin_ops(ctx, list);
+			} else if (
 				first_elem.internal == ctx->sym_nil.internal
 				|| first_elem.internal == ctx->sym_true.internal
 				|| first_elem.internal == ctx->sym_false.internal
@@ -1023,6 +1071,13 @@ mara_compile(
 		.sym_false = mara_new_sym(ctx, mara_str_from_literal("false")),
 		.sym_import = mara_new_sym(ctx, mara_str_from_literal("import")),
 		.sym_export = mara_new_sym(ctx, mara_str_from_literal("export")),
+
+		.sym_lt = mara_new_sym(ctx, mara_str_from_literal("<")),
+		.sym_lte = mara_new_sym(ctx, mara_str_from_literal("<=")),
+		.sym_gt = mara_new_sym(ctx, mara_str_from_literal(">")),
+		.sym_gte = mara_new_sym(ctx, mara_str_from_literal(">=")),
+		.sym_plus = mara_new_sym(ctx, mara_str_from_literal("+")),
+		.sym_minus = mara_new_sym(ctx, mara_str_from_literal("-")),
 	};
 
 	error = mara_do_compile(&compile_ctx, zone, options, exprs, result);

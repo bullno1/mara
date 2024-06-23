@@ -204,6 +204,10 @@ typedef struct mara_module_loader_entry_s {
 	X(JUMP_IF_FALSE) \
 	X(MAKE_CLOSURE) \
 	X(CALL_CAPTURE) \
+	X(LT) \
+	X(LTE) \
+	X(GT) \
+	X(GTE) \
 
 #define MARA_DEFINE_OPCODE_ENUM(X) \
 	MARA_OP_##X,

@@ -1,115 +1,6 @@
 #include "internal.h"
 #include <mara/bind.h>
-
-// Arithmetic
-
-#define MARA_BIN_OP(X) \
-	X(mara_core_lt, <) \
-	X(mara_core_lte, <=) \
-	X(mara_core_gt, >) \
-	X(mara_core_gte, >=)
-
-#define MARA_DEFINE_BIN_OP(NAME, OP) \
-	MARA_PRIVATE MARA_FUNCTION(NAME) { \
-		(void)userdata; \
-		mara_add_native_debug_info(ctx); \
-		MARA_FN_CHECK_ARITY(2); \
-		if (mara_value_is_int(argv[0])) { \
-			MARA_FN_ARG(mara_index_t, lhs, 0); \
-			MARA_FN_ARG(mara_index_t, rhs, 1); \
-			MARA_RETURN_BOOL(lhs OP rhs); \
-		} else if (mara_value_is_real(argv[0])) { \
-			MARA_FN_ARG(mara_real_t, lhs, 0); \
-			MARA_FN_ARG(mara_real_t, rhs, 1); \
-			MARA_RETURN_BOOL(lhs OP rhs); \
-		} else { \
-			return mara_errorf( \
-				ctx, \
-				mara_str_from_literal("core/unexpected-type"), \
-				"Expecting number", \
-				mara_value_from_int(0) \
-			); \
-		} \
-	}
-
-MARA_BIN_OP(MARA_DEFINE_BIN_OP)
-
-MARA_PRIVATE MARA_FUNCTION(mara_core_plus) {
-	(void)userdata;
-	mara_add_native_debug_info(ctx);
-
-	if (argc == 0) {
-		MARA_RETURN(0);
-	}
-	if (mara_value_is_int(argv[0])) {
-		mara_index_t total = 0;
-		for (mara_index_t i = 0; i < argc; ++i) {
-			MARA_FN_ARG(mara_index_t, value, i);
-			total += value;
-		}
-		MARA_RETURN(total);
-	} else if (mara_value_is_real(argv[0])) {
-		mara_real_t total = 0;
-		for (mara_index_t i = 0; i < argc; ++i) {
-			MARA_FN_ARG(mara_real_t, value, i);
-			total += value;
-		}
-		MARA_RETURN(total);
-	} else {
-		return mara_errorf(
-			ctx,
-			mara_str_from_literal("core/unexpected-type"),
-			"Expecting number",
-			mara_value_from_int(0)
-		);
-	}
-}
-
-MARA_PRIVATE MARA_FUNCTION(mara_core_minus) {
-	(void)userdata;
-	mara_add_native_debug_info(ctx);
-	MARA_FN_CHECK_ARITY(1);
-
-	if (argc == 1) {
-		if (mara_value_is_int(argv[0])) {
-			MARA_FN_ARG(mara_index_t, value, 0);
-			MARA_RETURN(-value);
-		} else if (mara_value_is_real(argv[0])) {
-			MARA_FN_ARG(mara_real_t, value, 0);
-			MARA_RETURN(-value);
-		} else {
-			return mara_errorf(
-				ctx,
-				mara_str_from_literal("core/unexpected-type"),
-				"Expecting number",
-				mara_value_from_int(0)
-			);
-		}
-	} else {
-		if (mara_value_is_int(argv[0])) {
-			MARA_FN_ARG(mara_index_t, acc, 0);
-			for (mara_index_t i = 1; i < argc; ++i) {
-				MARA_FN_ARG(mara_index_t, value, i);
-				acc -= value;
-			}
-			MARA_RETURN(acc);
-		} else if (mara_value_is_real(argv[0])) {
-			MARA_FN_ARG(mara_real_t, acc, 0);
-			for (mara_index_t i = 1; i < argc; ++i) {
-				MARA_FN_ARG(mara_real_t, value, i);
-				acc -= value;
-			}
-			MARA_RETURN(acc);
-		} else {
-			return mara_errorf(
-				ctx,
-				mara_str_from_literal("core/unexpected-type"),
-				"Expecting number",
-				mara_value_from_int(0)
-			);
-		}
-	}
-}
+#include "vm_intrinsics.h"
 
 // List
 
@@ -175,13 +66,13 @@ MARA_PRIVATE MARA_FUNCTION(mara_core_module_entry) {
 		.no_alloc = true,
 	};
 
-	MARA_EXPORT_FN(<, mara_core_lt, core_module_options);
-	MARA_EXPORT_FN(<=, mara_core_lte, core_module_options);
-	MARA_EXPORT_FN(>, mara_core_gt, core_module_options);
-	MARA_EXPORT_FN(>=, mara_core_gte, core_module_options);
+	MARA_EXPORT_FN(<, mara_intrin_lt, core_module_options);
+	MARA_EXPORT_FN(<=, mara_intrin_lte, core_module_options);
+	MARA_EXPORT_FN(>, mara_intrin_gt, core_module_options);
+	MARA_EXPORT_FN(>=, mara_intrin_gte, core_module_options);
 
-	MARA_EXPORT_FN(+, mara_core_plus, core_module_options);
-	MARA_EXPORT_FN(-, mara_core_minus, core_module_options);
+	MARA_EXPORT_FN(+, mara_intrin_plus, core_module_options);
+	MARA_EXPORT_FN(-, mara_intrin_minus, core_module_options);
 
 	MARA_EXPORT_FN(list/new, mara_core_list_new, core_module_options);
 	MARA_EXPORT_FN(list/len, mara_core_list_len, core_module_options);
