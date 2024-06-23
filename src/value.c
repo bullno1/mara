@@ -418,7 +418,12 @@ mara_new_ref(mara_exec_ctx_t* ctx, mara_zone_t* zone, void* tag, void* value) {
 }
 
 mara_fn_t*
-mara_new_fn(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_native_fn_t fn, void* userdata) {
+mara_new_fn(
+	mara_exec_ctx_t* ctx,
+	mara_zone_t* zone,
+	mara_native_fn_t fn,
+	mara_native_fn_options_t options
+) {
 	// TODO: Implement light native function like Lua
 	// if userdata == NULL, use a light representation.
 	// Intern the function pointer in the permanent zone.
@@ -427,7 +432,7 @@ mara_new_fn(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_native_fn_t fn, void* 
 
 	mara_native_closure_t* closure = (mara_native_closure_t*)obj->body;
 	closure->fn = fn;
-	closure->userdata = userdata;
+	closure->options = options;
 
 	// Point to the header so we can differentiate between mara and native closures
 	return (mara_fn_t*)obj;

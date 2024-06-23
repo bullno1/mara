@@ -321,7 +321,7 @@ mara_do_print_value(
 			mara_print_indented(
 				output, options.indent,
 				"(native-fn %p %p)",
-				(void*)closure->fn, closure->userdata
+				(void*)closure->fn, closure->options.userdata
 			);
 		} else {
 			mara_vm_closure_t* closure = (mara_vm_closure_t*)obj->body;

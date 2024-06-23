@@ -121,7 +121,8 @@ MARA_PRIVATE MARA_FUNCTION(mara_core_list_new) {
 	if (argc >= 1) {
 		MARA_FN_BIND_ARG(capacity, 0);
 	}
-	MARA_RETURN(mara_new_list(ctx, mara_get_return_zone(ctx), capacity));
+	// This is called in the caller's zone
+	MARA_RETURN(mara_new_list(ctx, mara_get_local_zone(ctx), capacity));
 }
 
 MARA_PRIVATE MARA_FUNCTION(mara_core_list_len) {
@@ -170,19 +171,23 @@ MARA_PRIVATE MARA_FUNCTION(mara_core_module_entry) {
 	(void)userdata;
 	MARA_FN_CHECK_ARITY(3);
 
-	MARA_EXPORT_FN(<, mara_core_lt, NULL);
-	MARA_EXPORT_FN(<=, mara_core_lte, NULL);
-	MARA_EXPORT_FN(>, mara_core_gt, NULL);
-	MARA_EXPORT_FN(>=, mara_core_gte, NULL);
+	mara_native_fn_options_t core_module_options = {
+		.no_alloc = true,
+	};
 
-	MARA_EXPORT_FN(+, mara_core_plus, NULL);
-	MARA_EXPORT_FN(-, mara_core_minus, NULL);
+	MARA_EXPORT_FN(<, mara_core_lt, core_module_options);
+	MARA_EXPORT_FN(<=, mara_core_lte, core_module_options);
+	MARA_EXPORT_FN(>, mara_core_gt, core_module_options);
+	MARA_EXPORT_FN(>=, mara_core_gte, core_module_options);
 
-	MARA_EXPORT_FN(list/new, mara_core_list_new, NULL);
-	MARA_EXPORT_FN(list/len, mara_core_list_len, NULL);
-	MARA_EXPORT_FN(list/push, mara_core_list_push, NULL);
-	MARA_EXPORT_FN(list/set, mara_core_list_set, NULL);
-	MARA_EXPORT_FN(list/get, mara_core_list_get, NULL);
+	MARA_EXPORT_FN(+, mara_core_plus, core_module_options);
+	MARA_EXPORT_FN(-, mara_core_minus, core_module_options);
+
+	MARA_EXPORT_FN(list/new, mara_core_list_new, core_module_options);
+	MARA_EXPORT_FN(list/len, mara_core_list_len, core_module_options);
+	MARA_EXPORT_FN(list/push, mara_core_list_push, core_module_options);
+	MARA_EXPORT_FN(list/set, mara_core_list_set, core_module_options);
+	MARA_EXPORT_FN(list/get, mara_core_list_get, core_module_options);
 
 	MARA_RETURN(mara_value_from_bool(true));
 }
@@ -198,15 +203,19 @@ MARA_PRIVATE MARA_FUNCTION(mara_load_core_module) {
 		return NULL;
 	}
 
-	MARA_RETURN(mara_new_fn(ctx, mara_get_return_zone(ctx), mara_core_module_entry, NULL));
+	mara_native_fn_options_t entry_options = { 0 };
+	MARA_RETURN(mara_new_fn(ctx, mara_get_return_zone(ctx), mara_core_module_entry, entry_options));
 }
 
 void
 mara_add_core_module(mara_exec_ctx_t* ctx) {
+	void* userdata = (void*)(uintptr_t)mara_new_sym(ctx, mara_str_from_literal("core")).internal;
 	mara_fn_t* loader = mara_new_fn(
 		ctx, ctx->current_zone,
 		mara_load_core_module,
-		(void*)(uintptr_t)mara_new_sym(ctx, mara_str_from_literal("core")).internal
+		(mara_native_fn_options_t) {
+			.userdata = userdata,
+		}
 	);
 	mara_add_module_loader(ctx, loader);
 	mara_value_t result;

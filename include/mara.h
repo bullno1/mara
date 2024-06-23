@@ -148,6 +148,12 @@ typedef struct {
 	bool strip_debug_info;
 } mara_compile_options_t;
 
+typedef struct {
+	void* userdata;
+	bool no_alloc;
+	bool no_call;
+} mara_native_fn_options_t;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -319,7 +325,12 @@ MARA_API mara_value_t
 mara_new_sym(mara_exec_ctx_t* ctx, mara_str_t name);
 
 MARA_API mara_fn_t*
-mara_new_fn(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_native_fn_t fn, void* userdata);
+mara_new_fn(
+	mara_exec_ctx_t* ctx,
+	mara_zone_t* zone,
+	mara_native_fn_t fn,
+	mara_native_fn_options_t options
+);
 
 MARA_API mara_list_t*
 mara_new_list(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_index_t initial_capacity);

@@ -82,7 +82,8 @@ TEST(runtime, map) {
 	ASSERT_EQ(value_int, 2);
 
 	iterator_state_t iterator_state = { 0 };
-	mara_fn_t* fn = mara_new_fn(ctx, mara_get_local_zone(ctx), iterate_map, &iterator_state);
+	mara_native_fn_options_t options = { .userdata = &iterator_state };
+	mara_fn_t* fn = mara_new_fn(ctx, mara_get_local_zone(ctx), iterate_map, options);
 	mara_map_foreach(ctx, map, fn);
 
 	ASSERT_EQ(iterator_state.num_elements, 2);

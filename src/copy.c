@@ -88,7 +88,7 @@ mara_deep_copy(
 				// TODO: Light native representation can skip copying
 				mara_native_closure_t* closure = (mara_native_closure_t*)obj->body;
 				mara_value_t result = mara_value_from_fn(
-					mara_new_fn(ctx, target_zone, closure->fn, closure->userdata)
+					mara_new_fn(ctx, target_zone, closure->fn, closure->options)
 				);
 				mara_ptr_map_put(ctx, local_zone, copied_objs, obj, mara_value_to_obj(result));
 				return result;
@@ -203,7 +203,7 @@ mara_copy(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_value_t value) {
 			{
 				mara_native_closure_t* closure = (mara_native_closure_t*)obj->body;
 				return mara_value_from_fn(
-					mara_new_fn(ctx, zone, closure->fn, closure->userdata)
+					mara_new_fn(ctx, zone, closure->fn, closure->options)
 				);
 			}
 		case MARA_OBJ_TYPE_LIST:

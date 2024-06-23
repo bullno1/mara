@@ -1,4 +1,5 @@
 #include "internal.h"
+#include "vendor/nanbox.h"
 
 #if defined(__GNUC__)
 

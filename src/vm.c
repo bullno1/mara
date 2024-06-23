@@ -95,14 +95,16 @@ mara_call(
 
 	mara_error_t* error = NULL;
 	if (obj->type == MARA_OBJ_TYPE_NATIVE_CLOSURE) {
-		mara_zone_enter_new(ctx, (mara_zone_options_t){
-			.argc = argc,
-			.argv = argv,
-		});
+		mara_native_closure_t* closure = (mara_native_closure_t*)obj->body;
+		if (!closure->options.no_alloc) {
+			mara_zone_enter_new(ctx, (mara_zone_options_t){
+				.argc = argc,
+				.argv = argv,
+			});
+		}
 
 		mara_value_t return_value = mara_nil();
-		mara_native_closure_t* closure = (mara_native_closure_t*)obj->body;
-		error = closure->fn(ctx, argc, argv, closure->userdata, &return_value);
+		error = closure->fn(ctx, argc, argv, closure->options.userdata, &return_value);
 		if (error == NULL) {
 			// Copy in case the function allocates in its local zone
 			*result = mara_copy(ctx, zone, return_value);
@@ -297,15 +299,15 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
                         ctx, next_closure, frame_state
                     );
 
-                    mara_zone_enter_new(
-                        ctx, (mara_zone_options_t){
-                            .argc = operands,
-                            .argv = sp,
-                        }
-                    );
-
                     if(next_closure != NULL) {
                         if (MARA_EXPECT(next_closure->fn->num_args <= (mara_index_t)operands)) {
+							mara_zone_enter_new(
+								ctx, (mara_zone_options_t){
+									.argc = operands,
+									.argv = sp,
+								}
+							);
+
                             args = sp;
                             fp = stackframe;
                             sp = stackframe->stack + next_closure->fn->num_locals;
@@ -321,19 +323,28 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
                             );
                         }
                     } else {
+                        mara_native_closure_t* native_closure = (mara_native_closure_t*)fn->body;
+						if (!native_closure->options.no_alloc) {
+							mara_zone_enter_new(
+								ctx, (mara_zone_options_t){
+									.argc = operands,
+									.argv = sp,
+								}
+							);
+						}
+
                         args = sp;
                         fp = stackframe;
                         sp = NULL;
                         ip = NULL;
                         MARA_VM_SAVE_STATE(vm);
 
-                        mara_native_closure_t* native_closure = (mara_native_closure_t*)fn->body;
                         mara_value_t result = mara_nil();
                         mara_check_error(
                             native_closure->fn(
                                 ctx,
                                 operands, args,
-                                native_closure->userdata,
+                                native_closure->options.userdata,
                                 &result
                             )
                         );

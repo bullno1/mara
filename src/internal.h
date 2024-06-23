@@ -242,7 +242,7 @@ typedef struct {
 
 typedef struct {
 	mara_native_fn_t fn;
-	void* userdata;
+	mara_native_fn_options_t options;
 } mara_native_closure_t;
 
 typedef struct mara_stack_frame_s mara_stack_frame_t;
