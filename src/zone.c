@@ -60,7 +60,6 @@ mara_zone_enter(mara_exec_ctx_t* ctx, mara_zone_t* zone) {
 	ctx->current_zone = zone;
 
 	// Reset error
-	ctx->last_error = (mara_error_t){ 0 };
 	mara_zone_cleanup(ctx->env, &ctx->error_zone);
 }
 
