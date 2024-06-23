@@ -92,6 +92,12 @@ mara_begin(mara_env_t* env) {
 		sizeof(mara_value_t) * env->options.max_stack,
 		_Alignof(mara_value_t)
 	);
+	ctx->zone_bookmarks = mara_arena_alloc_ex(
+		env,
+		&ctx->control_arena,
+		sizeof(mara_zone_bookmark_t) * env->options.max_stackframes,
+		_Alignof(mara_zone_bookmark_t)
+	);
 	mara_zone_enter_new(ctx, (mara_zone_options_t){ 0 });
 	env->ref_count += 1;
 	return ctx;

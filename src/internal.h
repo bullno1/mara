@@ -174,7 +174,6 @@ typedef struct {
 typedef struct mara_zone_bookmark_s {
 	mara_zone_t* previous_zone;
 	struct mara_zone_bookmark_s* previous_bookmark;
-	mara_arena_snapshot_t control_snapshot;
 } mara_zone_bookmark_t;
 
 typedef struct mara_module_loader_entry_s {

@@ -1,5 +1,4 @@
 #include "internal.h"
-#include "vendor/nanbox.h"
 
 #if defined(__GNUC__)
 
@@ -101,15 +100,10 @@ mara_zone_enter_new(mara_exec_ctx_t* ctx, mara_zone_options_t options) {
 
 void
 mara_zone_enter(mara_exec_ctx_t* ctx, mara_zone_t* zone) {
-	mara_arena_snapshot_t control_snapshot = mara_arena_snapshot(
-		ctx->env, &ctx->control_arena
-	);
-	mara_zone_bookmark_t* bookmark = MARA_ARENA_ALLOC_TYPE(
-		ctx->env, &ctx->control_arena, mara_zone_bookmark_t
-	);
+	mara_zone_bookmark_t* bookmark = ctx->zone_bookmarks;
+	ctx->zone_bookmarks++;
 	bookmark->previous_bookmark = ctx->current_zone_bookmark;
 	bookmark->previous_zone = ctx->current_zone;
-	bookmark->control_snapshot = control_snapshot;
 
 	zone->ref_count += 1;
 
@@ -128,7 +122,7 @@ mara_zone_exit(mara_exec_ctx_t* ctx) {
 	mara_zone_bookmark_t* bookmark = ctx->current_zone_bookmark;
 	ctx->current_zone = bookmark->previous_zone;
 	ctx->current_zone_bookmark = bookmark->previous_bookmark;
-	mara_arena_restore(ctx->env, &ctx->control_arena, bookmark->control_snapshot);
+	ctx->zone_bookmarks = bookmark;
 
 	if (--current_zone->ref_count == 0) {
 		mara_zone_cleanup(ctx->env, current_zone);
