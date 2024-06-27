@@ -42,6 +42,16 @@ if (MSVC)
 	# 4200: Flexible array member is a standard feature since C99
 	add_compile_options(/W4 /WX /wd4200)
 	add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
+
+	# Because CMake can't set proper flags even with CMAKE_INTERPROCEDURAL_OPTIMIZATION_Release
+	set(RELEASE_COMPILER_FLAGS "/Gy;/Ob2;/GL;/Oi")
+	set(RELEASE_LINKER_FLAGS "/LTCG")
+
+	add_compile_options("$<$<CONFIG:Release>:${RELEASE_COMPILER_FLAGS}>")
+	add_link_options("$<$<CONFIG:Release>:${RELEASE_LINKER_FLAGS}>")
+
+	add_compile_options("$<$<CONFIG:RelWithDebInfo>:${RELEASE_COMPILER_FLAGS}>")
+	add_link_options("$<$<CONFIG:RelWithDebInfo>:${RELEASE_LINKER_FLAGS}>")
 else()
 	add_compile_options(-Wall -Wextra -pedantic -Werror)
 endif()
