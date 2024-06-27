@@ -166,7 +166,7 @@ mara_call(
 			mara_decode_instruction(instruction, &opcode, &operands); \
 		} while (0); \
 		goto *dispatch_table[opcode];
-#	define MARA_BEGIN_DISPATCH(OPCODE) \
+#	define MARA_BEGIN_DISPATCH() \
 		static void* dispatch_table[] = { \
 			MARA_OPCODE(MARA_MAKE_DISPATCH_TABLE) \
 		}; \
@@ -191,7 +191,7 @@ mara_call(
 		switch (opcode) { \
 			MARA_OPCODE(MARA_DISPATCH_ENTRY) \
 		}
-#	define MARA_BEGIN_DISPATCH(OPCODE) \
+#	define MARA_BEGIN_DISPATCH() \
 		MARA_DISPATCH_NEXT()
 #	define MARA_BEGIN_OP(NAME) MARA_OP_##NAME: {
 #	define MARA_END_OP() MARA_DISPATCH_NEXT() }
@@ -201,6 +201,17 @@ mara_call(
 			operands = OPERANDS; \
 			goto MARA_OP_##NAME; \
 		} while (0)
+#endif
+
+MARA_WARNING_PUSH()
+#if defined(__clang__)
+#pragma clang diagnostic ignored "-Wgnu-label-as-value"
+#elif defined(_MSC_VER)
+// MARA_END_OP is not reachable when following MARA_DISPATCH_OP
+// The warning is unnecessary.
+// MARA_END_OP is there to serve as a closing block annotation.
+// The code will get eliminated anyway.
+#pragma warning(disable: 4702)
 #endif
 
 MARA_PRIVATE mara_error_t*
@@ -248,11 +259,7 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
     mara_opcode_t opcode;
     mara_operand_t operands;
 
-    MARA_WARNING_PUSH()
-#if defined(__clang__)
-#pragma clang diagnostic ignored "-Wgnu-label-as-value"
-#endif
-    MARA_BEGIN_DISPATCH(opcode)
+    MARA_BEGIN_DISPATCH()
         MARA_BEGIN_OP(NOP)
         MARA_END_OP()
         MARA_BEGIN_OP(NIL)
@@ -565,5 +572,5 @@ invalid_type:
             );
 #endif
     MARA_END_DISPATCH()
-    MARA_WARNING_POP()
 }
+MARA_WARNING_POP()
