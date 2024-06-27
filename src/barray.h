@@ -13,6 +13,14 @@
 #define BARRAY_CTX_TYPE void*
 #endif
 
+#ifndef BARRAY_ALIGN_TYPE
+#	ifdef _MSC_VER
+#		define BARRAY_ALIGN_TYPE long double
+#	else
+#		define BARRAY_ALIGN_TYPE max_align_t
+#	endif
+#endif
+
 #define barray(T) T*
 
 #define barray_push(ctx, array, element) \
@@ -38,7 +46,7 @@
 typedef struct {
 	size_t capacity;
 	size_t len;
-	_Alignas(max_align_t) char elems[];
+	_Alignas(BARRAY_ALIGN_TYPE) char elems[];
 } barray_header_t;
 
 #ifdef BARRAY_USE_STD_REALLOC

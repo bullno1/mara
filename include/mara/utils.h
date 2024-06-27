@@ -21,7 +21,8 @@
 
 #define mara_add_native_debug_info(ctx) \
 	do { \
-		static mara_source_info_t native_debug_info = { \
+		static mara_source_info_t native_debug_info; \
+		native_debug_info = (mara_source_info_t){ \
 			.filename = mara_str_from_literal(__FILE__), \
 			.range = { \
 				.start = { .line = __LINE__, .col = 1, .byte_offset = 0 }, \
@@ -39,7 +40,7 @@ typedef struct mara_str_reader_s {
 static inline mara_str_t
 mara_str_from_cstr(const char* cstr) {
 	return (mara_str_t){
-		.len = strlen(cstr),
+		.len = (mara_index_t)strlen(cstr),
 		.data = cstr,
 	};
 }
@@ -63,7 +64,7 @@ mara_write(const void* buffer, mara_index_t size, mara_writer_t writer) {
 static inline mara_index_t
 mara_read_from_str(void* buffer, mara_index_t size, void* userdata) {
 	mara_str_reader_t* reader = userdata;
-	mara_index_t bytes_left = reader->str.len - reader->read_offset;
+	mara_index_t bytes_left = (mara_index_t)(reader->str.len - reader->read_offset);
 	mara_index_t bytes_to_read = mara_min(size, bytes_left);
 	memcpy(buffer, reader->str.data + reader->read_offset, bytes_to_read);
 	reader->read_offset += bytes_to_read;

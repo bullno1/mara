@@ -71,7 +71,7 @@ mara_arena_alloc_ex(mara_env_t* env, mara_arena_t* arena, size_t size, size_t al
 
 void*
 mara_arena_alloc(mara_env_t* env, mara_arena_t* arena, size_t size) {
-	return mara_arena_alloc_ex(env, arena, size, _Alignof(max_align_t));
+	return mara_arena_alloc_ex(env, arena, size, _Alignof(MARA_ALIGN_TYPE));
 }
 
 mara_arena_snapshot_t

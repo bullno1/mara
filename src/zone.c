@@ -14,7 +14,7 @@ mara_ffs(uint32_t mask) {
 MARA_PRIVATE uint32_t
 mara_ffs(uint32_t mask) {
     unsigned long i;
-    _BitScanForward(&i, x);
+    _BitScanForward(&i, mask);
 	return i;
 }
 

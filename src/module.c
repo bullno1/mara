@@ -257,17 +257,17 @@ mara_import(
 					mara_value_to_fn(ctx, loaders->elems[i], &loader)
 				);
 				if (MARA_EXPECT(loader != NULL)) {
-					mara_value_t result;
+					mara_value_t call_result;
 					mara_value_t args[] = { module_name_sym, calling_module };
 					mara_error_t* load_error = mara_call(
 						ctx, ctx->current_zone,
 						loader, mara_count_of(args), args,
-						&result
+						&call_result
 					);
 					// TODO: where to output warning?
-					if (load_error == NULL && mara_value_is_fn(result)) {
+					if (load_error == NULL && mara_value_is_fn(call_result)) {
 						mara_assert_no_error(
-							mara_value_to_fn(ctx, result, &module_entry)
+							mara_value_to_fn(ctx, call_result, &module_entry)
 						);
 						break;
 					}

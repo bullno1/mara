@@ -31,7 +31,8 @@ mara_vm_alloc_stack_frame(mara_exec_ctx_t* ctx, mara_vm_closure_t* closure, mara
 	} else {
 		stackframe = &ctx->stack_frames[ctx->num_stack_frames++];
 		stackframe->closure = NULL;
-		static mara_source_info_t default_debug_info = {
+		static mara_source_info_t default_debug_info;
+		default_debug_info = (mara_source_info_t){
 			.filename = mara_str_from_literal("<native>"),
 		};
 		stackframe->native_debug_info = &default_debug_info;
@@ -290,6 +291,9 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
             *(++sp) = stack_top = closure->captures[operands];
         MARA_END_OP()
         MARA_BEGIN_OP(CALL)
+#ifdef _MSC_VER
+		MARA_OP_CALL:
+#endif
 			sp -= operands;
 
 			if (MARA_EXPECT(mara_value_is_obj(stack_top))) {
@@ -344,15 +348,15 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 					ip = NULL;
 					MARA_VM_SAVE_STATE(vm);
 
-					mara_value_t result = mara_nil();
+					mara_value_t call_result = mara_nil();
 					error = native_closure->fn(
 						ctx,
 						operands, args,
 						native_closure->options.userdata,
-						&result
+						&call_result
 					);
 					if (MARA_EXPECT(error == NULL)) {
-						mara_value_t result_copy = mara_copy(ctx, return_zone, result);
+						mara_value_t result_copy = mara_copy(ctx, return_zone, call_result);
 
 						mara_vm_pop_stack_frame(ctx, stackframe);
 						MARA_VM_LOAD_STATE(vm);

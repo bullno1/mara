@@ -12,6 +12,12 @@
 #define MARA_NUM_ARENAS (sizeof(MARA_ARENA_MASK_TYPE) * CHAR_BIT)
 #define MARA_DEBUG_INFO_SELF ((mara_index_t)-1)
 
+#ifdef _MSC_VER
+#define MARA_ALIGN_TYPE long double
+#else
+#define MARA_ALIGN_TYPE max_align_t
+#endif
+
 #define MARA_PRIVATE static inline
 // TODO: panic handler for assert cases
 #define mara_assert(cond, msg) assert((cond) && (msg))
@@ -95,7 +101,7 @@ typedef struct {
 	mara_obj_type_t type;
 	mara_arena_mask_t arena_mask;
 	mara_zone_t* zone;
-	_Alignas(max_align_t) char body[];
+	_Alignas(MARA_ALIGN_TYPE) char body[];
 } mara_obj_t;
 
 typedef struct {

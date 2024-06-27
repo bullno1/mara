@@ -296,7 +296,7 @@ mara_compiler_end_function(mara_compile_ctx_t* ctx) {
 	mara_zone_t* local_zone = mara_get_local_zone(exec_ctx);
 
 	// Remove NIL POP pairs
-	mara_index_t num_instructions = barray_len(fn_scope->instructions);
+	mara_index_t num_instructions = (mara_index_t)barray_len(fn_scope->instructions);
 	{
 		mara_index_t out_index = 0;
 		for (mara_index_t i = 0; i < num_instructions; ++i) {
@@ -456,7 +456,7 @@ mara_compiler_end_function(mara_compile_ctx_t* ctx) {
 	}
 
 	// Sub functions
-	mara_index_t num_functions = barray_len(fn_scope->functions);
+	mara_index_t num_functions = (mara_index_t)barray_len(fn_scope->functions);
 	mara_vm_function_t** functions = mara_zone_alloc_ex(
 		exec_ctx, permanent_zone,
 		sizeof(mara_vm_function_t*) * num_functions, _Alignof(mara_vm_function_t*)
@@ -540,7 +540,7 @@ mara_compiler_find_name(
 	mara_exec_ctx_t* exec_ctx = ctx->exec_ctx;
 	mara_value_t index = mara_nil();
 	bool is_new_capture = false;
-	mara_opcode_t load_opcode;
+	mara_opcode_t load_opcode = MARA_OP_NOP;
 
 	// Search upward for the variable
 	for (
@@ -916,7 +916,7 @@ mara_compile_fn(mara_compile_ctx_t* ctx, mara_list_t* list) {
 	// Finish the sub function and emit closure
 	mara_check_error(mara_compiler_emit(ctx, MARA_OP_RETURN, 0, 0));
 	mara_vm_function_t* subfunction = mara_compiler_end_function(ctx);
-	mara_index_t function_index = barray_len(fn_scope->functions);
+	mara_index_t function_index = (mara_index_t)barray_len(fn_scope->functions);
 	barray_push(ctx->exec_ctx->env, fn_scope->functions, subfunction);
 	mara_operand_t operand = ((function_index & 0xff) << 16) | (num_captures & 0xffff);
 	mara_check_error(mara_compiler_emit(ctx, MARA_OP_MAKE_CLOSURE, operand, 1));

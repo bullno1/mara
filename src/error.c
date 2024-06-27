@@ -67,7 +67,7 @@ mara_errorv(
 				*frame = *itr->native_debug_info;
 			} else if (closure->fn->source_info != NULL) {
 				mara_source_info_t* debug_info = closure->fn->source_info;
-				mara_index_t instruction_offset = vm_state.ip - closure->fn->instructions - 1;
+				mara_index_t instruction_offset = (mara_index_t)(vm_state.ip - closure->fn->instructions - 1);
 				*frame = debug_info[instruction_offset];
 			} else {
 				*frame = (mara_source_info_t){

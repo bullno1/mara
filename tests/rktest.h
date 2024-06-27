@@ -237,8 +237,8 @@ int rktest_main(int argc, const char* argv[]);
 #define EXPECT_LONG_GT(lhs, rhs) RKTEST_CHECK_CMP(long, "%ld", lhs, rhs, >, RKTEST_CHECK_EXPECT, " ")
 #define EXPECT_LONG_GE(lhs, rhs) RKTEST_CHECK_CMP(long, "%ld", lhs, rhs, >=, RKTEST_CHECK_EXPECT, " ")
 
-#define ASSERT_LONG_EQ(lhs, rhs) RKTEST_CHECK_EQ(long, "%ld", lhs, rhs, RKTEST_CHECK_ASSERT, " ")
-#define ASSERT_LONG_NE(lhs, rhs) RKTEST_CHECK_CMP(long, "%ld", lhs, rhs, !=, RKTEST_CHECK_ASSERT, " ")
+#define ASSERT_LONG_EQ(lhs, rhs) RKTEST_CHECK_EQ(long long, "%lld", lhs, rhs, RKTEST_CHECK_ASSERT, " ")
+#define ASSERT_LONG_NE(lhs, rhs) RKTEST_CHECK_CMP(long long, "%lld", lhs, rhs, !=, RKTEST_CHECK_ASSERT, " ")
 #define ASSERT_LONG_LT(lhs, rhs) RKTEST_CHECK_CMP(long, "%ld", lhs, rhs, <, RKTEST_CHECK_ASSERT, " ")
 #define ASSERT_LONG_LE(lhs, rhs) RKTEST_CHECK_CMP(long, "%ld", lhs, rhs, <=, RKTEST_CHECK_ASSERT, " ")
 #define ASSERT_LONG_GT(lhs, rhs) RKTEST_CHECK_CMP(long, "%ld", lhs, rhs, >, RKTEST_CHECK_ASSERT, " ")

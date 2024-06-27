@@ -26,14 +26,14 @@ TEST(runtime, symbol) {
 
 	mara_value_t abc = mara_new_sym(fixture.ctx, mara_str_from_cstr(cstr));
 	mara_value_t abc2 = mara_new_sym(fixture.ctx, mara_str_from_literal("abc"));
-	ASSERT_EQ(abc.internal, abc2.internal);
+	ASSERT_LONG_EQ(abc.internal, abc2.internal);
 
 	cstr[2] = 'f';
 	mara_value_t abf = mara_new_sym(fixture.ctx, mara_str_from_cstr(cstr));
-	ASSERT_NE(abf.internal, abc.internal);
+	ASSERT_LONG_NE(abf.internal, abc.internal);
 
 	mara_value_t abf2 = mara_new_sym(fixture.ctx, mara_str_from_literal("abf"));
-	ASSERT_EQ(abf.internal, abf2.internal);
+	ASSERT_LONG_EQ(abf.internal, abf2.internal);
 }
 
 static inline mara_error_t*
@@ -60,7 +60,7 @@ TEST(runtime, map) {
 
 	mara_value_t a = mara_new_sym(ctx, mara_str_from_literal("a"));
 	mara_value_t b = mara_new_sym(ctx, mara_str_from_literal("b"));
-	ASSERT_NE(a.internal, b.internal);
+	ASSERT_LONG_NE(a.internal, b.internal);
 
 	mara_value_t value = mara_map_get(ctx, map, a);
 	ASSERT_TRUE(mara_value_is_nil(value));

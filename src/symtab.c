@@ -26,8 +26,8 @@ mara_index_t
 mara_symtab_intern(mara_env_t* env, mara_symtab_t* symtab, mara_str_t string) {
 	mara_index_t index_itr = symtab->len > 0 ? 0 : -1;
 	uint64_t hash_itr = mara_XXH3_64bits(string.data, string.len);
-	mara_index_t last_node_index = -1;
-	mara_index_t last_hash_itr = -1;
+	mara_index_t last_node_index = index_itr;
+	uint64_t last_hash_itr = hash_itr;
 	for (; index_itr >= 0; hash_itr >>= BHAMT_NUM_BITS) {
 		mara_symtab_node_t* node = &symtab->nodes[index_itr];
 		if (mara_str_equal(node->key, string)) {
@@ -48,7 +48,7 @@ mara_symtab_intern(mara_env_t* env, mara_symtab_t* symtab, mara_str_t string) {
 		if (current_len >= symtab->capacity) {
 			mara_index_t new_capacity = current_capacity > 0
 				? current_capacity * 2
-				: MARA_NUM_BUILTIN_SYMBOLS * 2;
+				: (mara_index_t)MARA_NUM_BUILTIN_SYMBOLS * 2;
 			symtab->nodes = mara_realloc(
 				env->options.allocator,
 				symtab->nodes,

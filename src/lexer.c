@@ -145,7 +145,7 @@ mara_lexer_make_token(mara_lexer_t* lexer, mara_token_type_t type) {
 	return (mara_token_t) {
 		.type = type,
 		.lexeme = {
-			.len = lexer->capture_len,
+			.len = (mara_index_t)lexer->capture_len,
 			.data = capturing ? lexer->capture_buf : NULL,
 		},
 		.location = {
@@ -182,7 +182,7 @@ mara_lexer_continue_number(mara_exec_ctx_t* ctx, mara_lexer_t* lexer, mara_token
 					"Badly formatted number",
 					mara_new_str(ctx, mara_get_error_zone(ctx), (mara_str_t){
 						.data = lexer->capture_buf,
-						.len = lexer->capture_len,
+						.len = (mara_index_t)lexer->capture_len,
 					})
 				);
 			} else {
