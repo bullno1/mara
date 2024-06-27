@@ -158,49 +158,67 @@ mara_call(
 // It has to be here so that certain functions are inlined
 
 #if defined(__GNUC__) || defined(__clang__)
-#	define MARA_MAKE_DISPATCH_TABLE(X) &&MARA_OP_##X,
+#	define MARA_DISPATCH_ENTRY(X) &&MARA_OP_##X,
 #	define MARA_DISPATCH_NEXT() \
-		do { \
+		{ \
 			mara_instruction_t instruction = *ip; \
 			++ip; \
 			mara_decode_instruction(instruction, &opcode, &operands); \
-		} while (0); \
+		} \
 		goto *dispatch_table[opcode];
 #	define MARA_BEGIN_DISPATCH() \
 		static void* dispatch_table[] = { \
-			MARA_OPCODE(MARA_MAKE_DISPATCH_TABLE) \
+			MARA_OPCODE(MARA_DISPATCH_ENTRY) \
 		}; \
 		MARA_DISPATCH_NEXT()
 #	define MARA_BEGIN_OP(NAME) MARA_OP_##NAME: {
-#	define MARA_END_OP() MARA_DISPATCH_NEXT() }
+#	define MARA_END_OP() } MARA_DISPATCH_NEXT()
 #	define MARA_END_DISPATCH()
 #	define MARA_DISPATCH_OP(NAME, OPERANDS) \
-		do { \
+		{ \
 			operands = OPERANDS; \
 			goto MARA_OP_##NAME; \
-		} while (0)
-#else
+		}
+#elif !defined(_MSC_VER)
 #	define MARA_DISPATCH_ENTRY(X) \
 		case MARA_OP_##X: goto MARA_OP_##X;
 #	define MARA_DISPATCH_NEXT() \
-		do { \
+		{ \
 			mara_instruction_t instruction = *ip; \
 			++ip; \
 			mara_decode_instruction(instruction, &opcode, &operands); \
-		} while (0); \
+		}; \
 		switch (opcode) { \
 			MARA_OPCODE(MARA_DISPATCH_ENTRY) \
 		}
 #	define MARA_BEGIN_DISPATCH() \
 		MARA_DISPATCH_NEXT()
 #	define MARA_BEGIN_OP(NAME) MARA_OP_##NAME: {
-#	define MARA_END_OP() MARA_DISPATCH_NEXT() }
+#	define MARA_END_OP() } MARA_DISPATCH_NEXT()
 #	define MARA_END_DISPATCH()
 #	define MARA_DISPATCH_OP(NAME, OPERANDS) \
-		do { \
+		{ \
 			operands = OPERANDS; \
 			goto MARA_OP_##NAME; \
-		} while (0)
+		}
+#else
+#	define MARA_BEGIN_DISPATCH() \
+		while (true) { \
+			{ \
+				mara_instruction_t instruction = *ip; \
+				++ip; \
+				mara_decode_instruction(instruction, &opcode, &operands); \
+			} \
+			redispatch: switch (opcode) {
+#	define MARA_BEGIN_OP(NAME) case MARA_OP_##NAME: {
+#	define MARA_END_OP() } continue;
+#	define MARA_END_DISPATCH() }}
+#	define MARA_DISPATCH_OP(NAME, OPERANDS) \
+		{ \
+			opcode = MARA_OP_##NAME; \
+			operands = OPERANDS; \
+			goto redispatch; \
+		}
 #endif
 
 MARA_WARNING_PUSH()
