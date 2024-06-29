@@ -42,6 +42,16 @@ mara_list_reserve(
 	obj->capacity = new_capacity;
 }
 
+MARA_PRIVATE mara_value_t
+mara_list_do_set(mara_exec_ctx_t* ctx, mara_list_t* list, mara_index_t index, mara_value_t value) {
+	mara_obj_t* header = mara_header_of(list);
+	mara_value_t copy = mara_copy(ctx, header->zone, value);
+	mara_obj_add_arena_mask(header, copy);
+	mara_value_t old_value = list->elems[index];
+	list->elems[index] = copy;
+	return old_value;
+}
+
 mara_list_t*
 mara_new_list(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_index_t initial_capacity) {
 	mara_obj_t* obj = mara_alloc_obj(
@@ -85,13 +95,13 @@ mara_list_get(mara_exec_ctx_t* ctx, mara_list_t* list, mara_index_t index) {
 
 mara_value_t
 mara_list_set(mara_exec_ctx_t* ctx, mara_list_t* list, mara_index_t index, mara_value_t value) {
-	if (MARA_EXPECT(0 <= index && index < list->len)) {
-		mara_obj_t* header = mara_header_of(list);
-		mara_value_t copy = mara_copy(ctx, header->zone, value);
-		mara_obj_add_arena_mask(header, copy);
-		mara_value_t old_value = list->elems[index];
-		list->elems[index] = copy;
-		return old_value;
+	if (MARA_EXPECT(0 <= index)) {
+		if (MARA_EXPECT(index < list->len)) {
+			return mara_list_do_set(ctx, list, index, value);
+		} else {
+			mara_list_resize(ctx, list, index + 1);
+			return mara_list_do_set(ctx, list, index, value);
+		}
 	} else {
 		return mara_nil();
 	}
