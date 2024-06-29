@@ -55,7 +55,10 @@ mara_zone_exit(mara_exec_ctx_t* ctx, mara_zone_t* zone) {
 void
 mara_zone_cleanup(mara_env_t* env, mara_zone_t* zone) {
 	if (zone->arena != NULL) {
-		// FIXME: What if the arena is on the heap??
+		// In case the arena is allocated on the heap, release the chunks first.
+		// This should be safe as finalizers deal with unmanaged heap memory.
+		mara_arena_restore(env, zone->arena, zone->arena_snapshot);
+
 		for (
 			mara_finalizer_t* itr = zone->finalizers;
 			itr != NULL;
@@ -63,8 +66,6 @@ mara_zone_cleanup(mara_env_t* env, mara_zone_t* zone) {
 		) {
 			itr->callback.fn(env, itr->callback.userdata);
 		}
-
-		mara_arena_restore(env, zone->arena, zone->arena_snapshot);
 	}
 }
 
