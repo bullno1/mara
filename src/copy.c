@@ -174,14 +174,19 @@ mara_deep_copy(
 MARA_PRIVATE mara_value_t
 mara_start_deep_copy(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_value_t value) {
 	// value is not included because we are not modifying it
-	mara_zone_enter_new(ctx, &(mara_zone_options_t){
-		.num_marked_zones = 1,
-		.marked_zones = (mara_zone_t*[]){ zone },
+	mara_zone_t* copy_zone = mara_zone_enter(ctx, (mara_zone_options_t){
+		.return_zone = zone,
 	});
-	mara_ptr_map_t copied_objs = { .root = NULL };
-	mara_value_t result = mara_deep_copy(ctx, zone, &copied_objs, value);
-	mara_zone_exit(ctx);
-	return result;
+
+	if (MARA_EXPECT(copy_zone != NULL)) {
+		mara_ptr_map_t copied_objs = { .root = NULL };
+		mara_value_t result = mara_deep_copy(ctx, zone, &copied_objs, value);
+		mara_zone_exit(ctx, copy_zone);
+		return result;
+	} else {
+		mara_assert(copy_zone != NULL, "Zone limit reached");
+		return mara_nil();
+	}
 }
 
 mara_value_t

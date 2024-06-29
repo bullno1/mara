@@ -23,14 +23,6 @@ mara_create_env(mara_env_options_t options) {
 		options.alloc_chunk_size = 4096 * 4;
 	}
 
-	if (options.max_stack <= 0) {
-		options.max_stack = 512;
-	}
-
-	if (options.max_stackframes <= 0) {
-		options.max_stackframes = 512;
-	}
-
 	mem_layout_t layout = 0;
 	mem_layout_reserve(&layout, sizeof(mara_env_t), _Alignof(mara_env_t));
 	ptrdiff_t dummy_chunk_offset = mem_layout_reserve(&layout, sizeof(mara_arena_chunk_t), _Alignof(mara_arena_chunk_t));
@@ -44,16 +36,13 @@ mara_create_env(mara_env_options_t options) {
 
 	*env = (mara_env_t){
 		.options = options,
-		.permanent_zone = {
-			.ref_count = 1,
-			.level = -2,
-		},
+		.permanent_zone.level = -1,
 		.dummy_chunk = dummy_chunk,
 	};
 	mara_arena_init(env, &env->permanent_arena);
 
 	env->permanent_zone.arena = &env->permanent_arena;
-	env->permanent_zone.local_snapshot = mara_arena_snapshot(env, &env->permanent_arena);
+	env->permanent_zone.arena_snapshot = mara_arena_snapshot(env, &env->permanent_arena);
 	mara_symtab_init(env, &env->symtab);
 
 	return env;
@@ -74,69 +63,98 @@ mara_destroy_env(mara_env_t* env) {
 }
 
 mara_exec_ctx_t*
-mara_begin(mara_env_t* env) {
-	mara_arena_t control_arena;
-	mara_arena_init(env, &control_arena);
+mara_begin(mara_env_t* env, mara_exec_options_t options) {
+	if (options.max_stack_size <= 0) {
+		options.max_stack_size = 256;
+	}
 
-	mara_exec_ctx_t* ctx = MARA_ARENA_ALLOC_TYPE(env, &control_arena, mara_exec_ctx_t);
+	if (options.max_stack_frames <= 0) {
+		options.max_stack_frames = 64;
+	}
+
+	mem_layout_t layout = 0;
+	mem_layout_reserve(&layout, sizeof(mara_exec_ctx_t), _Alignof(mara_exec_ctx_t));
+
+	ptrdiff_t zones_offset = mem_layout_reserve(
+		&layout,
+		sizeof(mara_zone_t) * options.max_stack_frames,
+		_Alignof(mara_zone_t)
+	);
+	ptrdiff_t stack_frames_offset = mem_layout_reserve(
+		&layout,
+		sizeof(mara_stack_frame_t) * options.max_stack_frames,
+		_Alignof(mara_stack_frame_t)
+	);
+	ptrdiff_t stack_offset = mem_layout_reserve(
+		&layout,
+		sizeof(mara_value_t) * options.max_stack_size,
+		_Alignof(mara_value_t)
+	);
+
+	size_t ctx_size = mem_layout_size(&layout);
+
+	mara_exec_ctx_t* ctx;
+	if (env->free_contexts != NULL && env->free_contexts->size >= ctx_size) {
+		ctx = env->free_contexts;
+		env->free_contexts = ctx->next;
+		ctx_size = ctx->size;
+	} else {
+		ctx = mara_arena_alloc(env, &env->permanent_arena, ctx_size);
+	}
+
+	mara_zone_t* current_zone = mem_layout_locate(ctx, zones_offset);
+	mara_value_t* stack_base = mem_layout_locate(ctx, stack_offset);
+	mara_stack_frame_t* current_stack_frame = mem_layout_locate(ctx, stack_frames_offset);
 	*ctx = (mara_exec_ctx_t){
 		.env = env,
-		.error_zone = {
-			.ref_count = 1,
-			.level = -1,
-		},
-		.control_arena = control_arena,
+		.size = ctx_size,
 		.current_module_options.module_name = mara_str_from_literal("."),
+		.current_zone = current_zone,
+		.stack_frames_begin = current_stack_frame,
+		.vm_state.fp = current_stack_frame,
+		.zones_end = current_zone + options.max_stack_frames,
+		.stack_end = stack_base + options.max_stack_size,
+		.stack_frames_end = current_stack_frame + options.max_stack_frames,
+		.error_zone = {
+			.arena = &ctx->error_arena,
+			.level = options.max_stack_frames,
+		},
 	};
+
 	mara_arena_init(env, &ctx->error_arena);
+	ctx->error_zone.arena_snapshot = mara_arena_snapshot(env, &ctx->error_arena);
+
 	mara_arena_init(env, &ctx->debug_info_arena);
 	for (mara_index_t i = 0; i < (mara_index_t)MARA_NUM_ARENAS; ++i) {
 		mara_arena_init(env, &ctx->arenas[i]);
 	}
 
-	ctx->error_zone.arena = &ctx->error_arena;
-	ctx->error_zone.local_snapshot = mara_arena_snapshot(env, &ctx->error_arena);
-	ctx->zones = mara_arena_alloc_ex(
-		env,
-		&ctx->control_arena,
-		sizeof(mara_zone_t) * env->options.max_stackframes,
-		_Alignof(mara_zone_t)
-	);
-	ctx->stack_frames = mara_arena_alloc_ex(
-		env,
-		&ctx->control_arena,
-		sizeof(mara_stack_frame_t) * env->options.max_stackframes,
-		_Alignof(mara_stack_frame_t)
-	);
-	ctx->stack = mara_arena_alloc_ex(
-		env,
-		&ctx->control_arena,
-		sizeof(mara_value_t) * env->options.max_stack,
-		_Alignof(mara_value_t)
-	);
-	ctx->zone_bookmarks = mara_arena_alloc_ex(
-		env,
-		&ctx->control_arena,
-		sizeof(mara_zone_bookmark_t) * env->options.max_stackframes,
-		_Alignof(mara_zone_bookmark_t)
-	);
-	static mara_zone_options_t initial_options = { 0 };
-	mara_zone_enter_new(ctx, &initial_options);
+	*current_zone = (mara_zone_t){ 0 };
+	*current_stack_frame = (mara_stack_frame_t){
+		.return_zone = current_zone,
+		.stack = stack_base,
+	};
+
 	env->ref_count += 1;
 	return ctx;
 }
 
 void
 mara_end(mara_exec_ctx_t* ctx) {
-	while (ctx->current_zone != NULL) {
-		mara_zone_exit(ctx);
+	mara_env_t* env = ctx->env;
+
+	mara_index_t num_zones = ctx->current_zone->level + 1;
+	mara_zone_t* current_zone = ctx->current_zone;
+	for (mara_index_t i = 0; i < num_zones; ++i) {
+		mara_zone_cleanup(ctx->env, current_zone - i);
 	}
 
-	mara_env_t* env = ctx->env;
 	mara_zone_cleanup(env, &ctx->error_zone);
-	mara_arena_reset(env, &ctx->control_arena);
 	mara_arena_reset(env, &ctx->debug_info_arena);
 	env->ref_count -= 1;
+
+	ctx->next = env->free_contexts;
+	env->free_contexts = ctx;
 }
 
 bool

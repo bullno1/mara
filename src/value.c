@@ -34,15 +34,11 @@ mara_obj_t*
 mara_alloc_obj(mara_exec_ctx_t* ctx, mara_zone_t* zone, size_t size) {
 	mara_obj_t* obj = mara_zone_alloc(ctx, zone, sizeof(mara_obj_t) + size);
 	mara_assert(obj != NULL, "Out of memory");
+
 	obj->zone = zone;
-	if (
-		MARA_EXPECT(
-			ctx->arenas <= zone->arena
-			&& zone->arena < ctx->arenas + MARA_NUM_ARENAS
-		)
-	) {
-		obj->arena_mask = mara_arena_mask_of_zone(ctx, zone);
-	}
+	// zone->arena_mask is guaranteed to be set since we just alloc'ed
+	obj->arena_mask = zone->arena_mask;
+
 	return obj;
 }
 

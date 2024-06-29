@@ -73,7 +73,7 @@ main(int argc, const char* argv[]) {
 
 	if (command != NULL) {
 		mara_env_t* env = mara_create_env((mara_env_options_t) { 0 });
-		mara_exec_ctx_t* ctx = mara_begin(env);
+		mara_exec_ctx_t* ctx = mara_begin(env, (mara_exec_options_t){ 0 });
 		int exit_code = command(argc, argv, ctx);
 		mara_end(ctx);
 		mara_destroy_env(env);

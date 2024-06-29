@@ -20,14 +20,6 @@ typedef struct {
 	mara_source_range_t source_range;
 } mara_linked_list_t;
 
-MARA_PRIVATE void
-mara_parser_set_debug_info(mara_exec_ctx_t* ctx, mara_source_info_t debug_info) {
-	// TODO: create a context per parser
-	static mara_source_info_t parser_debug_info;
-	parser_debug_info = debug_info;
-	mara_set_debug_info(ctx, &parser_debug_info);
-}
-
 MARA_PRIVATE mara_error_t*
 mara_parser_error(
 	mara_exec_ctx_t* ctx,
@@ -37,10 +29,12 @@ mara_parser_error(
 	mara_source_range_t range,
 	...
 ) {
-	mara_parser_set_debug_info(ctx, (mara_source_info_t){
+	// This is safe, we immediately call mara_errorv which copies this debug_info
+	mara_source_info_t debug_info = {
 		.filename = lexer->filename,
 		.range = range,
-	});
+	};
+	mara_set_debug_info(ctx, &debug_info);
 
 	va_list args;
 	va_start(args, range);
@@ -83,10 +77,6 @@ mara_linked_list_flatten(
 	mara_str_t filename,
 	mara_linked_list_t* tmp_list
 ) {
-	mara_parser_set_debug_info(ctx, (mara_source_info_t){
-		.filename = filename,
-		.range = tmp_list->source_range,
-	});
 	mara_list_t* list = mara_new_list(ctx, zone, tmp_list->len);
 	mara_put_debug_info(
 		ctx,
@@ -186,7 +176,7 @@ mara_parse_token(
 	mara_token_t token,
 	mara_value_t* result
 ) {
-	mara_arena_t* local_arena = mara_get_zone_arena(ctx, mara_get_local_zone(ctx));
+	mara_arena_t* local_arena = mara_zone_get_arena(ctx, mara_get_local_zone(ctx));
 
 	switch (token.type) {
 		case MARA_TOK_INT:
@@ -407,11 +397,19 @@ mara_parse(
 	mara_list_t** result
 ) {
 	mara_error_t* error;
-	mara_zone_enter_new(ctx, &(mara_zone_options_t){
-		.num_marked_zones = 1,
-		.marked_zones = (mara_zone_t*[]){ zone },
+	mara_zone_t* parser_zone = mara_zone_enter(ctx, (mara_zone_options_t){
+		.return_zone = zone,
 	});
+	if (parser_zone == NULL) {
+		return mara_errorf(
+			ctx,
+			mara_str_from_literal("core/limit-reached/stack-overflow"),
+			"Too many stack frames",
+			mara_nil()
+		);
+	}
+
 	error = mara_do_parse(ctx, zone, options, reader, result);
-	mara_zone_exit(ctx);
+	mara_zone_exit(ctx, parser_zone);
 	return error;
 }

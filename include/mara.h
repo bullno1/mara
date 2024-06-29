@@ -100,10 +100,12 @@ typedef mara_error_t* (*mara_native_fn_t)(
 typedef struct {
 	mara_allocator_t allocator;
 	size_t alloc_chunk_size;
-
-	mara_index_t max_stackframes;
-	mara_index_t max_stack;
 } mara_env_options_t;
+
+typedef struct {
+	mara_index_t max_stack_frames;
+	mara_index_t max_stack_size;
+} mara_exec_options_t;
 
 typedef struct {
 	mara_index_t max_depth;
@@ -167,7 +169,7 @@ MARA_API void
 mara_destroy_env(mara_env_t* env);
 
 MARA_API mara_exec_ctx_t*
-mara_begin(mara_env_t* env);
+mara_begin(mara_env_t* env, mara_exec_options_t options);
 
 MARA_API void
 mara_end(mara_exec_ctx_t* ctx);

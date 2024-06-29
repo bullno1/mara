@@ -60,7 +60,7 @@ typedef struct {
 static inline void
 setup_mara_fixture(mara_fixture_t* fixture) {
 	fixture->env = mara_create_env((mara_env_options_t){ 0 });
-	fixture->ctx = mara_begin(fixture->env);
+	fixture->ctx = mara_begin(fixture->env, (mara_exec_options_t){ 0 });
 }
 
 static inline void

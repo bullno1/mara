@@ -1130,10 +1130,17 @@ mara_compile(
 	mara_fn_t** result
 ) {
 	mara_error_t* error;
-	mara_zone_enter_new(ctx, &(mara_zone_options_t){
-		.num_marked_zones = 1,
-		.marked_zones = (mara_zone_t*[]){ zone },
+	mara_zone_t* compiler_zone = mara_zone_enter(ctx, (mara_zone_options_t){
+		.return_zone = zone,
 	});
+	if (compiler_zone == NULL) {
+		return mara_errorf(
+			ctx,
+			mara_str_from_literal("core/limit-reached/stack-overflow"),
+			"Too many stack frames",
+			mara_nil()
+		);
+	}
 
 	mara_compile_ctx_t compile_ctx = {
 		.exec_ctx = ctx,
@@ -1163,6 +1170,6 @@ mara_compile(
 	error = mara_do_compile(&compile_ctx, zone, options, exprs, result);
 
 	barray_free(ctx->env, compile_ctx.captures);
-	mara_zone_exit(ctx);
+	mara_zone_exit(ctx, compiler_zone);
 	return error;
 }

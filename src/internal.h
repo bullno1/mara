@@ -171,10 +171,10 @@ typedef struct {
 } mara_zone_snapshot_t;
 
 typedef struct {
-	mara_index_t num_marked_zones;
-	mara_zone_t** marked_zones;
+	mara_zone_t* return_zone;
 	mara_index_t argc;
 	const mara_value_t* argv;
+	struct mara_vm_closure_s* vm_closure;
 } mara_zone_options_t;
 
 typedef struct mara_zone_bookmark_s {
@@ -250,7 +250,7 @@ typedef struct mara_function_s {
 	struct mara_function_s** functions;
 } mara_vm_function_t;
 
-typedef struct {
+typedef struct mara_vm_closure_s {
 	mara_vm_function_t* fn;
 	mara_value_t captures[];
 } mara_vm_closure_t;
@@ -270,34 +270,30 @@ typedef struct mara_vm_state_s {
 } mara_vm_state_t;
 
 struct mara_stack_frame_s {
-	mara_vm_closure_t* closure;
-
-	mara_zone_bookmark_t* zone_bookmark;
+	mara_vm_state_t previous_vm_state;
 	mara_zone_t* return_zone;
-	mara_vm_state_t saved_state;
-	const mara_source_info_t* native_debug_info;
-
 	mara_value_t* stack;
+	mara_vm_closure_t* vm_closure;
+	const mara_source_info_t* native_debug_info;
 };
 
 // Public types
 
 struct mara_zone_s {
 	mara_index_t level;
-	mara_index_t index;
-	mara_index_t ref_count;
-	mara_finalizer_t* finalizers;
-	mara_arena_t* arena;
-	const mara_source_info_t* debug_info;
-	mara_arena_snapshot_t local_snapshot;
+	mara_arena_mask_t arena_mask;
 
-	mara_zone_t* parent;
-	mara_zone_options_t* options;
+	mara_arena_t* arena;
+	mara_finalizer_t* finalizers;
+	mara_arena_snapshot_t arena_snapshot;
+
+	mara_zone_options_t options;
 };
 
 struct mara_env_s {
 	mara_env_options_t options;
 	mara_arena_chunk_t* free_chunks;
+	mara_exec_ctx_t* free_contexts;
 	mara_map_t* module_cache;
 	mara_zone_t permanent_zone;
 	mara_arena_t permanent_arena;
@@ -309,32 +305,31 @@ struct mara_env_s {
 };
 
 struct mara_exec_ctx_s {
-	mara_env_t* env;
+	union {
+		mara_env_t* env;
+		struct mara_exec_ctx_s* next;
+	};
+	size_t size;
+
 	mara_zone_t* current_zone;
-	mara_zone_bookmark_t* current_zone_bookmark;
-	mara_arena_t control_arena;
 	mara_arena_t arenas[MARA_NUM_ARENAS];
+
+	mara_zone_t* zones_end;
+	mara_value_t* stack_end;
+	mara_stack_frame_t* stack_frames_begin;
+	mara_stack_frame_t* stack_frames_end;
+
+	mara_list_t* module_loaders;
+	mara_map_t* current_module;
+	mara_module_options_t current_module_options;
 
 	mara_arena_t error_arena;
 	mara_error_t last_error;
 	mara_zone_t error_zone;
 
-	mara_map_t* current_module;
-	mara_list_t* module_loaders;
-	mara_module_options_t current_module_options;
-
 	mara_arena_t debug_info_arena;
 	mara_strpool_t debug_info_strpool;
 	mara_debug_info_map_t debug_info_map;
-
-	mara_index_t num_zones;
-	mara_zone_t* zones;
-	mara_index_t stack_size;
-	mara_value_t* stack;
-	mara_value_t* orig_stack;
-	mara_index_t num_stack_frames;
-	mara_stack_frame_t* stack_frames;
-	mara_zone_bookmark_t* zone_bookmarks;
 
 	mara_vm_state_t vm_state;
 };
@@ -370,23 +365,17 @@ mara_arena_reset(mara_env_t* env, mara_arena_t* arena);
 
 // Zone
 
-void
-mara_zone_enter_new(mara_exec_ctx_t* ctx, mara_zone_options_t* options);
+mara_zone_t*
+mara_zone_enter(mara_exec_ctx_t* ctx, mara_zone_options_t options);
 
 void
-mara_zone_enter(mara_exec_ctx_t* ctx, mara_zone_t* zone);
-
-void
-mara_zone_exit(mara_exec_ctx_t* ctx);
+mara_zone_exit(mara_exec_ctx_t* ctx, mara_zone_t* zone);
 
 void
 mara_zone_cleanup(mara_env_t* env, mara_zone_t* zone);
 
 void
 mara_add_finalizer(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_callback_t callback);
-
-mara_arena_mask_t
-mara_arena_mask_of_zone(mara_exec_ctx_t* ctx, mara_zone_t* zone);
 
 mara_zone_snapshot_t
 mara_zone_snapshot(mara_exec_ctx_t* ctx);
@@ -395,7 +384,7 @@ void
 mara_zone_restore(mara_exec_ctx_t* ctx, mara_zone_snapshot_t snapshot);
 
 mara_arena_t*
-mara_get_zone_arena(mara_exec_ctx_t* ctx, mara_zone_t* zone);
+mara_zone_get_arena(mara_exec_ctx_t* ctx, mara_zone_t* zone);
 
 // Value
 

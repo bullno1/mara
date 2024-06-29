@@ -12,8 +12,7 @@ MARA_PRIVATE MARA_FUNCTION(mara_core_list_new) {
 	if (argc >= 1) {
 		MARA_FN_BIND_ARG(capacity, 0);
 	}
-	// This is called in the caller's zone
-	MARA_RETURN(mara_new_list(ctx, mara_get_local_zone(ctx), capacity));
+	MARA_RETURN(mara_new_list(ctx, mara_get_return_zone(ctx), capacity));
 }
 
 MARA_PRIVATE MARA_FUNCTION(mara_core_list_len) {
