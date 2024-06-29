@@ -45,12 +45,12 @@ mara_vm_alloc_native_stack_frame(
 	return stackframe;
 }
 
-void
+MARA_PRIVATE void
 mara_vm_pop_stack_frame(mara_exec_ctx_t* ctx, mara_stack_frame_t* check_stackframe) {
 	(void)check_stackframe;
 	mara_vm_state_t* vm = &ctx->vm_state;
 	mara_stack_frame_t* stackframe = vm->fp;
-    mara_index_t stack_size = stackframe->closure != NULL ? stackframe->closure->fn->stack_size + 1 : 0;
+	mara_index_t stack_size = stackframe->closure != NULL ? stackframe->closure->fn->stack_size + 1 : 0;
 	mara_assert(check_stackframe == vm->fp, "Unmatched stackframe");
 	*vm = stackframe->saved_state;
 
@@ -59,7 +59,7 @@ mara_vm_pop_stack_frame(mara_exec_ctx_t* ctx, mara_stack_frame_t* check_stackfra
 		mara_zone_exit(ctx);
 	}
 	ctx->num_stack_frames -= 1;
-    ctx->stack -= stack_size != 0 ? stack_size + 1 : stack_size;
+	ctx->stack -= stack_size != 0 ? stack_size + 1 : stack_size;
 }
 
 mara_error_t*
@@ -158,6 +158,7 @@ mara_call(
 // It has to be here so that certain functions are inlined
 
 #if defined(__GNUC__) || defined(__clang__)
+// Computed goto
 #	define MARA_DISPATCH_ENTRY(X) &&MARA_OP_##X,
 #	define MARA_DISPATCH_NEXT() \
 		{ \
@@ -180,6 +181,7 @@ mara_call(
 			goto MARA_OP_##NAME; \
 		}
 #elif !defined(_MSC_VER)
+// Switched goto
 #	define MARA_DISPATCH_ENTRY(X) \
 		case MARA_OP_##X: goto MARA_OP_##X;
 #	define MARA_DISPATCH_NEXT() \
@@ -202,6 +204,7 @@ mara_call(
 			goto MARA_OP_##NAME; \
 		}
 #else
+// Switch case
 #	define MARA_BEGIN_DISPATCH() \
 		while (true) { \
 			{ \
@@ -222,6 +225,7 @@ mara_call(
 #endif
 
 MARA_WARNING_PUSH()
+
 #if defined(__clang__)
 #pragma clang diagnostic ignored "-Wgnu-label-as-value"
 #elif defined(_MSC_VER)
@@ -274,56 +278,56 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 	MARA_VM_LOAD_STATE(vm);
 	MARA_VM_DERIVE_STATE();
 
-    mara_opcode_t opcode;
-    mara_operand_t operands;
+	mara_opcode_t opcode;
+	mara_operand_t operands;
 
-    MARA_BEGIN_DISPATCH()
-        MARA_BEGIN_OP(NOP)
-        MARA_END_OP()
-        MARA_BEGIN_OP(NIL)
-            *(++sp) = stack_top = mara_nil();
-        MARA_END_OP()
-        MARA_BEGIN_OP(TRUE)
-            *(++sp) = stack_top = mara_value_from_bool(true);
-        MARA_END_OP()
-        MARA_BEGIN_OP(FALSE)
-            *(++sp) = stack_top = mara_value_from_bool(false);
-        MARA_END_OP()
-        MARA_BEGIN_OP(SMALL_INT)
-            *(++sp) = stack_top = mara_value_from_int((int16_t)(operands & 0xffff));
-        MARA_END_OP()
-        MARA_BEGIN_OP(CONSTANT)
-            // Constants come from permanent zone so copying is needed
-            *(++sp) = stack_top = mara_copy(ctx, ctx->current_zone, function->constants[operands]);
-        MARA_END_OP()
-        MARA_BEGIN_OP(POP)
-            sp -= operands;
-            stack_top = *sp;
-        MARA_END_OP()
-        MARA_BEGIN_OP(SET_LOCAL)
-            fp->stack[operands] = stack_top;
-        MARA_END_OP()
-        MARA_BEGIN_OP(GET_LOCAL)
-            *(++sp) = stack_top = fp->stack[operands];
-        MARA_END_OP()
-        MARA_BEGIN_OP(SET_ARG)
-            // TODO: Rethink this opcode
-            // The arguments may come from a list in mara_apply
-            // Some zone crossing might happen.
-            args[operands] = stack_top;
-        MARA_END_OP()
-        MARA_BEGIN_OP(GET_ARG)
-            *(++sp) = stack_top = args[operands];
-        MARA_END_OP()
-        MARA_BEGIN_OP(SET_CAPTURE)
+	MARA_BEGIN_DISPATCH()
+		MARA_BEGIN_OP(NOP)
+		MARA_END_OP()
+		MARA_BEGIN_OP(NIL)
+			*(++sp) = stack_top = mara_nil();
+		MARA_END_OP()
+		MARA_BEGIN_OP(TRUE)
+			*(++sp) = stack_top = mara_value_from_bool(true);
+		MARA_END_OP()
+		MARA_BEGIN_OP(FALSE)
+			*(++sp) = stack_top = mara_value_from_bool(false);
+		MARA_END_OP()
+		MARA_BEGIN_OP(SMALL_INT)
+			*(++sp) = stack_top = mara_value_from_int((int16_t)(operands & 0xffff));
+		MARA_END_OP()
+		MARA_BEGIN_OP(CONSTANT)
+			// Constants come from permanent zone so copying is needed
+			*(++sp) = stack_top = mara_copy(ctx, ctx->current_zone, function->constants[operands]);
+		MARA_END_OP()
+		MARA_BEGIN_OP(POP)
+			sp -= operands;
+			stack_top = *sp;
+		MARA_END_OP()
+		MARA_BEGIN_OP(SET_LOCAL)
+			fp->stack[operands] = stack_top;
+		MARA_END_OP()
+		MARA_BEGIN_OP(GET_LOCAL)
+			*(++sp) = stack_top = fp->stack[operands];
+		MARA_END_OP()
+		MARA_BEGIN_OP(SET_ARG)
+			// TODO: Rethink this opcode
+			// The arguments may come from a list in mara_apply
+			// Some zone crossing might happen.
+			args[operands] = stack_top;
+		MARA_END_OP()
+		MARA_BEGIN_OP(GET_ARG)
+			*(++sp) = stack_top = args[operands];
+		MARA_END_OP()
+		MARA_BEGIN_OP(SET_CAPTURE)
 			mara_value_t value_copy = mara_copy(ctx, closure_header->zone, stack_top);
 			closure->captures[operands] = value_copy;
 			mara_obj_add_arena_mask(closure_header, value_copy);
-        MARA_END_OP()
-        MARA_BEGIN_OP(GET_CAPTURE)
-            *(++sp) = stack_top = closure->captures[operands];
-        MARA_END_OP()
-        MARA_BEGIN_OP(CALL)
+		MARA_END_OP()
+		MARA_BEGIN_OP(GET_CAPTURE)
+			*(++sp) = stack_top = closure->captures[operands];
+		MARA_END_OP()
+		MARA_BEGIN_OP(CALL)
 			sp -= operands;
 
 			if (MARA_EXPECT(mara_value_is_obj(stack_top))) {
@@ -400,8 +404,8 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 			} else {
 				goto invalid_type;
 			}
-        MARA_END_OP()
-        MARA_BEGIN_OP(RETURN)
+		MARA_END_OP()
+		MARA_BEGIN_OP(RETURN)
 			mara_stack_frame_t* stackframe = fp;
 			mara_zone_bookmark_t* zone_bookmark = stackframe->zone_bookmark;
 			mara_value_t result_copy = mara_copy(
@@ -431,20 +435,20 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 				*result = result_copy;
 				return NULL;
 			}
-        MARA_END_OP()
-        MARA_BEGIN_OP(JUMP)
-            ip += (int16_t)(operands & 0xffff);
-        MARA_END_OP()
-        MARA_BEGIN_OP(JUMP_IF_FALSE)
-            if (
-                mara_value_is_nil(stack_top)
-                || mara_value_is_false(stack_top)
-            ) {
-                ip += (int16_t)(operands & 0xffff);
-            }
-            stack_top = *(--sp);
-        MARA_END_OP()
-        MARA_BEGIN_OP(MAKE_CLOSURE)
+		MARA_END_OP()
+		MARA_BEGIN_OP(JUMP)
+			ip += (int16_t)(operands & 0xffff);
+		MARA_END_OP()
+		MARA_BEGIN_OP(JUMP_IF_FALSE)
+			if (
+				mara_value_is_nil(stack_top)
+				|| mara_value_is_false(stack_top)
+			) {
+				ip += (int16_t)(operands & 0xffff);
+			}
+			stack_top = *(--sp);
+		MARA_END_OP()
+		MARA_BEGIN_OP(MAKE_CLOSURE)
 			// By loading num_captures from the instruction, we avoid
 			// loading the function just to read that info
 			mara_index_t function_index = (uint8_t)((operands >> 16) & 0xff);
@@ -483,7 +487,7 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 
 			*(++sp) = stack_top = mara_obj_to_value(new_obj);
 			ip += num_captures;
-        MARA_END_OP()
+		MARA_END_OP()
 		// Intrinsics
 		MARA_BEGIN_OP(LT)
 			sp -= 1;
@@ -493,8 +497,8 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 				MARA_VM_SAVE_STATE(vm);
 				return error;
 			}
-        MARA_END_OP()
-        MARA_BEGIN_OP(LTE)
+		MARA_END_OP()
+		MARA_BEGIN_OP(LTE)
 			sp -= 1;
 			if (MARA_EXPECT((error = mara_intrin_lte(ctx, 2, sp, NULL, &stack_top)) == NULL)) {
 				*sp = stack_top;
@@ -502,8 +506,8 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 				MARA_VM_SAVE_STATE(vm);
 				return error;
 			}
-        MARA_END_OP()
-        MARA_BEGIN_OP(GT)
+		MARA_END_OP()
+		MARA_BEGIN_OP(GT)
 			sp -= 1;
 			if (MARA_EXPECT((error = mara_intrin_gt(ctx, 2, sp, NULL, &stack_top)) == NULL)) {
 				*sp = stack_top;
@@ -511,8 +515,8 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 				MARA_VM_SAVE_STATE(vm);
 				return error;
 			}
-        MARA_END_OP()
-        MARA_BEGIN_OP(GTE)
+		MARA_END_OP()
+		MARA_BEGIN_OP(GTE)
 			sp -= 1;
 			if (MARA_EXPECT((error = mara_intrin_gte(ctx, 2, sp, NULL, &stack_top)) == NULL)) {
 				*sp = stack_top;
@@ -520,8 +524,8 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 				MARA_VM_SAVE_STATE(vm);
 				return error;
 			}
-        MARA_END_OP()
-        MARA_BEGIN_OP(PLUS)
+		MARA_END_OP()
+		MARA_BEGIN_OP(PLUS)
 			sp -= operands - 1;
 			if (MARA_EXPECT((error = mara_intrin_plus(ctx, operands, sp, NULL, &stack_top)) == NULL)) {
 				*sp = stack_top;
@@ -529,16 +533,16 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 				MARA_VM_SAVE_STATE(vm);
 				return error;
 			}
-        MARA_END_OP()
-        MARA_BEGIN_OP(NEG)
+		MARA_END_OP()
+		MARA_BEGIN_OP(NEG)
 			if (MARA_EXPECT((error = mara_intrin_neg(ctx, 1, sp, NULL, &stack_top)) == NULL)) {
 				*sp = stack_top;
 			} else {
 				MARA_VM_SAVE_STATE(vm);
 				return error;
 			}
-        MARA_END_OP()
-        MARA_BEGIN_OP(SUB)
+		MARA_END_OP()
+		MARA_BEGIN_OP(SUB)
 			sp -= operands - 1;
 			if (MARA_EXPECT((error = mara_intrin_sub(ctx, operands, sp, NULL, &stack_top)) == NULL)) {
 				*sp = stack_top;
@@ -546,26 +550,26 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 				MARA_VM_SAVE_STATE(vm);
 				return error;
 			}
-        MARA_END_OP()
+		MARA_END_OP()
 		// Super instructions
-        MARA_BEGIN_OP(CALL_CAPTURE)
+		MARA_BEGIN_OP(CALL_CAPTURE)
 			mara_operand_t capture_index = operands & 0xffff;
 			mara_operand_t arity = (operands >> 16) & 0xff;
-            *(++sp) = stack_top = closure->captures[capture_index];
+			*(++sp) = stack_top = closure->captures[capture_index];
 			MARA_DISPATCH_OP(CALL, arity);
-        MARA_END_OP()
-        MARA_BEGIN_OP(CALL_ARG)
+		MARA_END_OP()
+		MARA_BEGIN_OP(CALL_ARG)
 			mara_operand_t arg_index = operands & 0xffff;
 			mara_operand_t arity = (operands >> 16) & 0xff;
-            *(++sp) = stack_top = args[arg_index];
+			*(++sp) = stack_top = args[arg_index];
 			MARA_DISPATCH_OP(CALL, arity);
-        MARA_END_OP()
-        MARA_BEGIN_OP(CALL_LOCAL)
+		MARA_END_OP()
+		MARA_BEGIN_OP(CALL_LOCAL)
 			mara_operand_t local_index = operands & 0xffff;
 			mara_operand_t arity = (operands >> 16) & 0xff;
-            *(++sp) = stack_top = fp->stack[local_index];
+			*(++sp) = stack_top = fp->stack[local_index];
 			MARA_DISPATCH_OP(CALL, arity);
-        MARA_END_OP()
+		MARA_END_OP()
 invalid_type:
 			MARA_VM_SAVE_STATE(vm);
 			return mara_errorf(
@@ -578,17 +582,18 @@ invalid_type:
 		// TODO: safety checks
 		// * Illegal instruction
 		// * Stack over/under flow when creating frames
-		// *                       when executing to catch miscompilation
+		// * Stack over/under flow when executing to catch miscompilation
 #if 0
-        default:
-            MARA_VM_SAVE_STATE(vm);
-            return mara_errorf(
-                ctx,
-                mara_str_from_literal("core/illegal-instruction"),
-                "Illegal instruction encountered",
-                mara_value_from_int(instruction)
-            );
+		default:
+			MARA_VM_SAVE_STATE(vm);
+			return mara_errorf(
+				ctx,
+				mara_str_from_literal("core/illegal-instruction"),
+				"Illegal instruction encountered",
+				mara_value_from_int(instruction)
+			);
 #endif
-    MARA_END_DISPATCH()
+	MARA_END_DISPATCH()
 }
+
 MARA_WARNING_POP()
