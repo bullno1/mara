@@ -6,38 +6,42 @@ MARA_PRIVATE mara_error_t*
 mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result);
 
 MARA_PRIVATE mara_stack_frame_t*
-mara_vm_alloc_stack_frame(mara_exec_ctx_t* ctx, mara_vm_closure_t* closure, mara_vm_state_t vm_state) {
+mara_vm_alloc_vm_stack_frame(
+	mara_exec_ctx_t* ctx,
+	const mara_vm_state_t* vm_state,
+	mara_vm_closure_t* closure
+) {
 	mara_stack_frame_t* stackframe;
-	if (closure != NULL) {
-		mara_index_t stack_size = closure->fn->stack_size + 1;  // +1 for sentinel
-		stackframe = &ctx->stack_frames[ctx->num_stack_frames++];
-		stackframe->closure = closure;
-		stackframe->stack = ctx->stack;
-		ctx->stack += stack_size;
-		stackframe->stack[closure->fn->num_locals] = mara_tombstone();
-	} else {
-		stackframe = &ctx->stack_frames[ctx->num_stack_frames++];
-		stackframe->closure = NULL;
-		static mara_source_info_t default_debug_info;
-		default_debug_info = (mara_source_info_t){
-			.filename = mara_str_from_literal("<native>"),
-		};
-		stackframe->native_debug_info = &default_debug_info;
-	}
+	mara_index_t stack_size = closure->fn->stack_size + 1;  // +1 for sentinel
+	stackframe = &ctx->stack_frames[ctx->num_stack_frames++];
+	stackframe->closure = closure;
+	stackframe->stack = ctx->stack;
+	ctx->stack += stack_size;
+	stackframe->stack[closure->fn->num_locals] = mara_tombstone();
 
-	stackframe->saved_state = vm_state;
+	stackframe->saved_state = *vm_state;
 	stackframe->zone_bookmark = ctx->current_zone_bookmark;
 	stackframe->return_zone = ctx->current_zone;
 	return stackframe;
 }
 
 MARA_PRIVATE mara_stack_frame_t*
-mara_vm_push_stack_frame(mara_exec_ctx_t* ctx, mara_vm_closure_t* closure) {
-	mara_stack_frame_t* stackframe = mara_vm_alloc_stack_frame(ctx, closure, ctx->vm_state);
-	mara_vm_state_t* vm = &ctx->vm_state;
-	vm->fp = stackframe;
-	vm->sp = closure != NULL ? stackframe->stack + closure->fn->num_locals: NULL;
-	vm->ip = closure != NULL ? closure->fn->instructions : NULL;
+mara_vm_alloc_native_stack_frame(
+	mara_exec_ctx_t* ctx,
+	const mara_vm_state_t* vm_state
+) {
+	mara_stack_frame_t* stackframe;
+	stackframe = &ctx->stack_frames[ctx->num_stack_frames++];
+	stackframe->closure = NULL;
+	static mara_source_info_t default_debug_info;
+	default_debug_info = (mara_source_info_t){
+		.filename = mara_str_from_literal("<native>"),
+	};
+	stackframe->native_debug_info = &default_debug_info;
+
+	stackframe->saved_state = *vm_state;
+	stackframe->zone_bookmark = ctx->current_zone_bookmark;
+	stackframe->return_zone = ctx->current_zone;
 	return stackframe;
 }
 
@@ -85,11 +89,16 @@ mara_call(
 		"Invalid object type"
 	);
 	const mara_source_info_t* debug_info = ctx->current_zone->debug_info;
+	mara_vm_state_t* vm_state = &ctx->vm_state;
 
 	// This stack frame ensures that the VM will return here.
 	// It will also undo all the zone changes when it's popped.
-	mara_stack_frame_t* stackframe = mara_vm_push_stack_frame(ctx, NULL);
+	mara_stack_frame_t* stackframe = mara_vm_alloc_native_stack_frame(ctx, vm_state);
 	stackframe->native_debug_info = debug_info;
+	vm_state->fp = stackframe;
+	vm_state->sp = NULL;
+	vm_state->ip = NULL;
+	vm_state->args = argv;
 
 	// Change the return zone if needed
 	if (zone != ctx->current_zone) {
@@ -116,7 +125,11 @@ mara_call(
 		mara_vm_closure_t* closure = (mara_vm_closure_t*)obj->body;
 		mara_vm_function_t* mara_fn = closure->fn;
 		if (MARA_EXPECT(mara_fn->num_args <= argc)) {
-			mara_vm_push_stack_frame(ctx, closure);
+			mara_stack_frame_t* vm_stack_frame = mara_vm_alloc_vm_stack_frame(ctx, vm_state, closure);
+			vm_state->fp = vm_stack_frame;
+			vm_state->args = argv;
+			vm_state->sp = vm_stack_frame->stack + mara_fn->num_locals;
+			vm_state->ip = mara_fn->instructions;
 
 			mara_zone_enter_new(ctx, &(mara_zone_options_t){
 				.argc = argc,
@@ -320,8 +333,8 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 					if (MARA_EXPECT(next_closure->fn->num_args <= (mara_index_t)operands)) {
 						mara_vm_state_t frame_state;
 						MARA_VM_SAVE_STATE(&frame_state);
-						mara_stack_frame_t* stackframe = mara_vm_alloc_stack_frame(
-							ctx, next_closure, frame_state
+						mara_stack_frame_t* stackframe = mara_vm_alloc_vm_stack_frame(
+							ctx, &frame_state, next_closure
 						);
 						mara_zone_enter_new(
 							ctx, &(mara_zone_options_t){
@@ -349,7 +362,7 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 					mara_zone_t* return_zone = ctx->current_zone;
 					mara_vm_state_t frame_state;
 					MARA_VM_SAVE_STATE(&frame_state);
-					mara_stack_frame_t* stackframe = mara_vm_alloc_stack_frame(ctx, NULL, frame_state);
+					mara_stack_frame_t* stackframe = mara_vm_alloc_native_stack_frame(ctx, &frame_state);
 					if (!native_closure->options.no_alloc) {
 						mara_zone_enter_new(
 							ctx, &(mara_zone_options_t){
