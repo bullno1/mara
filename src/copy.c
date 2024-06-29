@@ -184,6 +184,7 @@ mara_start_deep_copy(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_value_t value
 		mara_zone_exit(ctx, copy_zone);
 		return result;
 	} else {
+		// FIXME: This will mysteriously fail on release if we trigger stack overflow
 		mara_assert(copy_zone != NULL, "Zone limit reached");
 		return mara_nil();
 	}
