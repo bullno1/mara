@@ -1,5 +1,6 @@
 #include "internal.h"
 #include <stdlib.h>
+#include "mem_layout.h"
 
 MARA_PRIVATE void*
 mara_libc_alloc(void* ptr, size_t new_size, void* userdata) {
@@ -30,8 +31,16 @@ mara_create_env(mara_env_options_t options) {
 		options.max_stackframes = 512;
 	}
 
-	mara_env_t* env = mara_malloc(options.allocator, sizeof(mara_env_t));
+	mem_layout_t layout = 0;
+	mem_layout_reserve(&layout, sizeof(mara_env_t), _Alignof(mara_env_t));
+	ptrdiff_t dummy_chunk_offset = mem_layout_reserve(&layout, sizeof(mara_arena_chunk_t), _Alignof(mara_arena_chunk_t));
+
+	mara_env_t* env = mara_malloc(options.allocator, mem_layout_size(&layout));
 	mara_assert(env != NULL, "Out of memory");
+
+	mara_arena_chunk_t* dummy_chunk = mem_layout_locate(env, dummy_chunk_offset);
+	dummy_chunk->bump_ptr = dummy_chunk->end = dummy_chunk->begin;
+	dummy_chunk->next = NULL;
 
 	*env = (mara_env_t){
 		.options = options,
@@ -39,8 +48,12 @@ mara_create_env(mara_env_options_t options) {
 			.ref_count = 1,
 			.level = -2,
 		},
+		.dummy_chunk = dummy_chunk,
 	};
+	mara_arena_init(env, &env->permanent_arena);
+
 	env->permanent_zone.arena = &env->permanent_arena;
+	env->permanent_zone.local_snapshot = mara_arena_snapshot(env, &env->permanent_arena);
 	mara_symtab_init(env, &env->symtab);
 
 	return env;
@@ -62,7 +75,9 @@ mara_destroy_env(mara_env_t* env) {
 
 mara_exec_ctx_t*
 mara_begin(mara_env_t* env) {
-	mara_arena_t control_arena = { 0 };
+	mara_arena_t control_arena;
+	mara_arena_init(env, &control_arena);
+
 	mara_exec_ctx_t* ctx = MARA_ARENA_ALLOC_TYPE(env, &control_arena, mara_exec_ctx_t);
 	*ctx = (mara_exec_ctx_t){
 		.env = env,
@@ -73,7 +88,14 @@ mara_begin(mara_env_t* env) {
 		.control_arena = control_arena,
 		.current_module_options.module_name = mara_str_from_literal("."),
 	};
+	mara_arena_init(env, &ctx->error_arena);
+	mara_arena_init(env, &ctx->debug_info_arena);
+	for (mara_index_t i = 0; i < (mara_index_t)MARA_NUM_ARENAS; ++i) {
+		mara_arena_init(env, &ctx->arenas[i]);
+	}
+
 	ctx->error_zone.arena = &ctx->error_arena;
+	ctx->error_zone.local_snapshot = mara_arena_snapshot(env, &ctx->error_arena);
 	ctx->zones = mara_arena_alloc_ex(
 		env,
 		&ctx->control_arena,

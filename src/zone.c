@@ -87,15 +87,15 @@ mara_zone_switch(mara_exec_ctx_t* ctx, mara_zone_t* zone) {
 
 void
 mara_zone_cleanup(mara_env_t* env, mara_zone_t* zone) {
-	for (
-		mara_finalizer_t* itr = zone->finalizers;
-		itr != NULL;
-		itr = itr->next
-	) {
-		itr->callback.fn(env, itr->callback.userdata);
-	}
-
 	if (zone->arena != NULL) {
+		for (
+			mara_finalizer_t* itr = zone->finalizers;
+			itr != NULL;
+			itr = itr->next
+		) {
+			itr->callback.fn(env, itr->callback.userdata);
+		}
+
 		mara_arena_restore(env, zone->arena, zone->local_snapshot);
 	}
 }
@@ -233,7 +233,7 @@ mara_get_zone_arena(mara_exec_ctx_t* ctx, mara_zone_t* zone) {
 				mara_arena_t* arena = MARA_ARENA_ALLOC_TYPE(
 					ctx->env, &ctx->control_arena, mara_arena_t
 				);
-				*arena = (mara_arena_t){ 0 };
+				mara_arena_init(ctx->env, arena);
 				arena_for_zone = arena;
 			}
 		}

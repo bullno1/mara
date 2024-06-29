@@ -304,6 +304,8 @@ struct mara_env_s {
 	mara_strpool_t permanent_strpool;
 	mara_symtab_t symtab;
 	mara_index_t ref_count;
+
+	mara_arena_chunk_t* dummy_chunk;
 };
 
 struct mara_exec_ctx_s {
@@ -347,6 +349,9 @@ mara_free(mara_allocator_t allocator, void* ptr);
 
 void*
 mara_realloc(mara_allocator_t allocator, void* ptr, size_t new_size);
+
+void
+mara_arena_init(mara_env_t* env, mara_arena_t* arena);
 
 void*
 mara_arena_alloc(mara_env_t* env, mara_arena_t* arena, size_t size);
