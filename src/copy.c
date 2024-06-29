@@ -14,19 +14,6 @@ typedef struct {
 	mara_ptr_map_node_t* root;
 } mara_ptr_map_t;
 
-#include "vendor/nanbox.h"
-MARA_PRIVATE bool
-mara_need_copy(mara_value_t value) {
-	nanbox_t nanbox = { .as_int64 = value.internal };
-	return nanbox_is_pointer(nanbox);
-}
-
-MARA_PRIVATE void*
-mara_value_to_ptr(mara_value_t value) {
-	nanbox_t nanbox = { .as_int64 = value.internal };
-	return nanbox_to_pointer(nanbox);
-}
-
 MARA_PRIVATE void
 mara_ptr_map_put(
 	mara_exec_ctx_t* ctx,
@@ -69,9 +56,12 @@ mara_deep_copy(
 	mara_ptr_map_t* copied_objs,
 	mara_value_t value
 ) {
-	mara_obj_t* obj = mara_value_to_obj(value);
+	if (!mara_value_is_obj(value)) {
+		return value;
+	}
 
-	if (obj == NULL || obj->zone->level <= target_zone->level) {
+	mara_obj_t* obj = mara_value_to_obj(value);
+	if (obj->zone->level <= target_zone->level) {
 		return value;
 	}
 
@@ -196,10 +186,11 @@ mara_start_deep_copy(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_value_t value
 
 mara_value_t
 mara_copy(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_value_t value) {
-	if (MARA_EXPECT(!mara_need_copy(value))) {
+	if (MARA_EXPECT(!mara_value_is_obj(value))) {
 		return value;
 	}
-	mara_obj_t* obj = mara_value_to_ptr(value);
+
+	mara_obj_t* obj = mara_value_to_obj(value);
 	if (obj->zone->level <= zone->level) {
 		return value;
 	}

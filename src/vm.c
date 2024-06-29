@@ -5,19 +5,6 @@
 MARA_PRIVATE mara_error_t*
 mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result);
 
-#include "vendor/nanbox.h"
-MARA_PRIVATE bool
-mara_value_is_obj(mara_value_t value) {
-	nanbox_t nanbox = { .as_int64 = value.internal };
-	return nanbox_is_pointer(nanbox);
-}
-
-MARA_PRIVATE void*
-mara_value_to_ptr(mara_value_t value) {
-	nanbox_t nanbox = { .as_int64 = value.internal };
-	return nanbox_to_pointer(nanbox);
-}
-
 MARA_PRIVATE mara_stack_frame_t*
 mara_vm_alloc_stack_frame(mara_exec_ctx_t* ctx, mara_vm_closure_t* closure, mara_vm_state_t vm_state) {
 	mara_stack_frame_t* stackframe;
@@ -327,7 +314,7 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 			sp -= operands;
 
 			if (MARA_EXPECT(mara_value_is_obj(stack_top))) {
-				mara_obj_t* fn = mara_value_to_ptr(stack_top);
+				mara_obj_t* fn = mara_value_to_obj(stack_top);
 				if (fn->type == MARA_OBJ_TYPE_VM_CLOSURE) {
 					mara_vm_closure_t* next_closure = (mara_vm_closure_t*)fn->body;
 					if (MARA_EXPECT(next_closure->fn->num_args <= (mara_index_t)operands)) {

@@ -46,14 +46,14 @@ mara_alloc_obj(mara_exec_ctx_t* ctx, mara_zone_t* zone, size_t size) {
 	return obj;
 }
 
+bool
+mara_value_is_obj(mara_value_t value) {
+	return nanbox_is_pointer(mara_value_to_nanbox(value));
+}
+
 mara_obj_t*
 mara_value_to_obj(mara_value_t value) {
-	nanbox_t nanbox = { .as_int64 = value.internal };
-	if (nanbox_is_pointer(nanbox)) {
-		return nanbox_to_pointer(nanbox);
-	} else {
-		return NULL;
-	}
+	return nanbox_to_pointer(mara_value_to_nanbox(value));
 }
 
 mara_value_t
@@ -87,8 +87,12 @@ mara_value_is_bool(mara_value_t value) {
 
 bool
 mara_value_is_str(mara_value_t value) {
-	mara_obj_t* obj = mara_value_to_obj(value);
-	return obj != NULL && obj->type == MARA_OBJ_TYPE_STRING;
+	if (mara_value_is_obj(value)) {
+		mara_obj_t* obj = mara_value_to_obj(value);
+		return obj->type == MARA_OBJ_TYPE_STRING;
+	} else {
+		return false;
+	}
 }
 
 bool
@@ -99,32 +103,44 @@ mara_value_is_sym(mara_value_t value) {
 
 bool
 mara_value_is_ref(mara_value_t value, void* tag) {
-	mara_obj_t* obj = mara_value_to_obj(value);
-	return obj != NULL
-		&& obj->type == MARA_OBJ_TYPE_REF
-		&& ((mara_ref_t*)obj->body)->tag == tag;
+	if (mara_value_is_obj(value)) {
+		mara_obj_t* obj = mara_value_to_obj(value);
+		return obj->type == MARA_OBJ_TYPE_REF
+			&& ((mara_ref_t*)obj->body)->tag == tag;
+	} else {
+		return false;
+	}
 }
 
 bool
 mara_value_is_fn(mara_value_t value) {
-	mara_obj_t* obj = mara_value_to_obj(value);
-	return obj != NULL
-		&& (
-			obj->type == MARA_OBJ_TYPE_VM_CLOSURE
-			|| obj->type == MARA_OBJ_TYPE_NATIVE_CLOSURE
-		);
+	if (mara_value_is_obj(value)) {
+		mara_obj_t* obj = mara_value_to_obj(value);
+		return obj->type == MARA_OBJ_TYPE_VM_CLOSURE
+			|| obj->type == MARA_OBJ_TYPE_NATIVE_CLOSURE;
+	} else {
+		return false;
+	}
 }
 
 bool
 mara_value_is_list(mara_value_t value) {
-	mara_obj_t* obj = mara_value_to_obj(value);
-	return obj != NULL && obj->type == MARA_OBJ_TYPE_LIST;
+	if (mara_value_is_obj(value)) {
+		mara_obj_t* obj = mara_value_to_obj(value);
+		return obj->type == MARA_OBJ_TYPE_LIST;
+	} else {
+		return false;
+	}
 }
 
 bool
 mara_value_is_map(mara_value_t value) {
-	mara_obj_t* obj = mara_value_to_obj(value);
-	return obj != NULL && obj->type == MARA_OBJ_TYPE_MAP;
+	if (mara_value_is_obj(value)) {
+		mara_obj_t* obj = mara_value_to_obj(value);
+		return obj->type == MARA_OBJ_TYPE_MAP;
+	} else {
+		return false;
+	}
 }
 
 mara_value_type_t
@@ -471,8 +487,8 @@ mara_new_sym(mara_exec_ctx_t* ctx, mara_str_t name) {
 
 void
 mara_obj_add_arena_mask(mara_obj_t* parent, mara_value_t child) {
-	mara_obj_t* child_obj = mara_value_to_obj(child);
-	if (child_obj != NULL) {
+	if (mara_value_is_obj(child)) {
+		mara_obj_t* child_obj = mara_value_to_obj(child);
 		parent->arena_mask |= child_obj->arena_mask;
 	}
 }

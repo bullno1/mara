@@ -138,12 +138,6 @@ mara_get_error_zone(mara_exec_ctx_t* ctx) {
 	return &ctx->error_zone;
 }
 
-mara_zone_t*
-mara_get_zone_of(mara_exec_ctx_t* ctx, mara_value_t value) {
-	mara_obj_t* obj = mara_value_to_obj(value);
-	return obj != NULL ? obj->zone : mara_get_local_zone(ctx);
-}
-
 mara_arena_mask_t
 mara_arena_mask_of_zone(mara_exec_ctx_t* ctx, mara_zone_t* zone) {
 	mara_arena_t* zone_arena = mara_get_zone_arena(ctx, zone);
@@ -206,10 +200,11 @@ mara_get_zone_arena(mara_exec_ctx_t* ctx, mara_zone_t* zone) {
 			}
 
 			for (mara_index_t i = 0; i < options->argc; ++i) {
-				mara_obj_t* obj = mara_value_to_obj(options->argv[i]);
-				if (obj == NULL) { continue; }
-
-				arena_mask |= obj->arena_mask;
+				mara_value_t arg = options->argv[i];
+				if (mara_value_is_obj(arg)) {
+					mara_obj_t* obj = mara_value_to_obj(arg);
+					arena_mask |= obj->arena_mask;
+				}
 			}
 
 			// Module system objects are implicitly passed to all zones

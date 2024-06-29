@@ -397,6 +397,9 @@ mara_get_zone_arena(mara_exec_ctx_t* ctx, mara_zone_t* zone);
 mara_obj_t*
 mara_alloc_obj(mara_exec_ctx_t* ctx, mara_zone_t* zone, size_t size);
 
+bool
+mara_value_is_obj(mara_value_t value);
+
 mara_obj_t*
 mara_value_to_obj(mara_value_t value);
 
