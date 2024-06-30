@@ -478,6 +478,9 @@ mara_put_debug_info(
 const mara_source_info_t*
 mara_get_debug_info(mara_exec_ctx_t* ctx, mara_debug_info_key_t key);
 
+mara_stacktrace_t*
+mara_build_stacktrace(mara_exec_ctx_t* ctx);
+
 // String pool
 
 mara_str_t

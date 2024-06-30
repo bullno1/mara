@@ -36,6 +36,13 @@ mara_errorv(
 		.extra = extra_copy,
 	};
 
+	ctx->last_error.stacktrace = mara_build_stacktrace(ctx);
+
+	return &ctx->last_error;
+}
+
+mara_stacktrace_t*
+mara_build_stacktrace(mara_exec_ctx_t* ctx) {
 	mara_index_t num_frames = (mara_index_t)(ctx->vm_state.fp - ctx->stack_frames_begin + 1);
 	mara_stacktrace_t* stacktrace = mara_zone_alloc_ex(
 		ctx,
@@ -76,7 +83,5 @@ mara_errorv(
 		vm_state = itr->previous_vm_state;
 	}
 
-	ctx->last_error.stacktrace = stacktrace;
-
-	return &ctx->last_error;
+	return stacktrace;
 }

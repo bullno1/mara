@@ -427,7 +427,9 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 								mara_zone_exit(ctx, call_zone);
 							}
 
-							goto terminate;
+							// VM state is already saved before calling the
+							// native function
+							return error;
 						}
 					} else {
 						MARA_VM_SAVE_STATE(vm);
@@ -525,7 +527,7 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 			if (MARA_EXPECT((error = mara_intrin_lt(ctx, 2, sp, NULL, &stack_top)) == NULL)) {
 				*sp = stack_top;
 			} else {
-				goto terminate;
+				goto intrinsic_error;
 			}
 		MARA_END_OP()
 		MARA_BEGIN_OP(LTE)
@@ -533,7 +535,7 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 			if (MARA_EXPECT((error = mara_intrin_lte(ctx, 2, sp, NULL, &stack_top)) == NULL)) {
 				*sp = stack_top;
 			} else {
-				goto terminate;
+				goto intrinsic_error;
 			}
 		MARA_END_OP()
 		MARA_BEGIN_OP(GT)
@@ -541,7 +543,7 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 			if (MARA_EXPECT((error = mara_intrin_gt(ctx, 2, sp, NULL, &stack_top)) == NULL)) {
 				*sp = stack_top;
 			} else {
-				goto terminate;
+				goto intrinsic_error;
 			}
 		MARA_END_OP()
 		MARA_BEGIN_OP(GTE)
@@ -549,7 +551,7 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 			if (MARA_EXPECT((error = mara_intrin_gte(ctx, 2, sp, NULL, &stack_top)) == NULL)) {
 				*sp = stack_top;
 			} else {
-				goto terminate;
+				goto intrinsic_error;
 			}
 		MARA_END_OP()
 		MARA_BEGIN_OP(PLUS)
@@ -557,14 +559,14 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 			if (MARA_EXPECT((error = mara_intrin_plus(ctx, operands, sp, NULL, &stack_top)) == NULL)) {
 				*sp = stack_top;
 			} else {
-				goto terminate;
+				goto intrinsic_error;
 			}
 		MARA_END_OP()
 		MARA_BEGIN_OP(NEG)
 			if (MARA_EXPECT((error = mara_intrin_neg(ctx, 1, sp, NULL, &stack_top)) == NULL)) {
 				*sp = stack_top;
 			} else {
-				goto terminate;
+				goto intrinsic_error;
 			}
 		MARA_END_OP()
 		MARA_BEGIN_OP(SUB)
@@ -572,7 +574,7 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 			if (MARA_EXPECT((error = mara_intrin_sub(ctx, operands, sp, NULL, &stack_top)) == NULL)) {
 				*sp = stack_top;
 			} else {
-				goto terminate;
+				goto intrinsic_error;
 			}
 		MARA_END_OP()
 		// Super instructions
@@ -606,9 +608,11 @@ invalid_call_type:
 		mara_value_type_name(mara_value_type(stack_top, NULL))
 	);
 
-terminate:
+intrinsic_error:
+	// Rebuild stacktrace with accurate sp and fp
 	MARA_VM_SAVE_STATE(vm);
-	return error;
+	ctx->last_error.stacktrace = mara_build_stacktrace(ctx);
+	return &ctx->last_error;
 
 	// TODO: safety checks
 	// * Illegal instruction
