@@ -85,6 +85,11 @@ mara_begin(mara_env_t* env, mara_exec_options_t options) {
 		sizeof(mara_stack_frame_t) * options.max_stack_frames,
 		_Alignof(mara_stack_frame_t)
 	);
+	ptrdiff_t debug_info_offset = mem_layout_reserve(
+		&layout,
+		sizeof(mara_source_info_t*) * options.max_stack_frames,
+		_Alignof(mara_source_info_t*)
+	);
 	ptrdiff_t stack_offset = mem_layout_reserve(
 		&layout,
 		sizeof(mara_value_t) * options.max_stack_size,
@@ -115,6 +120,7 @@ mara_begin(mara_env_t* env, mara_exec_options_t options) {
 		.zones_end = current_zone + options.max_stack_frames,
 		.stack_end = stack_base + options.max_stack_size,
 		.stack_frames_end = current_stack_frame + options.max_stack_frames,
+		.native_debug_info = mem_layout_locate(ctx, debug_info_offset),
 		.error_zone = {
 			.arena = &ctx->error_arena,
 			.level = options.max_stack_frames,
@@ -134,6 +140,7 @@ mara_begin(mara_env_t* env, mara_exec_options_t options) {
 		.return_zone = current_zone,
 		.stack = stack_base,
 	};
+	ctx->native_debug_info[0] = NULL;
 
 	env->ref_count += 1;
 	return ctx;

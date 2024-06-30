@@ -27,17 +27,37 @@ mara_free_arena(mara_env_t* env, void* userdata) {
 	mara_free(env->options.allocator, userdata);
 }
 
+void
+mara_zone_cleanup(mara_env_t* env, mara_zone_t* zone) {
+	if (zone->arena != NULL) {
+		// In case the arena is allocated on the heap, release the chunks first.
+		// This should be safe as finalizers deal with unmanaged heap memory.
+		mara_arena_restore(env, zone->arena, zone->arena_snapshot);
+
+		for (
+			mara_finalizer_t* itr = zone->finalizers;
+			itr != NULL;
+			itr = itr->next
+			) {
+			itr->callback.fn(env, itr->callback.userdata);
+		}
+	}
+}
+
 mara_zone_t*
 mara_zone_enter(mara_exec_ctx_t* ctx, mara_zone_options_t options) {
 	mara_zone_t* current_zone = ctx->current_zone;
 	mara_zone_t* new_zone = ++ctx->current_zone;
 	if (MARA_EXPECT(new_zone < ctx->zones_end)) {
-		*new_zone = (mara_zone_t){
-			.level = current_zone->level + 1,
-			.options = options,
-		};
+		new_zone->level = current_zone->level + 1;
+		new_zone->options = options;
+		new_zone->arena = NULL;
+		new_zone->finalizers = NULL;
 
-		mara_zone_cleanup(ctx->env, &ctx->error_zone);
+		if (ctx->last_error.type.len) {
+			mara_zone_cleanup(ctx->env, &ctx->error_zone);
+		}
+
 		return new_zone;
 	} else {
 		return NULL;
@@ -50,23 +70,6 @@ mara_zone_exit(mara_exec_ctx_t* ctx, mara_zone_t* zone) {
 	mara_assert(zone->level > 0, "Illegal zone exit");
 	mara_zone_cleanup(ctx->env, zone);
 	--ctx->current_zone;
-}
-
-void
-mara_zone_cleanup(mara_env_t* env, mara_zone_t* zone) {
-	if (zone->arena != NULL) {
-		// In case the arena is allocated on the heap, release the chunks first.
-		// This should be safe as finalizers deal with unmanaged heap memory.
-		mara_arena_restore(env, zone->arena, zone->arena_snapshot);
-
-		for (
-			mara_finalizer_t* itr = zone->finalizers;
-			itr != NULL;
-			itr = itr->next
-		) {
-			itr->callback.fn(env, itr->callback.userdata);
-		}
-	}
 }
 
 void

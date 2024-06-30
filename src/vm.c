@@ -179,7 +179,7 @@ mara_call(
 			operands = OPERANDS; \
 			goto MARA_OP_##NAME; \
 		}
-#elif !defined(_MSC_VER)
+#elif 1
 // Switched goto
 #	define MARA_DISPATCH_ENTRY(X) \
 		case MARA_OP_##X: goto MARA_OP_##X;
@@ -383,6 +383,7 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 					mara_stack_frame_t* stack_frame = mara_vm_alloc_stack_frame(
 						ctx, &frame_state, NULL, return_zone
 					);
+					ctx->native_debug_info[stack_frame - ctx->stack_frames_begin] = NULL;
 
 					if (MARA_EXPECT(stack_frame != NULL)) {
 						args = sp;

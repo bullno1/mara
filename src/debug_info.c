@@ -13,7 +13,7 @@ mara_debug_info_key_equal(mara_debug_info_key_t lhs, mara_debug_info_key_t rhs) 
 void
 mara_set_debug_info(mara_exec_ctx_t* ctx, const mara_source_info_t* debug_info) {
 	mara_stack_frame_t* current_frame = ctx->vm_state.fp;
-	current_frame->native_debug_info = debug_info;
+	ctx->native_debug_info[current_frame - ctx->stack_frames_begin] = debug_info;
 }
 
 MARA_PRIVATE void

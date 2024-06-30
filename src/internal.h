@@ -274,7 +274,6 @@ struct mara_stack_frame_s {
 	mara_zone_t* return_zone;
 	mara_value_t* stack;
 	mara_vm_closure_t* vm_closure;
-	const mara_source_info_t* native_debug_info;
 };
 
 // Public types
@@ -318,6 +317,7 @@ struct mara_exec_ctx_s {
 	mara_value_t* stack_end;
 	mara_stack_frame_t* stack_frames_begin;
 	mara_stack_frame_t* stack_frames_end;
+	const mara_source_info_t** native_debug_info;
 
 	mara_list_t* module_loaders;
 	mara_map_t* current_module;

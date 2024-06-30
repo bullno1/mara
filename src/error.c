@@ -36,7 +36,7 @@ mara_errorv(
 		.extra = extra_copy,
 	};
 
-	mara_index_t num_frames = ctx->vm_state.fp - ctx->stack_frames_begin + 1;
+	mara_index_t num_frames = (mara_index_t)(ctx->vm_state.fp - ctx->stack_frames_begin + 1);
 	mara_stacktrace_t* stacktrace = mara_zone_alloc_ex(
 		ctx,
 		&ctx->error_zone,
@@ -55,8 +55,9 @@ mara_errorv(
 		mara_source_info_t* frame = &stacktrace->frames[frame_index];
 		mara_vm_closure_t* closure = itr->vm_closure;
 		if (closure == NULL) {
-			if (itr->native_debug_info != NULL) {
-				*frame = *itr->native_debug_info;
+			const mara_source_info_t* native_debug_info = ctx->native_debug_info[itr - ctx->stack_frames_begin];
+			if (native_debug_info != NULL) {
+				*frame = *native_debug_info;
 			} else {
 				*frame = (mara_source_info_t){
 					.filename = mara_str_from_literal("<native>"),
