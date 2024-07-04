@@ -87,8 +87,7 @@ MARA_PRIVATE MARA_FUNCTION(mara_load_core_module) {
 	MARA_FN_CHECK_ARITY(1);
 	MARA_FN_ARG(mara_value_t, module_name, 0);
 
-	mara_value_t core_module_name = (mara_value_t){ .internal = (uintptr_t)userdata };
-	if (module_name.internal != core_module_name.internal) {
+	if (module_name.internal != userdata.internal) {
 		*result = mara_nil();
 		return NULL;
 	}
@@ -99,12 +98,12 @@ MARA_PRIVATE MARA_FUNCTION(mara_load_core_module) {
 
 void
 mara_add_core_module(mara_exec_ctx_t* ctx) {
-	void* userdata = (void*)(uintptr_t)mara_new_sym(ctx, mara_str_from_literal("core")).internal;
+	mara_value_t userdata = mara_new_sym(ctx, mara_str_from_literal("core"));
 	mara_fn_t* loader = mara_new_fn(
 		ctx, ctx->current_zone,
 		mara_load_core_module,
 		(mara_native_fn_options_t) {
-			.userdata = userdata,
+			.userdata = &userdata,
 		}
 	);
 	mara_add_module_loader(ctx, loader);

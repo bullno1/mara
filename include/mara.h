@@ -93,7 +93,7 @@ typedef mara_error_t* (*mara_native_fn_t)(
 	mara_exec_ctx_t* ctx,
 	mara_index_t argc,
 	const mara_value_t* argv,
-	void* userdata,
+	mara_value_t userdata,
 	mara_value_t* result
 );
 
@@ -151,9 +151,8 @@ typedef struct {
 } mara_compile_options_t;
 
 typedef struct {
-	void* userdata;
 	bool no_alloc;
-	bool no_call;
+	const mara_value_t* userdata;
 } mara_native_fn_options_t;
 
 #ifdef __cplusplus

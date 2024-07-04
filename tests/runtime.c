@@ -37,12 +37,19 @@ TEST(runtime, symbol) {
 }
 
 static inline mara_error_t*
-iterate_map(mara_exec_ctx_t* ctx, int argc, const mara_value_t* argv, void* userdata, mara_value_t* result) {
+iterate_map(
+	mara_exec_ctx_t* ctx,
+	int argc, const mara_value_t* argv,
+	mara_value_t userdata,
+	mara_value_t* result
+) {
 	(void)ctx;
 	(void)argc;
 	(void)argv;
 
-	iterator_state_t* itr_state = userdata;
+	void* itr_state_ptr;
+	mara_check_error(mara_value_to_ref(ctx, userdata, &fixture, &itr_state_ptr));
+	iterator_state_t* itr_state = itr_state_ptr;
 
 	if (++itr_state->num_elements > 2) {
 		*result = mara_value_from_bool(false);
@@ -81,9 +88,12 @@ TEST(runtime, map) {
 	MARA_ASSERT_NO_ERROR(ctx, mara_value_to_int(ctx, value, &value_int));
 	ASSERT_EQ(value_int, 2);
 
+	mara_zone_t* local_zone = mara_get_local_zone(ctx);
 	iterator_state_t iterator_state = { 0 };
-	mara_native_fn_options_t options = { .userdata = &iterator_state };
-	mara_fn_t* fn = mara_new_fn(ctx, mara_get_local_zone(ctx), iterate_map, options);
+	mara_value_t userdata = mara_new_ref(ctx, local_zone, &fixture, &iterator_state);
+	mara_fn_t* fn = mara_new_fn(ctx, local_zone, iterate_map, (mara_native_fn_options_t){
+		.userdata = &userdata,
+	});
 	mara_map_foreach(ctx, map, fn);
 
 	ASSERT_EQ(iterator_state.num_elements, 2);

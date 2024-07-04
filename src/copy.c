@@ -90,11 +90,24 @@ mara_deep_copy(
 			{
 				// TODO: Light native representation can skip copying
 				mara_native_closure_t* closure = (mara_native_closure_t*)obj->body;
-				mara_value_t result = mara_value_from_fn(
-					mara_new_fn(ctx, target_zone, closure->fn, closure->options)
+
+				mara_obj_t* new_closure_header = mara_alloc_obj(
+					ctx, target_zone, sizeof(mara_native_closure_t)
 				);
-				mara_ptr_map_put(ctx, local_zone, copied_objs, obj, mara_value_to_obj(result));
-				return result;
+				new_closure_header->type = MARA_OBJ_TYPE_NATIVE_CLOSURE;
+				mara_ptr_map_put(ctx, local_zone, copied_objs, obj, new_closure_header);
+
+				mara_native_closure_t* new_closure = (mara_native_closure_t*)new_closure_header->body;
+				new_closure->fn = closure->fn;
+				new_closure->no_alloc = closure->no_alloc;
+
+				mara_value_t userdata_copy = mara_deep_copy(
+					ctx, target_zone, copied_objs, closure->userdata
+				);
+				new_closure->userdata = userdata_copy;
+				mara_obj_add_arena_mask(new_closure_header, userdata_copy);
+
+				return mara_obj_to_value(new_closure_header);
 			}
 		case MARA_OBJ_TYPE_LIST:
 			{
@@ -215,9 +228,16 @@ mara_copy(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_value_t value) {
 		case MARA_OBJ_TYPE_NATIVE_CLOSURE:
 			{
 				mara_native_closure_t* closure = (mara_native_closure_t*)obj->body;
-				return mara_value_from_fn(
-					mara_new_fn(ctx, zone, closure->fn, closure->options)
-				);
+				if (mara_value_is_obj(closure->userdata)) {
+					return mara_start_deep_copy(ctx, zone, value);
+				} else {
+					return mara_value_from_fn(
+						mara_new_fn(ctx, zone, closure->fn, (mara_native_fn_options_t){
+							.no_alloc = closure->no_alloc,
+							.userdata = &closure->userdata,
+						})
+					);
+				}
 			}
 		case MARA_OBJ_TYPE_LIST:
 		case MARA_OBJ_TYPE_MAP:

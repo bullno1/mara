@@ -15,7 +15,7 @@ mara_internal_import(
 	mara_exec_ctx_t* ctx,
 	mara_index_t argc,
 	const mara_value_t* argv,
-	void* userdata,
+	mara_value_t userdata,
 	mara_value_t* result
 ) {
 	mara_add_native_debug_info(ctx);
@@ -46,7 +46,7 @@ mara_internal_export(
 	mara_exec_ctx_t* ctx,
 	mara_index_t argc,
 	const mara_value_t* argv,
-	void* userdata,
+	mara_value_t userdata,
 	mara_value_t* result
 ) {
 	(void)userdata;

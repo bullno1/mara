@@ -257,7 +257,8 @@ typedef struct mara_vm_closure_s {
 
 typedef struct {
 	mara_native_fn_t fn;
-	mara_native_fn_options_t options;
+	mara_value_t userdata;
+	bool no_alloc;
 } mara_native_closure_t;
 
 typedef struct mara_stack_frame_s mara_stack_frame_t;

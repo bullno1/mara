@@ -261,6 +261,8 @@ mara_do_print_value(
 	mara_debug_info_key_t debug_key,
 	mara_writer_t output
 ) {
+	mara_debug_info_key_t dummy_key = mara_make_debug_info_key(mara_nil(), 0);
+
 	if (mara_value_is_nil(value)) {
 		mara_print_indented(output, options.indent, "nil");
 	} else if (mara_value_is_true(value)) {
@@ -329,9 +331,6 @@ mara_do_print_value(
 			mara_print_indented(output, options.indent, "(map\n");
 			{
 				mara_print_options_t children_options = options;
-				mara_debug_info_key_t children_key = mara_make_debug_info_key(
-					mara_nil(), 0
-				);
 				children_options.max_depth -= 1;
 				children_options.indent += 2;
 
@@ -344,8 +343,8 @@ mara_do_print_value(
 				) {
 					mara_print_indented(output, options.indent + 1, "(\n");
 					{
-						mara_do_print_value(ctx, node->key, children_options, children_key, output);
-						mara_do_print_value(ctx, node->value, children_options, children_key, output);
+						mara_do_print_value(ctx, node->key, children_options, dummy_key, output);
+						mara_do_print_value(ctx, node->value, children_options, dummy_key, output);
 					}
 					mara_print_indented(output, options.indent + 1, ")\n");
 				}
@@ -357,11 +356,17 @@ mara_do_print_value(
 		mara_obj_t* obj = mara_value_to_obj(value);
 		if (obj->type == MARA_OBJ_TYPE_NATIVE_CLOSURE) {
 			mara_native_closure_t* closure = (mara_native_closure_t*)obj->body;
-			mara_print_indented(
-				output, options.indent,
-				"(native-fn %p %p)",
-				(void*)closure->fn, closure->options.userdata
-			);
+			mara_print_indented(output, options.indent, "(native-fn\n");
+			{
+				mara_print_options_t children_options = options;
+				children_options.max_depth -= 1;
+				children_options.indent += 1;
+
+				mara_print_indented(output, options.indent + 1, "%p\n", (void*)closure->fn);
+				mara_print_indented(output, options.indent + 1, "%s\n", closure->no_alloc ? "no-alloc" : "alloc");
+				mara_do_print_value(ctx, closure->userdata, children_options, dummy_key, output);
+			}
+			mara_print_indented(output, options.indent, ")");
 		} else {
 			mara_vm_closure_t* closure = (mara_vm_closure_t*)obj->body;
 			if (options.max_depth <= 0) {
@@ -384,7 +389,7 @@ mara_do_print_value(
 						for (mara_index_t i = 0; i < print_len; ++i) {
 							mara_do_print_value(
 								ctx, closure->captures[i], capture_print_options,
-								mara_make_debug_info_key(mara_nil(), 0),
+								dummy_key,
 								output
 							);
 						}

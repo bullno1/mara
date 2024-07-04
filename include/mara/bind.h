@@ -20,7 +20,7 @@
 		mara_exec_ctx_t* ctx, \
 		mara_index_t argc, \
 		const mara_value_t* argv, \
-		void* userdata, \
+		mara_value_t userdata, \
 		mara_value_t* result \
 	) \
 

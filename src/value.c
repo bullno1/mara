@@ -444,7 +444,14 @@ mara_new_fn(
 
 	mara_native_closure_t* closure = (mara_native_closure_t*)obj->body;
 	closure->fn = fn;
-	closure->options = options;
+	closure->no_alloc = options.no_alloc;
+	if (options.userdata != NULL) {
+		mara_value_t userdata = mara_copy(ctx, zone, *options.userdata);
+		closure->userdata = userdata;
+		mara_obj_add_arena_mask(obj, userdata);
+	} else {
+		closure->userdata = mara_nil();
+	}
 
 	// Point to the header so we can differentiate between mara and native closures
 	return (mara_fn_t*)obj;

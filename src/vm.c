@@ -79,7 +79,7 @@ mara_call(
 	if (obj->type == MARA_OBJ_TYPE_NATIVE_CLOSURE) {
 		mara_native_closure_t* closure = (mara_native_closure_t*)obj->body;
 		mara_zone_t* call_zone = NULL;
-		if (!closure->options.no_alloc) {
+		if (!closure->no_alloc) {
 			call_zone = mara_zone_enter(ctx, (mara_zone_options_t){
 				.argc = argc,
 				.argv = argv,
@@ -98,7 +98,7 @@ mara_call(
 		mara_value_t return_value = mara_nil();
 		mara_zone_t* previous_return_zone = vm_state->fp->return_zone;
 		vm_state->fp->return_zone = zone;
-		error = closure->fn(ctx, argc, argv, closure->options.userdata, &return_value);
+		error = closure->fn(ctx, argc, argv, closure->userdata, &return_value);
 		vm_state->fp->return_zone = previous_return_zone;
 		if (MARA_EXPECT(error == NULL)) {
 			// Copy in case the function allocates in its local zone
@@ -393,7 +393,7 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 						MARA_VM_SAVE_STATE(vm);
 
 						mara_zone_t* call_zone = NULL;
-						if (!native_closure->options.no_alloc) {
+						if (!native_closure->no_alloc) {
 							call_zone = mara_zone_enter(
 								ctx,
 								(mara_zone_options_t){
@@ -409,7 +409,7 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 						error = native_closure->fn(
 							ctx,
 							operands, args,
-							native_closure->options.userdata,
+							native_closure->userdata,
 							&call_result
 						);
 						if (MARA_EXPECT(error == NULL)) {
@@ -524,7 +524,7 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 		// Intrinsics
 		MARA_BEGIN_OP(LT)
 			sp -= 1;
-			if (MARA_EXPECT((error = mara_intrin_lt(ctx, 2, sp, NULL, &stack_top)) == NULL)) {
+			if (MARA_EXPECT((error = mara_intrin_lt(ctx, 2, sp, mara_nil(), &stack_top)) == NULL)) {
 				*sp = stack_top;
 			} else {
 				goto intrinsic_error;
@@ -532,7 +532,7 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 		MARA_END_OP()
 		MARA_BEGIN_OP(LTE)
 			sp -= 1;
-			if (MARA_EXPECT((error = mara_intrin_lte(ctx, 2, sp, NULL, &stack_top)) == NULL)) {
+			if (MARA_EXPECT((error = mara_intrin_lte(ctx, 2, sp, mara_nil(), &stack_top)) == NULL)) {
 				*sp = stack_top;
 			} else {
 				goto intrinsic_error;
@@ -540,7 +540,7 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 		MARA_END_OP()
 		MARA_BEGIN_OP(GT)
 			sp -= 1;
-			if (MARA_EXPECT((error = mara_intrin_gt(ctx, 2, sp, NULL, &stack_top)) == NULL)) {
+			if (MARA_EXPECT((error = mara_intrin_gt(ctx, 2, sp, mara_nil(), &stack_top)) == NULL)) {
 				*sp = stack_top;
 			} else {
 				goto intrinsic_error;
@@ -548,7 +548,7 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 		MARA_END_OP()
 		MARA_BEGIN_OP(GTE)
 			sp -= 1;
-			if (MARA_EXPECT((error = mara_intrin_gte(ctx, 2, sp, NULL, &stack_top)) == NULL)) {
+			if (MARA_EXPECT((error = mara_intrin_gte(ctx, 2, sp, mara_nil(), &stack_top)) == NULL)) {
 				*sp = stack_top;
 			} else {
 				goto intrinsic_error;
@@ -556,14 +556,14 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 		MARA_END_OP()
 		MARA_BEGIN_OP(PLUS)
 			sp -= operands - 1;
-			if (MARA_EXPECT((error = mara_intrin_plus(ctx, operands, sp, NULL, &stack_top)) == NULL)) {
+			if (MARA_EXPECT((error = mara_intrin_plus(ctx, operands, sp, mara_nil(), &stack_top)) == NULL)) {
 				*sp = stack_top;
 			} else {
 				goto intrinsic_error;
 			}
 		MARA_END_OP()
 		MARA_BEGIN_OP(NEG)
-			if (MARA_EXPECT((error = mara_intrin_neg(ctx, 1, sp, NULL, &stack_top)) == NULL)) {
+			if (MARA_EXPECT((error = mara_intrin_neg(ctx, 1, sp, mara_nil(), &stack_top)) == NULL)) {
 				*sp = stack_top;
 			} else {
 				goto intrinsic_error;
@@ -571,7 +571,7 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 		MARA_END_OP()
 		MARA_BEGIN_OP(SUB)
 			sp -= operands - 1;
-			if (MARA_EXPECT((error = mara_intrin_sub(ctx, operands, sp, NULL, &stack_top)) == NULL)) {
+			if (MARA_EXPECT((error = mara_intrin_sub(ctx, operands, sp, mara_nil(), &stack_top)) == NULL)) {
 				*sp = stack_top;
 			} else {
 				goto intrinsic_error;
