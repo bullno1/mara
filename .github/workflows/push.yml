@@ -53,6 +53,8 @@ jobs:
       - name: Build
         run: |
           cd msvc
-          msbuild mara.sln /property:Configuration=${{ matrix.build }}
+          msbuild mara.sln /property:Configuration=${{ matrix.build }} /property:Platform=x64
       - name: Test
-        run: bin/${{ matrix.build }}/tests.exe
+        run: |
+          ls
+          bin/${{ matrix.build }}/tests.exe
