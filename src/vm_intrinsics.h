@@ -117,3 +117,76 @@ MARA_PRIVATE MARA_FUNCTION(mara_intrin_minus) {
 		return mara_intrin_sub(ctx, argc, argv, userdata, result);
 	}
 }
+
+MARA_PRIVATE MARA_FUNCTION(mara_intrin_make_list) {
+	(void)userdata;
+	mara_add_native_debug_info(ctx);
+
+	mara_list_t* list = mara_new_list(ctx, mara_get_local_zone(ctx), argc);
+	for (mara_index_t i = 0; i < argc; ++i) {
+		mara_list_push(ctx, list, argv[0]);
+	}
+
+	MARA_RETURN(list);
+}
+
+MARA_PRIVATE MARA_FUNCTION(mara_intrin_put) {
+	(void)userdata;
+	(void)argc;
+	mara_add_native_debug_info(ctx);
+
+	MARA_FN_ARG(mara_value_t, container, 0);
+	MARA_FN_ARG(mara_value_t, value, 2);
+
+	if (mara_value_is_list(container)) {
+		mara_list_t* list;
+		mara_assert_no_error(mara_value_to_list(ctx, container, &list));
+
+		MARA_FN_ARG(mara_index_t, index, 1);
+
+		MARA_RETURN(mara_list_set(ctx, list, index, value));
+	} else if (mara_value_is_map(container)) {
+		mara_map_t* map;
+		mara_assert_no_error(mara_value_to_map(ctx, container, &map));
+
+		MARA_FN_ARG(mara_value_t, key, 1);
+
+		MARA_RETURN(mara_map_set(ctx, map, key, value));
+	} else {
+		return mara_errorf(
+			ctx,
+			mara_str_from_literal("core/unexpected-type"),
+			"Expecting map or list",
+			mara_value_from_int(0)
+		);
+	}
+}
+
+MARA_PRIVATE MARA_FUNCTION(mara_intrin_get) {
+	(void)userdata;
+	(void)argc;
+	mara_add_native_debug_info(ctx);
+
+	MARA_FN_ARG(mara_value_t, container, 0);
+
+	if (mara_value_is_list(container)) {
+		mara_list_t* list;
+		mara_assert_no_error(mara_value_to_list(ctx, container, &list));
+
+		MARA_FN_ARG(mara_index_t, index, 1);
+		MARA_RETURN(mara_list_get(ctx, list, index));
+	} else if (mara_value_is_map(container)) {
+		mara_map_t* map;
+		mara_assert_no_error(mara_value_to_map(ctx, container, &map));
+
+		MARA_FN_ARG(mara_value_t, key, 1);
+		MARA_RETURN(mara_map_get(ctx, map, key));
+	} else {
+		return mara_errorf(
+			ctx,
+			mara_str_from_literal("core/unexpected-type"),
+			"Expecting map or list",
+			mara_value_from_int(0)
+		);
+	}
+}

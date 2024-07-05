@@ -851,6 +851,45 @@ mara_compile_minus(mara_compile_ctx_t* ctx, mara_list_t* list) {
 }
 
 MARA_PRIVATE mara_error_t*
+mara_compile_list(mara_compile_ctx_t* ctx, mara_list_t* list) {
+	mara_index_t list_len = list->len;
+
+	for (mara_index_t i = 1; i < list_len; ++i) {
+		mara_compiler_set_debug_info(ctx, list, i);
+		mara_check_error(mara_compile_expression(ctx, list->elems[i]));
+	}
+
+	mara_compiler_set_debug_info(ctx, list, MARA_DEBUG_INFO_SELF);
+	return mara_compiler_emit(ctx, MARA_OP_MAKE_LIST, list_len - 1, -(list_len - 2));
+}
+
+MARA_PRIVATE mara_error_t*
+mara_compile_put(mara_compile_ctx_t* ctx, mara_list_t* list) {
+	mara_index_t list_len = list->len;
+
+	for (mara_index_t i = 1; i < list_len; ++i) {
+		mara_compiler_set_debug_info(ctx, list, i);
+		mara_check_error(mara_compile_expression(ctx, list->elems[i]));
+	}
+
+	mara_compiler_set_debug_info(ctx, list, MARA_DEBUG_INFO_SELF);
+	return mara_compiler_emit(ctx, MARA_OP_PUT, list_len - 1, -(list_len - 2));
+}
+
+MARA_PRIVATE mara_error_t*
+mara_compile_get(mara_compile_ctx_t* ctx, mara_list_t* list) {
+	mara_index_t list_len = list->len;
+
+	for (mara_index_t i = 1; i < list_len; ++i) {
+		mara_compiler_set_debug_info(ctx, list, i);
+		mara_check_error(mara_compile_expression(ctx, list->elems[i]));
+	}
+
+	mara_compiler_set_debug_info(ctx, list, MARA_DEBUG_INFO_SELF);
+	return mara_compiler_emit(ctx, MARA_OP_GET, list_len - 1, -(list_len - 2));
+}
+
+MARA_PRIVATE mara_error_t*
 mara_compile_def(mara_compile_ctx_t* ctx, mara_list_t* list) {
 	mara_index_t list_len = list->len;
 	if (
@@ -1066,7 +1105,7 @@ mara_compile_do(mara_compile_ctx_t* ctx, mara_list_t* list) {
 }
 
 MARA_PRIVATE mara_error_t*
-mara_compile_list(mara_compile_ctx_t* ctx, mara_value_t expr) {
+mara_compile_list_expr(mara_compile_ctx_t* ctx, mara_value_t expr) {
 	mara_list_t* list;
 	mara_assert_no_error(mara_value_to_list(ctx->exec_ctx, expr, &list));
 
@@ -1172,7 +1211,7 @@ mara_compile_expression(mara_compile_ctx_t* ctx, mara_value_t expr) {
 		mara_check_error(mara_compiler_find_var(ctx, expr, &load_opcode, &var_index));
 		return mara_compiler_emit(ctx, load_opcode, var_index, 1);
 	} else if (mara_value_is_list(expr)) {
-		return mara_compile_list(ctx, expr);
+		return mara_compile_list_expr(ctx, expr);
 	} else {
 		return mara_compiler_error(
 			ctx,
@@ -1267,6 +1306,10 @@ mara_compile(
 
 	mara_compiler_add_builtin(&compile_ctx, mara_str_from_literal("+"), mara_compile_plus);
 	mara_compiler_add_builtin(&compile_ctx, mara_str_from_literal("-"), mara_compile_minus);
+
+	mara_compiler_add_builtin(&compile_ctx, mara_str_from_literal("list"), mara_compile_list);
+	mara_compiler_add_builtin(&compile_ctx, mara_str_from_literal("put"), mara_compile_put);
+	mara_compiler_add_builtin(&compile_ctx, mara_str_from_literal("get"), mara_compile_get);
 
 	error = mara_do_compile(&compile_ctx, zone, options, exprs, result);
 

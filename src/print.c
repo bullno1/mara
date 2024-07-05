@@ -198,6 +198,15 @@ mara_print_vm_function(
 					case MARA_OP_SUB:
 						mara_print_indented(output, body_options.indent, "(SUB %d)", operands);
 						break;
+					case MARA_OP_MAKE_LIST:
+						mara_print_indented(output, body_options.indent, "(MAKE_LIST %d)", operands);
+						break;
+					case MARA_OP_PUT:
+						mara_print_indented(output, body_options.indent, "(PUT)");
+						break;
+					case MARA_OP_GET:
+						mara_print_indented(output, body_options.indent, "(GET)");
+						break;
 					case MARA_OP_NEG:
 						mara_print_indented(output, body_options.indent, "(NEG)");
 						break;

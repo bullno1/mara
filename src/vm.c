@@ -577,6 +577,30 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 				goto intrinsic_error;
 			}
 		MARA_END_OP()
+		MARA_BEGIN_OP(MAKE_LIST)
+			sp -= operands - 1;
+			if (MARA_EXPECT((error = mara_intrin_make_list(ctx, operands, sp, mara_nil(), &stack_top)) == NULL)) {
+				*sp = stack_top;
+			} else {
+				goto intrinsic_error;
+			}
+		MARA_END_OP()
+		MARA_BEGIN_OP(PUT)
+			sp -= 2;
+			if (MARA_EXPECT((error = mara_intrin_put(ctx, operands, sp, mara_nil(), &stack_top)) == NULL)) {
+				*sp = stack_top;
+			} else {
+				goto intrinsic_error;
+			}
+		MARA_END_OP()
+		MARA_BEGIN_OP(GET)
+			sp -= 1;
+			if (MARA_EXPECT((error = mara_intrin_get(ctx, operands, sp, mara_nil(), &stack_top)) == NULL)) {
+				*sp = stack_top;
+			} else {
+				goto intrinsic_error;
+			}
+		MARA_END_OP()
 		// Super instructions
 		MARA_BEGIN_OP(CALL_CAPTURE)
 			mara_operand_t capture_index = operands & 0xffff;
