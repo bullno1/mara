@@ -209,9 +209,6 @@ typedef struct mara_module_loader_entry_s {
 	X(JUMP) \
 	X(JUMP_IF_FALSE) \
 	X(MAKE_CLOSURE) \
-	X(CALL_CAPTURE) \
-	X(CALL_ARG) \
-	X(CALL_LOCAL) \
 	X(LT) \
 	X(LTE) \
 	X(GT) \
