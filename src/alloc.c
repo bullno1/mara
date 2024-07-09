@@ -39,7 +39,7 @@ mara_arena_alloc_ex(mara_env_t* env, mara_arena_t* arena, size_t size, size_t al
 		return mem;
 	} else {
 		size_t configured_chunk_size = env->options.alloc_chunk_size;
-		size_t required_chunk_size = sizeof(mara_arena_chunk_t) + size;
+		size_t required_chunk_size = sizeof(mara_arena_chunk_t) + size + alignment - 1;
 		size_t chunk_size = mara_max(configured_chunk_size, required_chunk_size);
 
 		mara_arena_chunk_t* new_chunk;

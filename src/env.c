@@ -106,6 +106,7 @@ mara_begin(mara_env_t* env, mara_exec_options_t options) {
 	} else {
 		ctx = mara_arena_alloc(env, &env->permanent_arena, ctx_size);
 	}
+	mara_assert(ctx != NULL, "Out of memory");
 
 	mara_zone_t* current_zone = mem_layout_locate(ctx, zones_offset);
 	mara_value_t* stack_base = mem_layout_locate(ctx, stack_offset);
