@@ -223,21 +223,16 @@ mara_call(
 	MARA_BEGIN_OP(NAME) \
 		if (MARA_EXPECT(mara_value_is_obj(stack_top))) { \
 			top_obj = mara_value_to_obj(stack_top); \
-			if (MARA_EXPECT(top_obj->type == MARA_OBJ_TYPE_NATIVE_CLOSURE || top_obj->type == MARA_OBJ_TYPE_VM_CLOSURE)) { \
-				uint8_t* quickened_opcode = (uint8_t*)top_obj->body; \
-				if (MARA_EXPECT(*quickened_opcode == opcode)) { \
-					sp -= operands; \
-					if (MARA_EXPECT((error = mara_intrin_##NAME(ctx, operands, sp, mara_nil(), &stack_top)) == NULL)) { \
-						*sp = stack_top; \
-					} else { \
-						goto intrinsic_error; \
-					} \
+			if (MARA_EXPECT(top_obj->quickened_opcode == opcode)) { \
+				sp -= operands; \
+				if (MARA_EXPECT((error = mara_intrin_##NAME(ctx, operands, sp, mara_nil(), &stack_top)) == NULL)) { \
+					*sp = stack_top; \
 				} else { \
-					MARA_VM_QUICKEN(MARA_OP_CALL_GENERIC); \
-					goto MARA_OP_CALL_GENERIC; \
+					goto intrinsic_error; \
 				} \
 			} else { \
-				goto invalid_call_type; \
+				MARA_VM_QUICKEN(MARA_OP_CALL_GENERIC); \
+				goto MARA_OP_CALL_GENERIC; \
 			} \
 		} else { \
 			goto invalid_call_type; \
@@ -355,8 +350,7 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 					MARA_VM_QUICKEN(MARA_OP_CALL_VM);
 					MARA_CALL_SUBROUTINE(handle_vm_call);
 				} else if (top_obj->type == MARA_OBJ_TYPE_NATIVE_CLOSURE) {
-					mara_native_closure_t* closure = (mara_native_closure_t*)top_obj->body;
-					MARA_VM_QUICKEN(closure->quickened_opcode);
+					MARA_VM_QUICKEN(top_obj->quickened_opcode);
 					MARA_CALL_SUBROUTINE(handle_native_call);
 				} else {
 					goto invalid_call_type;

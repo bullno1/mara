@@ -1064,8 +1064,8 @@ mara_do_compile(
 
 	mara_obj_t* obj = mara_alloc_obj(ctx->exec_ctx, zone, sizeof(mara_vm_closure_t));
 	obj->type = MARA_OBJ_TYPE_VM_CLOSURE;
+	obj->quickened_opcode = MARA_OP_CALL_VM;
 	mara_vm_closure_t* closure = (mara_vm_closure_t*)obj->body;
-	closure->quickened_opcode = MARA_OP_CALL_VM;
 	closure->fn = function;
 
 	*result = (mara_fn_t*)obj;

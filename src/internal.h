@@ -100,6 +100,7 @@ typedef enum mara_obj_type_e {
 typedef struct {
 	mara_obj_type_t type;
 	mara_arena_mask_t arena_mask;
+	uint8_t quickened_opcode;
 	mara_zone_t* zone;
 	_Alignas(MARA_ALIGN_TYPE) char body[];
 } mara_obj_t;
@@ -259,13 +260,11 @@ typedef struct mara_function_s {
 } mara_vm_function_t;
 
 typedef struct mara_vm_closure_s {
-	uint8_t quickened_opcode;
 	mara_vm_function_t* fn;
 	mara_value_t captures[];
 } mara_vm_closure_t;
 
 typedef struct {
-	uint8_t quickened_opcode;
 	mara_native_fn_t fn;
 	mara_value_t userdata;
 	bool no_alloc;

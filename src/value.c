@@ -36,6 +36,7 @@ mara_alloc_obj(mara_exec_ctx_t* ctx, mara_zone_t* zone, size_t size) {
 	mara_assert(obj != NULL, "Out of memory");
 
 	obj->zone = zone;
+	obj->quickened_opcode = MARA_OP_NOP;
 	// zone->arena_mask is guaranteed to be set since we just alloc'ed
 	obj->arena_mask = zone->arena_mask;
 
@@ -452,11 +453,11 @@ mara_new_fn_ex(
 	// Intern the function pointer in the permanent zone.
 	mara_obj_t* obj = mara_alloc_obj(ctx, zone, sizeof(mara_native_closure_t));
 	obj->type = MARA_OBJ_TYPE_NATIVE_CLOSURE;
+	obj->quickened_opcode = quickened_opcode;
 
 	mara_native_closure_t* closure = (mara_native_closure_t*)obj->body;
 	closure->fn = fn;
 	closure->no_alloc = options.no_alloc;
-	closure->quickened_opcode = quickened_opcode;
 
 	if (options.userdata != NULL) {
 		mara_value_t userdata = mara_copy(ctx, zone, *options.userdata);
