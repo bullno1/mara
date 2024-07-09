@@ -390,6 +390,53 @@ mara_compiler_end_function(mara_compile_ctx_t* ctx) {
 		num_instructions = out_index;
 	}
 
+	// Change GET_x CALL into FETCH_x CALL
+	{
+		for (mara_index_t i = 0; i < num_instructions; ++i) {
+			mara_opcode_t opcode;
+			mara_operand_t operands;
+			mara_tagged_instruction_t tagged_instruction = fn_scope->instructions[i];
+			mara_decode_instruction(tagged_instruction.instruction, &opcode, &operands);
+
+			if (
+				(
+					opcode == MARA_OP_GET_CAPTURE
+					|| opcode == MARA_OP_GET_ARG
+					|| opcode == MARA_OP_GET_LOCAL
+				) && (i < num_instructions - 1)
+			) {
+				mara_opcode_t next_opcode;
+				mara_operand_t next_operands;
+				mara_tagged_instruction_t next_instruction = fn_scope->instructions[i + 1];
+				mara_decode_instruction(next_instruction.instruction, &next_opcode, &next_operands);
+
+				if (next_opcode == MARA_OP_CALL) {
+					mara_opcode_t fetch_op = MARA_OP_NOP;
+					switch (opcode) {
+						case MARA_OP_GET_CAPTURE:
+							fetch_op = MARA_OP_FETCH_CAPTURE;
+							break;
+						case MARA_OP_GET_ARG:
+							fetch_op = MARA_OP_FETCH_ARG;
+							break;
+						case MARA_OP_GET_LOCAL:
+							fetch_op = MARA_OP_FETCH_LOCAL;
+							break;
+						default:
+							break;
+					}
+
+					mara_tagged_instruction_t replacement_instruction = {
+						.instruction = mara_encode_instruction(fetch_op, operands),
+						.source_info = next_instruction.source_info,
+					};
+					fn_scope->instructions[i] = replacement_instruction;
+					i += 1;
+				}
+			}
+		}
+	}
+
 	// Collect label targets
 	mara_index_t* jump_targets = mara_zone_alloc_ex(
 		exec_ctx, local_zone,

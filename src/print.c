@@ -132,17 +132,26 @@ mara_print_vm_function(
 					case MARA_OP_GET_LOCAL:
 						mara_print_indented(output, body_options.indent, "(GET_LOCAL %d)", operands);
 						break;
+					case MARA_OP_FETCH_LOCAL:
+						mara_print_indented(output, body_options.indent, "(FETCH_LOCAL %d)", operands);
+						break;
 					case MARA_OP_SET_ARG:
 						mara_print_indented(output, body_options.indent, "(SET_ARG %d)", operands);
 						break;
 					case MARA_OP_GET_ARG:
 						mara_print_indented(output, body_options.indent, "(GET_ARG %d)", operands);
 						break;
+					case MARA_OP_FETCH_ARG:
+						mara_print_indented(output, body_options.indent, "(FETCH_ARG %d)", operands);
+						break;
 					case MARA_OP_SET_CAPTURE:
 						mara_print_indented(output, body_options.indent, "(SET_CAPTURE %d)", operands);
 						break;
 					case MARA_OP_GET_CAPTURE:
 						mara_print_indented(output, body_options.indent, "(GET_CAPTURE %d)", operands);
+						break;
+					case MARA_OP_FETCH_CAPTURE:
+						mara_print_indented(output, body_options.indent, "(FETCH_CAPTURE %d)", operands);
 						break;
 					case MARA_OP_LT:
 					case MARA_OP_LTE:

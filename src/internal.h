@@ -205,6 +205,9 @@ typedef struct mara_module_loader_entry_s {
 	X(GET_ARG) \
 	X(SET_CAPTURE) \
 	X(GET_CAPTURE) \
+	X(FETCH_ARG) \
+	X(FETCH_LOCAL) \
+	X(FETCH_CAPTURE) \
 	X(CALL) \
 	X(CALL_VM) \
 	X(CALL_NATIVE) \

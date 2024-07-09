@@ -325,6 +325,10 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 		MARA_BEGIN_OP(GET_LOCAL)
 			*(++sp) = stack_top = fp->stack[operands];
 		MARA_END_OP()
+		MARA_BEGIN_OP(FETCH_LOCAL)
+			stack_top = fp->stack[operands];
+			++sp;
+		MARA_END_OP()
 		MARA_BEGIN_OP(SET_ARG)
 			// TODO: Rethink this opcode
 			// The arguments may come from a list in mara_apply
@@ -334,6 +338,10 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 		MARA_BEGIN_OP(GET_ARG)
 			*(++sp) = stack_top = args[operands];
 		MARA_END_OP()
+		MARA_BEGIN_OP(FETCH_ARG)
+			stack_top = args[operands];
+			++sp;
+		MARA_END_OP()
 		MARA_BEGIN_OP(SET_CAPTURE)
 			mara_value_t value_copy = mara_copy(ctx, closure_header->zone, stack_top);
 			closure->captures[operands] = value_copy;
@@ -341,6 +349,10 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 		MARA_END_OP()
 		MARA_BEGIN_OP(GET_CAPTURE)
 			*(++sp) = stack_top = closure->captures[operands];
+		MARA_END_OP()
+		MARA_BEGIN_OP(FETCH_CAPTURE)
+			stack_top = closure->captures[operands];
+			++sp;
 		MARA_END_OP()
 		MARA_BEGIN_OP(CALL)
 			if (MARA_EXPECT(mara_value_is_obj(stack_top))) {
@@ -483,7 +495,8 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 
 	MARA_BEGIN_SUBROUTINE(handle_vm_call)
 		mara_vm_closure_t* next_closure = (mara_vm_closure_t*)top_obj->body;
-		if (MARA_EXPECT(next_closure->fn->num_args <= (mara_index_t)operands)) {
+		mara_vm_function_t* next_fn = next_closure->fn;
+		if (MARA_EXPECT(next_fn->num_args <= (mara_index_t)operands)) {
 			sp -= operands;
 			mara_vm_state_t frame_state;
 			MARA_VM_SAVE_STATE(&frame_state);
@@ -491,7 +504,6 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 				ctx, &frame_state, next_closure, ctx->current_zone
 			);
 			if (MARA_EXPECT(stack_frame != NULL)) {
-
 				stack_frame->stack[0] = mara_tombstone();
 				mara_zone_t* call_zone = mara_zone_enter(
 					ctx,
@@ -507,8 +519,8 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 
 				args = sp;
 				fp = stack_frame;
-				sp = stack_frame->stack + next_closure->fn->num_locals;
-				ip = next_closure->fn->instructions;
+				sp = stack_frame->stack + next_fn->num_locals;
+				ip = next_fn->instructions;
 				MARA_VM_DERIVE_STATE();
 			} else {
 				MARA_VM_SAVE_STATE(vm);
