@@ -65,7 +65,7 @@ mara_destroy_env(mara_env_t* env) {
 mara_exec_ctx_t*
 mara_begin(mara_env_t* env, mara_exec_options_t options) {
 	if (options.max_stack_size <= 0) {
-		options.max_stack_size = 256;
+		options.max_stack_size = 512;
 	}
 
 	if (options.max_stack_frames <= 0) {
