@@ -215,28 +215,26 @@ mara_call(
 #	define MARA_CALL_SUBROUTINE(NAME) goto NAME;
 #endif
 
-#define MARA_VM_QUICKEN(NAME) \
-	*(ip - 1) = mara_encode_instruction(NAME, operands)
+/*#define MARA_VM_QUICKEN(NAME) \*/
+	/**(ip - 1) = mara_encode_instruction(NAME, operands)*/
+
+#define MARA_VM_QUICKEN(NAME)
 
 #define MARA_HANDLE_INTRINSIC(NAME) \
 	MARA_BEGIN_OP(NAME) \
-		if (MARA_EXPECT(mara_value_is_obj(stack_top))) { \
-			top_obj = mara_value_to_obj(stack_top); \
-			if (MARA_EXPECT(top_obj->quickened_opcode == opcode)) { \
-				sp -= operands; \
-				if (MARA_EXPECT((error = mara_intrin_##NAME(ctx, operands, sp, mara_nil(), &stack_top)) == NULL)) { \
-					*sp = stack_top; \
-				} else { \
-					goto intrinsic_error; \
-				} \
-			} else { \
-				MARA_VM_QUICKEN(MARA_OP_CALL_GENERIC); \
-				goto MARA_OP_CALL_GENERIC; \
-			} \
+		sp -= operands; \
+		if (MARA_EXPECT((error = mara_intrin_##NAME(ctx, operands, sp, mara_nil(), &stack_top)) == NULL)) { \
+			*sp = stack_top; \
 		} else { \
-			goto invalid_call_type; \
+			goto intrinsic_error; \
 		} \
 	MARA_END_OP()
+
+#define MARA_HANDLE_EARLY_INTRINSIC(NAME) \
+		operands = (*ip) & 0x00ffffff; \
+		++ip; \
+		goto *dispatch_table[obj->quickened_opcode]; \
+	break;
 
 MARA_WARNING_PUSH()
 
@@ -328,6 +326,17 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 		MARA_BEGIN_OP(FETCH_LOCAL)
 			stack_top = fp->stack[operands];
 			++sp;
+
+			if (MARA_EXPECT(mara_value_is_obj(stack_top))) {
+				mara_obj_t* obj = mara_value_to_obj(stack_top);
+				if (MARA_EXPECT(obj->quickened_opcode != MARA_OP_NOP)) {
+					operands = (*ip) & 0x00ffffff;
+					++ip;
+					goto *dispatch_table[obj->quickened_opcode];
+				}
+			} else {
+				goto invalid_call_type;
+			}
 		MARA_END_OP()
 		MARA_BEGIN_OP(SET_ARG)
 			// TODO: Rethink this opcode
@@ -341,6 +350,16 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 		MARA_BEGIN_OP(FETCH_ARG)
 			stack_top = args[operands];
 			++sp;
+
+			if (MARA_EXPECT(mara_value_is_obj(stack_top))) {
+				mara_obj_t* obj = mara_value_to_obj(stack_top);
+				operands = (*ip) & 0x00ffffff;
+				++ip;
+				// TODO: add call error
+				goto *dispatch_table[obj->quickened_opcode];
+			} else {
+				goto invalid_call_type;
+			}
 		MARA_END_OP()
 		MARA_BEGIN_OP(SET_CAPTURE)
 			mara_value_t value_copy = mara_copy(ctx, closure_header->zone, stack_top);
@@ -353,37 +372,28 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 		MARA_BEGIN_OP(FETCH_CAPTURE)
 			stack_top = closure->captures[operands];
 			++sp;
+
+			if (MARA_EXPECT(mara_value_is_obj(stack_top))) {
+				mara_obj_t* obj = mara_value_to_obj(stack_top);
+				operands = (*ip) & 0x00ffffff;
+				++ip;
+				// TODO: add call error
+				goto *dispatch_table[obj->quickened_opcode];
+			} else {
+				goto invalid_call_type;
+			}
 		MARA_END_OP()
 		MARA_BEGIN_OP(CALL)
 			if (MARA_EXPECT(mara_value_is_obj(stack_top))) {
 				top_obj = mara_value_to_obj(stack_top);
-				if (top_obj->type == MARA_OBJ_TYPE_VM_CLOSURE) {
-					MARA_VM_QUICKEN(MARA_OP_CALL_VM);
-					MARA_CALL_SUBROUTINE(handle_vm_call);
-				} else if (top_obj->type == MARA_OBJ_TYPE_NATIVE_CLOSURE) {
-					MARA_VM_QUICKEN(top_obj->quickened_opcode);
-					MARA_CALL_SUBROUTINE(handle_native_call);
-				} else {
-					goto invalid_call_type;
-				}
+				goto *dispatch_table[top_obj->quickened_opcode];
 			} else {
 				goto invalid_call_type;
 			}
 		MARA_END_OP()
 		MARA_BEGIN_OP(CALL_VM)
-			if (MARA_EXPECT(mara_value_is_obj(stack_top))) {
-				top_obj = mara_value_to_obj(stack_top);
-				if (MARA_EXPECT(top_obj->type == MARA_OBJ_TYPE_VM_CLOSURE)) {
-					MARA_CALL_SUBROUTINE(handle_vm_call);
-				} else if (top_obj->type == MARA_OBJ_TYPE_NATIVE_CLOSURE) {
-					MARA_VM_QUICKEN(MARA_OP_CALL_GENERIC);
-					MARA_CALL_SUBROUTINE(handle_native_call);
-				} else {
-					goto invalid_call_type;
-				}
-			} else {
-				goto invalid_call_type;
-			}
+			top_obj = mara_value_to_obj(stack_top);
+			MARA_CALL_SUBROUTINE(handle_vm_call);
 		MARA_END_OP()
 		MARA_BEGIN_OP(CALL_NATIVE)
 			if (MARA_EXPECT(mara_value_is_obj(stack_top))) {
@@ -391,6 +401,7 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 				if (MARA_EXPECT(top_obj->type == MARA_OBJ_TYPE_NATIVE_CLOSURE)) {
 					MARA_CALL_SUBROUTINE(handle_native_call);
 				} else if (MARA_EXPECT(top_obj->type == MARA_OBJ_TYPE_VM_CLOSURE)) {
+					printf("Wrong branch\n");
 					MARA_VM_QUICKEN(MARA_OP_CALL_GENERIC);
 					MARA_CALL_SUBROUTINE(handle_vm_call);
 				} else {
@@ -459,6 +470,7 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 				sizeof(mara_vm_closure_t) + sizeof(mara_value_t) * num_captures
 			);
 			new_obj->type = MARA_OBJ_TYPE_VM_CLOSURE;
+			new_obj->quickened_opcode = MARA_OP_CALL_VM;
 			mara_vm_closure_t* new_closure = (mara_vm_closure_t*)new_obj->body;
 			new_closure->fn = function->functions[function_index];
 			for (mara_index_t i = 0; i < num_captures; ++i) {
