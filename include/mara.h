@@ -152,6 +152,7 @@ typedef struct {
 
 typedef struct {
 	bool no_alloc;
+	// TODO: make it so that mara_value_t is considered nil when zero-initialized
 	const mara_value_t* userdata;
 } mara_native_fn_options_t;
 

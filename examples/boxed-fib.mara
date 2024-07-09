@@ -1,6 +1,13 @@
+(def list (import "core" "list"))
+(def list/set (import "core" "list/set"))
+(def list/get (import "core" "list/get"))
+(def <= (import "core" "<="))
+(def + (import "core" "+"))
+(def - (import "core" "-"))
+
 (def make-box (fn () (list nil)))
-(def box/set (fn (box x) (put box 0 x)))
-(def box/get (fn (box) (get box 0)))
+(def box/set (fn (box x) (list/set box 0 x)))
+(def box/get (fn (box) (list/get box 0)))
 
 (def fib-box (make-box))
 (def boxed-fib (fn (n)

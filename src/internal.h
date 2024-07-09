@@ -39,7 +39,7 @@
 	((type*)((char*)ptr - offsetof(type, member)))
 
 #if defined(__GNUC__) || defined(__clang__)
-#	define MARA_EXPECT(X) __builtin_expect((X), 1)
+#	define MARA_EXPECT(X) __builtin_expect(!!(X), 1)
 #else
 #	define MARA_EXPECT(X) (X)
 #endif
@@ -205,20 +205,28 @@ typedef struct mara_module_loader_entry_s {
 	X(SET_CAPTURE) \
 	X(GET_CAPTURE) \
 	X(CALL) \
+	X(CALL_VM) \
+	X(CALL_NATIVE) \
+	X(CALL_GENERIC) \
 	X(RETURN) \
 	X(JUMP) \
 	X(JUMP_IF_FALSE) \
 	X(MAKE_CLOSURE) \
+	MARA_INTRINSIC(X)
+
+#define MARA_INTRINSIC(X) \
 	X(LT) \
 	X(LTE) \
 	X(GT) \
 	X(GTE) \
 	X(PLUS) \
-	X(SUB) \
-	X(NEG) \
+	X(MINUS) \
 	X(MAKE_LIST) \
-	X(PUT) \
-	X(GET) \
+	X(LIST_NEW) \
+	X(LIST_SET) \
+	X(LIST_GET) \
+	X(LIST_LEN) \
+	X(LIST_PUSH)
 
 #define MARA_DEFINE_OPCODE_ENUM(X) \
 	MARA_OP_##X,
@@ -251,11 +259,13 @@ typedef struct mara_function_s {
 } mara_vm_function_t;
 
 typedef struct mara_vm_closure_s {
+	uint8_t quickened_opcode;
 	mara_vm_function_t* fn;
 	mara_value_t captures[];
 } mara_vm_closure_t;
 
 typedef struct {
+	uint8_t quickened_opcode;
 	mara_native_fn_t fn;
 	mara_value_t userdata;
 	bool no_alloc;
@@ -420,6 +430,15 @@ mara_value_is_tombstone(mara_value_t value);
 
 void
 mara_obj_add_arena_mask(mara_obj_t* parent, mara_value_t child);
+
+mara_fn_t*
+mara_new_fn_ex(
+	mara_exec_ctx_t* ctx,
+	mara_zone_t* zone,
+	mara_native_fn_t fn,
+	mara_native_fn_options_t options,
+	mara_opcode_t quickened_opcode
+);
 
 MARA_PRIVATE const char*
 mara_value_type_name(mara_value_type_t type) {

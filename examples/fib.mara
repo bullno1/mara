@@ -1,3 +1,7 @@
+(def <= (import "core" "<="))
+(def + (import "core" "+"))
+(def - (import "core" "-"))
+
 (def fib-rec (fn (self n)
                (if (<= n 1)
                  n

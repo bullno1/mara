@@ -2,82 +2,44 @@
 #include <mara/bind.h>
 #include "vm_intrinsics.h"
 
+#define MARA_EXPORT_INTRINSIC(NAME, OP) \
+	do { \
+		mara_fn_t* fn = mara_new_fn_ex( \
+			ctx, \
+			mara_get_local_zone(ctx), \
+			mara_intrin_##OP, \
+			(mara_native_fn_options_t){ \
+				.no_alloc = true \
+			}, \
+			MARA_OP_##OP \
+		); \
+		mara_export( \
+			ctx, \
+			mara_str_from_literal(MARA_BIND_STRINGIFY(NAME)), \
+			mara_value_from_fn(fn) \
+		); \
+	} while (0)
+
 // List
-
-MARA_PRIVATE MARA_FUNCTION(mara_core_list_new) {
-	(void)userdata;
-	mara_add_native_debug_info(ctx);
-
-	mara_index_t capacity = 0;
-	if (argc >= 1) {
-		MARA_FN_BIND_ARG(capacity, 0);
-	}
-	MARA_RETURN(mara_new_list(ctx, mara_get_return_zone(ctx), capacity));
-}
-
-MARA_PRIVATE MARA_FUNCTION(mara_core_list_len) {
-	(void)userdata;
-	mara_add_native_debug_info(ctx);
-	MARA_FN_CHECK_ARITY(1);
-	MARA_FN_ARG(mara_list_t*, list, 0);
-
-	MARA_RETURN(mara_list_len(ctx, list));
-}
-
-MARA_PRIVATE MARA_FUNCTION(mara_core_list_push) {
-	(void)userdata;
-	mara_add_native_debug_info(ctx);
-	MARA_FN_CHECK_ARITY(2);
-	MARA_FN_ARG(mara_list_t*, list, 0);
-	MARA_FN_ARG(mara_value_t, value, 1);
-
-	mara_list_push(ctx, list, value);
-	MARA_RETURN(mara_nil());
-}
-
-MARA_PRIVATE MARA_FUNCTION(mara_core_list_set) {
-	(void)userdata;
-	mara_add_native_debug_info(ctx);
-	MARA_FN_CHECK_ARITY(3);
-	MARA_FN_ARG(mara_list_t*, list, 0);
-	MARA_FN_ARG(mara_index_t, index, 1);
-	MARA_FN_ARG(mara_value_t, value, 2);
-
-	MARA_RETURN(mara_list_set(ctx, list, index, value));
-}
-
-MARA_PRIVATE MARA_FUNCTION(mara_core_list_get) {
-	(void)userdata;
-	mara_add_native_debug_info(ctx);
-	MARA_FN_CHECK_ARITY(2);
-	MARA_FN_ARG(mara_list_t*, list, 0);
-	MARA_FN_ARG(mara_index_t, index, 1);
-
-	MARA_RETURN(mara_list_get(ctx, list, index));
-}
 
 MARA_PRIVATE MARA_FUNCTION(mara_core_module_entry) {
 	(void)argv;
 	(void)userdata;
 	MARA_FN_CHECK_ARITY(3);
 
-	mara_native_fn_options_t core_module_options = {
-		.no_alloc = true,
-	};
+	MARA_EXPORT_INTRINSIC(<, LT);
+	MARA_EXPORT_INTRINSIC(<=, LTE);
+	MARA_EXPORT_INTRINSIC(>, GT);
+	MARA_EXPORT_INTRINSIC(>=, GTE);
+	MARA_EXPORT_INTRINSIC(+, PLUS);
+	MARA_EXPORT_INTRINSIC(-, MINUS);
 
-	MARA_EXPORT_FN(<, mara_intrin_lt, core_module_options);
-	MARA_EXPORT_FN(<=, mara_intrin_lte, core_module_options);
-	MARA_EXPORT_FN(>, mara_intrin_gt, core_module_options);
-	MARA_EXPORT_FN(>=, mara_intrin_gte, core_module_options);
-
-	MARA_EXPORT_FN(+, mara_intrin_plus, core_module_options);
-	MARA_EXPORT_FN(-, mara_intrin_minus, core_module_options);
-
-	MARA_EXPORT_FN(list/new, mara_core_list_new, core_module_options);
-	MARA_EXPORT_FN(list/len, mara_core_list_len, core_module_options);
-	MARA_EXPORT_FN(list/push, mara_core_list_push, core_module_options);
-	MARA_EXPORT_FN(list/set, mara_core_list_set, core_module_options);
-	MARA_EXPORT_FN(list/get, mara_core_list_get, core_module_options);
+	MARA_EXPORT_INTRINSIC(list, MAKE_LIST);
+	MARA_EXPORT_INTRINSIC(list/new, LIST_NEW);
+	MARA_EXPORT_INTRINSIC(list/get, LIST_GET);
+	MARA_EXPORT_INTRINSIC(list/set, LIST_SET);
+	MARA_EXPORT_INTRINSIC(list/len, LIST_LEN);
+	MARA_EXPORT_INTRINSIC(list/push, LIST_PUSH);
 
 	MARA_RETURN(mara_value_from_bool(true));
 }

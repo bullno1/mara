@@ -707,134 +707,6 @@ mara_compile_call(mara_compile_ctx_t* ctx, mara_list_t* list, mara_value_t fn) {
 }
 
 MARA_PRIVATE mara_error_t*
-mara_compile_bin_ops(mara_compile_ctx_t* ctx, mara_list_t* list) {
-	mara_index_t list_len = list->len;
-	if (list_len != 3) {
-		return mara_compiler_error(
-			ctx,
-			mara_str_from_literal("core/syntax-error"),
-			"Operator requires 2 arguments",
-			mara_nil()
-		);
-	}
-
-	mara_compiler_set_debug_info(ctx, list, 1);
-	mara_check_error(mara_compile_expression(ctx, list->elems[1]));
-
-	mara_compiler_set_debug_info(ctx, list, 2);
-	mara_check_error(mara_compile_expression(ctx, list->elems[2]));
-
-	mara_compiler_set_debug_info(ctx, list, MARA_DEBUG_INFO_SELF);
-	mara_value_t first_elem = list->elems[0];
-	if (first_elem.internal == ctx->sym_lt.internal) {
-		return mara_compiler_emit(ctx, MARA_OP_LT, 0, -1);
-	} else if (first_elem.internal == ctx->sym_lte.internal) {
-		return mara_compiler_emit(ctx, MARA_OP_LTE, 0, -1);
-	} else if (first_elem.internal == ctx->sym_gt.internal) {
-		return mara_compiler_emit(ctx, MARA_OP_GT, 0, -1);
-	} else if (first_elem.internal == ctx->sym_gte.internal) {
-		return mara_compiler_emit(ctx, MARA_OP_GTE, 0, -1);
-	}
-
-	mara_assert(false, "Invalid binop");
-	return NULL;
-}
-
-MARA_PRIVATE mara_error_t*
-mara_compile_plus(mara_compile_ctx_t* ctx, mara_list_t* list) {
-	mara_index_t list_len = list->len;
-	if (list_len - 1 > MARA_MAX_ARGS) {
-		return mara_compiler_error(
-			ctx,
-			mara_str_from_literal("core/limit-reached/max-arguments"),
-			"Operator has too many arguments",
-			mara_nil()
-		);
-	}
-
-	for (mara_index_t i = 1; i < list_len; ++i) {
-		mara_compiler_set_debug_info(ctx, list, i);
-		mara_check_error(mara_compile_expression(ctx, list->elems[i]));
-	}
-
-	mara_compiler_set_debug_info(ctx, list, MARA_DEBUG_INFO_SELF);
-	return mara_compiler_emit(ctx, MARA_OP_PLUS, list_len - 1, -(list_len - 2));
-}
-
-MARA_PRIVATE mara_error_t*
-mara_compile_minus(mara_compile_ctx_t* ctx, mara_list_t* list) {
-	// TODO: combine all intrinsics into one function with min max arity
-	mara_index_t list_len = list->len;
-	if (list_len < 1) {
-		return mara_compiler_error(
-			ctx,
-			mara_str_from_literal("core/syntax-error"),
-			"Operator requires at least one argument",
-			mara_nil()
-		);
-	}
-	if (list_len - 1 > MARA_MAX_ARGS) {
-		return mara_compiler_error(
-			ctx,
-			mara_str_from_literal("core/limit-reached/max-arguments"),
-			"Operator has too many arguments",
-			mara_nil()
-		);
-	}
-
-	for (mara_index_t i = 1; i < list_len; ++i) {
-		mara_compiler_set_debug_info(ctx, list, i);
-		mara_check_error(mara_compile_expression(ctx, list->elems[i]));
-	}
-
-	mara_compiler_set_debug_info(ctx, list, MARA_DEBUG_INFO_SELF);
-	if (list_len == 2) {
-		return mara_compiler_emit(ctx, MARA_OP_NEG, 0, 0);
-	} else {
-		return mara_compiler_emit(ctx, MARA_OP_SUB, list_len - 1, -(list_len - 2));
-	}
-}
-
-MARA_PRIVATE mara_error_t*
-mara_compile_list(mara_compile_ctx_t* ctx, mara_list_t* list) {
-	mara_index_t list_len = list->len;
-
-	for (mara_index_t i = 1; i < list_len; ++i) {
-		mara_compiler_set_debug_info(ctx, list, i);
-		mara_check_error(mara_compile_expression(ctx, list->elems[i]));
-	}
-
-	mara_compiler_set_debug_info(ctx, list, MARA_DEBUG_INFO_SELF);
-	return mara_compiler_emit(ctx, MARA_OP_MAKE_LIST, list_len - 1, -(list_len - 2));
-}
-
-MARA_PRIVATE mara_error_t*
-mara_compile_put(mara_compile_ctx_t* ctx, mara_list_t* list) {
-	mara_index_t list_len = list->len;
-
-	for (mara_index_t i = 1; i < list_len; ++i) {
-		mara_compiler_set_debug_info(ctx, list, i);
-		mara_check_error(mara_compile_expression(ctx, list->elems[i]));
-	}
-
-	mara_compiler_set_debug_info(ctx, list, MARA_DEBUG_INFO_SELF);
-	return mara_compiler_emit(ctx, MARA_OP_PUT, list_len - 1, -(list_len - 2));
-}
-
-MARA_PRIVATE mara_error_t*
-mara_compile_get(mara_compile_ctx_t* ctx, mara_list_t* list) {
-	mara_index_t list_len = list->len;
-
-	for (mara_index_t i = 1; i < list_len; ++i) {
-		mara_compiler_set_debug_info(ctx, list, i);
-		mara_check_error(mara_compile_expression(ctx, list->elems[i]));
-	}
-
-	mara_compiler_set_debug_info(ctx, list, MARA_DEBUG_INFO_SELF);
-	return mara_compiler_emit(ctx, MARA_OP_GET, list_len - 1, -(list_len - 2));
-}
-
-MARA_PRIVATE mara_error_t*
 mara_compile_def(mara_compile_ctx_t* ctx, mara_list_t* list) {
 	mara_index_t list_len = list->len;
 	if (
@@ -1193,6 +1065,7 @@ mara_do_compile(
 	mara_obj_t* obj = mara_alloc_obj(ctx->exec_ctx, zone, sizeof(mara_vm_closure_t));
 	obj->type = MARA_OBJ_TYPE_VM_CLOSURE;
 	mara_vm_closure_t* closure = (mara_vm_closure_t*)obj->body;
+	closure->quickened_opcode = MARA_OP_CALL_VM;
 	closure->fn = function;
 
 	*result = (mara_fn_t*)obj;
@@ -1243,18 +1116,6 @@ mara_compile(
 	mara_compiler_add_builtin(&compile_ctx, mara_str_from_literal("if"), mara_compile_if);
 	mara_compiler_add_builtin(&compile_ctx, mara_str_from_literal("fn"), mara_compile_fn);
 	mara_compiler_add_builtin(&compile_ctx, mara_str_from_literal("do"), mara_compile_do);
-
-	mara_compiler_add_builtin(&compile_ctx, mara_str_from_literal("<"), mara_compile_bin_ops);
-	mara_compiler_add_builtin(&compile_ctx, mara_str_from_literal("<="), mara_compile_bin_ops);
-	mara_compiler_add_builtin(&compile_ctx, mara_str_from_literal(">"), mara_compile_bin_ops);
-	mara_compiler_add_builtin(&compile_ctx, mara_str_from_literal(">="), mara_compile_bin_ops);
-
-	mara_compiler_add_builtin(&compile_ctx, mara_str_from_literal("+"), mara_compile_plus);
-	mara_compiler_add_builtin(&compile_ctx, mara_str_from_literal("-"), mara_compile_minus);
-
-	mara_compiler_add_builtin(&compile_ctx, mara_str_from_literal("list"), mara_compile_list);
-	mara_compiler_add_builtin(&compile_ctx, mara_str_from_literal("put"), mara_compile_put);
-	mara_compiler_add_builtin(&compile_ctx, mara_str_from_literal("get"), mara_compile_get);
 
 	error = mara_do_compile(&compile_ctx, zone, options, exprs, result);
 

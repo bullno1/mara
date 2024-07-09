@@ -69,11 +69,11 @@
 		mara_value_t: mara_unwrap_identity \
 	)
 
-#define MARA_EXPORT_FN(name, fn, userdata) \
+#define MARA_EXPORT_FN(name, fn, options) \
 	mara_export( \
 		ctx, \
 		mara_str_from_literal(MARA_BIND_STRINGIFY(name)), \
-		mara_value_from_fn(mara_new_fn(ctx, mara_get_local_zone(ctx), fn, userdata)) \
+		mara_value_from_fn(mara_new_fn(ctx, mara_get_local_zone(ctx), fn, options)) \
 	)
 
 #define MARA_BIND_STRINGIFY(X) MARA_BIND_STRINGIFY2(X)

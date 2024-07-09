@@ -100,6 +100,7 @@ mara_deep_copy(
 				mara_native_closure_t* new_closure = (mara_native_closure_t*)new_closure_header->body;
 				new_closure->fn = closure->fn;
 				new_closure->no_alloc = closure->no_alloc;
+				new_closure->quickened_opcode = closure->quickened_opcode;
 
 				mara_value_t userdata_copy = mara_deep_copy(
 					ctx, target_zone, copied_objs, closure->userdata
@@ -168,6 +169,7 @@ mara_deep_copy(
 
 				mara_vm_closure_t* new_closure = (mara_vm_closure_t*)new_closure_header->body;
 				new_closure->fn = old_closure->fn;
+				new_closure->quickened_opcode = MARA_OP_CALL_VM;
 				for (mara_index_t i = 0; i < num_captures; ++i) {
 					mara_value_t capture_copy = mara_deep_copy(
 						ctx, target_zone, copied_objs,
@@ -232,10 +234,16 @@ mara_copy(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_value_t value) {
 					return mara_start_deep_copy(ctx, zone, value);
 				} else {
 					return mara_value_from_fn(
-						mara_new_fn(ctx, zone, closure->fn, (mara_native_fn_options_t){
-							.no_alloc = closure->no_alloc,
-							.userdata = &closure->userdata,
-						})
+						mara_new_fn_ex(
+							ctx,
+							zone,
+							closure->fn,
+							(mara_native_fn_options_t){
+								.no_alloc = closure->no_alloc,
+								.userdata = &closure->userdata,
+							},
+							closure->quickened_opcode
+						)
 					);
 				}
 			}

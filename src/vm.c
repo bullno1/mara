@@ -174,11 +174,9 @@ mara_call(
 #	define MARA_BEGIN_OP(NAME) MARA_OP_##NAME: {
 #	define MARA_END_OP() } MARA_DISPATCH_NEXT()
 #	define MARA_END_DISPATCH()
-#	define MARA_DISPATCH_OP(NAME, OPERANDS) \
-		{ \
-			operands = OPERANDS; \
-			goto MARA_OP_##NAME; \
-		}
+#	define MARA_BEGIN_SUBROUTINE(NAME) NAME: {
+#	define MARA_END_SUBROUTINE(NAME) } MARA_DISPATCH_NEXT()
+#	define MARA_CALL_SUBROUTINE(NAME) goto NAME;
 #elif 1
 // Switched goto
 #	define MARA_DISPATCH_ENTRY(X) \
@@ -197,11 +195,9 @@ mara_call(
 #	define MARA_BEGIN_OP(NAME) MARA_OP_##NAME: {
 #	define MARA_END_OP() } MARA_DISPATCH_NEXT()
 #	define MARA_END_DISPATCH()
-#	define MARA_DISPATCH_OP(NAME, OPERANDS) \
-		{ \
-			operands = OPERANDS; \
-			goto MARA_OP_##NAME; \
-		}
+#	define MARA_BEGIN_SUBROUTINE(NAME) NAME: {
+#	define MARA_END_SUBROUTINE(NAME) } MARA_DISPATCH_NEXT()
+#	define MARA_CALL_SUBROUTINE(NAME) goto NAME;
 #else
 // Switch case
 #	define MARA_BEGIN_DISPATCH() \
@@ -215,13 +211,38 @@ mara_call(
 #	define MARA_BEGIN_OP(NAME) case MARA_OP_##NAME: {
 #	define MARA_END_OP() } continue;
 #	define MARA_END_DISPATCH() }}
-#	define MARA_DISPATCH_OP(NAME, OPERANDS) \
-		{ \
-			opcode = MARA_OP_##NAME; \
-			operands = OPERANDS; \
-			goto redispatch; \
-		}
+#	define MARA_BEGIN_SUBROUTINE(NAME) MARA_SUBROUTINE_##NAME: {
+#	define MARA_END_SUBROUTINE(NAME) } goto redispatch;
+#	define MARA_CALL_SUBROUTINE(NAME) goto NAME;
 #endif
+
+#define MARA_VM_QUICKEN(NAME) \
+	*(ip - 1) = mara_encode_instruction(NAME, operands)
+
+#define MARA_HANDLE_INTRINSIC(NAME) \
+	MARA_BEGIN_OP(NAME) \
+		if (MARA_EXPECT(mara_value_is_obj(stack_top))) { \
+			top_obj = mara_value_to_obj(stack_top); \
+			if (MARA_EXPECT(top_obj->type == MARA_OBJ_TYPE_NATIVE_CLOSURE || top_obj->type == MARA_OBJ_TYPE_VM_CLOSURE)) { \
+				uint8_t* quickened_opcode = (uint8_t*)top_obj->body; \
+				if (MARA_EXPECT(*quickened_opcode == opcode)) { \
+					sp -= operands; \
+					if (MARA_EXPECT((error = mara_intrin_##NAME(ctx, operands, sp, mara_nil(), &stack_top)) == NULL)) { \
+						*sp = stack_top; \
+					} else { \
+						goto intrinsic_error; \
+					} \
+				} else { \
+					MARA_VM_QUICKEN(MARA_OP_CALL_GENERIC); \
+					goto MARA_OP_CALL_GENERIC; \
+				} \
+			} else { \
+				goto invalid_call_type; \
+			} \
+		} else { \
+			goto invalid_call_type; \
+		} \
+	MARA_END_OP()
 
 MARA_WARNING_PUSH()
 
@@ -277,6 +298,7 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 	MARA_VM_LOAD_STATE(vm);
 	MARA_VM_DERIVE_STATE();
 
+	mara_obj_t* top_obj;
 	mara_opcode_t opcode;
 	mara_operand_t operands;
 
@@ -327,118 +349,59 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 			*(++sp) = stack_top = closure->captures[operands];
 		MARA_END_OP()
 		MARA_BEGIN_OP(CALL)
-			sp -= operands;
-
 			if (MARA_EXPECT(mara_value_is_obj(stack_top))) {
-				mara_obj_t* fn = mara_value_to_obj(stack_top);
-				if (fn->type == MARA_OBJ_TYPE_VM_CLOSURE) {
-					mara_vm_closure_t* next_closure = (mara_vm_closure_t*)fn->body;
-					if (MARA_EXPECT(next_closure->fn->num_args <= (mara_index_t)operands)) {
-						mara_vm_state_t frame_state;
-						MARA_VM_SAVE_STATE(&frame_state);
-						mara_stack_frame_t* stack_frame = mara_vm_alloc_stack_frame(
-							ctx, &frame_state, next_closure, ctx->current_zone
-						);
-						if (MARA_EXPECT(stack_frame != NULL)) {
-							stack_frame->stack[0] = mara_tombstone();
-							mara_zone_t* call_zone = mara_zone_enter(
-								ctx,
-								(mara_zone_options_t){
-									.argc = operands,
-									.argv = sp,
-									.return_zone = ctx->current_zone,
-									.vm_closure = next_closure,
-								}
-							);
-							(void)call_zone;
-							mara_assert(call_zone != NULL, "Cannot alloc call zone");
-
-							args = sp;
-							fp = stack_frame;
-							sp = stack_frame->stack + next_closure->fn->num_locals;
-							ip = next_closure->fn->instructions;
-							MARA_VM_DERIVE_STATE();
-						} else {
-							MARA_VM_SAVE_STATE(vm);
-							return mara_errorf(
-								ctx, mara_str_from_literal("core/stack-overflow"),
-								"Stack overflow",
-								mara_nil()
-							);
-						}
-					} else {
-						MARA_VM_SAVE_STATE(vm);
-						return mara_errorf(
-							ctx, mara_str_from_literal("core/wrong-arity"),
-							"Function expects %d arguments, got %d",
-							mara_nil(),
-							next_closure->fn->num_args, operands
-						);
-					}
-				} else if (fn->type == MARA_OBJ_TYPE_NATIVE_CLOSURE) {
-					mara_native_closure_t* native_closure = (mara_native_closure_t*)fn->body;
-					mara_zone_t* return_zone = ctx->current_zone;
-					mara_vm_state_t frame_state;
-					MARA_VM_SAVE_STATE(&frame_state);
-					mara_stack_frame_t* stack_frame = mara_vm_alloc_stack_frame(
-						ctx, &frame_state, NULL, return_zone
-					);
-					ctx->native_debug_info[stack_frame - ctx->stack_frames_begin] = NULL;
-
-					if (MARA_EXPECT(stack_frame != NULL)) {
-						args = sp;
-						fp = stack_frame;
-						sp = NULL;
-						ip = NULL;
-						MARA_VM_SAVE_STATE(vm);
-
-						mara_zone_t* call_zone = NULL;
-						if (!native_closure->no_alloc) {
-							call_zone = mara_zone_enter(
-								ctx,
-								(mara_zone_options_t){
-									.argc = operands,
-									.argv = args,
-									.return_zone = return_zone,
-								}
-							);
-							mara_assert(call_zone != NULL, "Cannot alloc call zone");
-						}
-
-						mara_value_t call_result = mara_nil();
-						error = native_closure->fn(
-							ctx,
-							operands, args,
-							native_closure->userdata,
-							&call_result
-						);
-						if (MARA_EXPECT(error == NULL)) {
-							mara_value_t result_copy = mara_copy(ctx, return_zone, call_result);
-
-							if (call_zone != NULL) {
-								mara_zone_exit(ctx, call_zone);
-							}
-
-							mara_vm_pop_stack_frame(ctx, stack_frame);
-							MARA_VM_LOAD_STATE(vm);
-							*sp = stack_top = result_copy;
-						} else {
-							if (call_zone != NULL) {
-								mara_zone_exit(ctx, call_zone);
-							}
-
-							// VM state is already saved before calling the
-							// native function
-							return error;
-						}
-					} else {
-						MARA_VM_SAVE_STATE(vm);
-						return mara_errorf(
-							ctx, mara_str_from_literal("core/stack-overflow"),
-							"Stack overflow",
-							mara_nil()
-						);
-					}
+				top_obj = mara_value_to_obj(stack_top);
+				if (top_obj->type == MARA_OBJ_TYPE_VM_CLOSURE) {
+					MARA_VM_QUICKEN(MARA_OP_CALL_VM);
+					MARA_CALL_SUBROUTINE(handle_vm_call);
+				} else if (top_obj->type == MARA_OBJ_TYPE_NATIVE_CLOSURE) {
+					mara_native_closure_t* closure = (mara_native_closure_t*)top_obj->body;
+					MARA_VM_QUICKEN(closure->quickened_opcode);
+					MARA_CALL_SUBROUTINE(handle_native_call);
+				} else {
+					goto invalid_call_type;
+				}
+			} else {
+				goto invalid_call_type;
+			}
+		MARA_END_OP()
+		MARA_BEGIN_OP(CALL_VM)
+			if (MARA_EXPECT(mara_value_is_obj(stack_top))) {
+				top_obj = mara_value_to_obj(stack_top);
+				if (MARA_EXPECT(top_obj->type == MARA_OBJ_TYPE_VM_CLOSURE)) {
+					MARA_CALL_SUBROUTINE(handle_vm_call);
+				} else if (top_obj->type == MARA_OBJ_TYPE_NATIVE_CLOSURE) {
+					MARA_VM_QUICKEN(MARA_OP_CALL_GENERIC);
+					MARA_CALL_SUBROUTINE(handle_native_call);
+				} else {
+					goto invalid_call_type;
+				}
+			} else {
+				goto invalid_call_type;
+			}
+		MARA_END_OP()
+		MARA_BEGIN_OP(CALL_NATIVE)
+			if (MARA_EXPECT(mara_value_is_obj(stack_top))) {
+				top_obj = mara_value_to_obj(stack_top);
+				if (MARA_EXPECT(top_obj->type == MARA_OBJ_TYPE_NATIVE_CLOSURE)) {
+					MARA_CALL_SUBROUTINE(handle_native_call);
+				} else if (MARA_EXPECT(top_obj->type == MARA_OBJ_TYPE_VM_CLOSURE)) {
+					MARA_VM_QUICKEN(MARA_OP_CALL_GENERIC);
+					MARA_CALL_SUBROUTINE(handle_vm_call);
+				} else {
+					goto invalid_call_type;
+				}
+			} else {
+				goto invalid_call_type;
+			}
+		MARA_END_OP()
+		MARA_BEGIN_OP(CALL_GENERIC)
+			if (MARA_EXPECT(mara_value_is_obj(stack_top))) {
+				top_obj = mara_value_to_obj(stack_top);
+				if (top_obj->type == MARA_OBJ_TYPE_VM_CLOSURE) {
+					MARA_CALL_SUBROUTINE(handle_vm_call);
+				} else if (top_obj->type == MARA_OBJ_TYPE_NATIVE_CLOSURE) {
+					MARA_CALL_SUBROUTINE(handle_native_call);
 				} else {
 					goto invalid_call_type;
 				}
@@ -521,87 +484,126 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 			*(++sp) = stack_top = mara_obj_to_value(new_obj);
 			ip += num_captures;
 		MARA_END_OP()
-		// Intrinsics
-		MARA_BEGIN_OP(LT)
-			sp -= 1;
-			if (MARA_EXPECT((error = mara_intrin_lt(ctx, 2, sp, mara_nil(), &stack_top)) == NULL)) {
-				*sp = stack_top;
-			} else {
-				goto intrinsic_error;
-			}
-		MARA_END_OP()
-		MARA_BEGIN_OP(LTE)
-			sp -= 1;
-			if (MARA_EXPECT((error = mara_intrin_lte(ctx, 2, sp, mara_nil(), &stack_top)) == NULL)) {
-				*sp = stack_top;
-			} else {
-				goto intrinsic_error;
-			}
-		MARA_END_OP()
-		MARA_BEGIN_OP(GT)
-			sp -= 1;
-			if (MARA_EXPECT((error = mara_intrin_gt(ctx, 2, sp, mara_nil(), &stack_top)) == NULL)) {
-				*sp = stack_top;
-			} else {
-				goto intrinsic_error;
-			}
-		MARA_END_OP()
-		MARA_BEGIN_OP(GTE)
-			sp -= 1;
-			if (MARA_EXPECT((error = mara_intrin_gte(ctx, 2, sp, mara_nil(), &stack_top)) == NULL)) {
-				*sp = stack_top;
-			} else {
-				goto intrinsic_error;
-			}
-		MARA_END_OP()
-		MARA_BEGIN_OP(PLUS)
-			sp -= operands - 1;
-			if (MARA_EXPECT((error = mara_intrin_plus(ctx, operands, sp, mara_nil(), &stack_top)) == NULL)) {
-				*sp = stack_top;
-			} else {
-				goto intrinsic_error;
-			}
-		MARA_END_OP()
-		MARA_BEGIN_OP(NEG)
-			if (MARA_EXPECT((error = mara_intrin_neg(ctx, 1, sp, mara_nil(), &stack_top)) == NULL)) {
-				*sp = stack_top;
-			} else {
-				goto intrinsic_error;
-			}
-		MARA_END_OP()
-		MARA_BEGIN_OP(SUB)
-			sp -= operands - 1;
-			if (MARA_EXPECT((error = mara_intrin_sub(ctx, operands, sp, mara_nil(), &stack_top)) == NULL)) {
-				*sp = stack_top;
-			} else {
-				goto intrinsic_error;
-			}
-		MARA_END_OP()
-		MARA_BEGIN_OP(MAKE_LIST)
-			sp -= operands - 1;
-			if (MARA_EXPECT((error = mara_intrin_make_list(ctx, operands, sp, mara_nil(), &stack_top)) == NULL)) {
-				*sp = stack_top;
-			} else {
-				goto intrinsic_error;
-			}
-		MARA_END_OP()
-		MARA_BEGIN_OP(PUT)
-			sp -= 2;
-			if (MARA_EXPECT((error = mara_intrin_put(ctx, operands, sp, mara_nil(), &stack_top)) == NULL)) {
-				*sp = stack_top;
-			} else {
-				goto intrinsic_error;
-			}
-		MARA_END_OP()
-		MARA_BEGIN_OP(GET)
-			sp -= 1;
-			if (MARA_EXPECT((error = mara_intrin_get(ctx, operands, sp, mara_nil(), &stack_top)) == NULL)) {
-				*sp = stack_top;
-			} else {
-				goto intrinsic_error;
-			}
-		MARA_END_OP()
+
+		MARA_INTRINSIC(MARA_HANDLE_INTRINSIC)
 	MARA_END_DISPATCH()
+
+	MARA_BEGIN_SUBROUTINE(handle_vm_call)
+		mara_vm_closure_t* next_closure = (mara_vm_closure_t*)top_obj->body;
+		if (MARA_EXPECT(next_closure->fn->num_args <= (mara_index_t)operands)) {
+			sp -= operands;
+			mara_vm_state_t frame_state;
+			MARA_VM_SAVE_STATE(&frame_state);
+			mara_stack_frame_t* stack_frame = mara_vm_alloc_stack_frame(
+				ctx, &frame_state, next_closure, ctx->current_zone
+			);
+			if (MARA_EXPECT(stack_frame != NULL)) {
+
+				stack_frame->stack[0] = mara_tombstone();
+				mara_zone_t* call_zone = mara_zone_enter(
+					ctx,
+					(mara_zone_options_t){
+						.argc = operands,
+						.argv = sp,
+						.return_zone = ctx->current_zone,
+						.vm_closure = next_closure,
+					}
+				);
+				(void)call_zone;
+				mara_assert(call_zone != NULL, "Cannot alloc call zone");
+
+				args = sp;
+				fp = stack_frame;
+				sp = stack_frame->stack + next_closure->fn->num_locals;
+				ip = next_closure->fn->instructions;
+				MARA_VM_DERIVE_STATE();
+			} else {
+				MARA_VM_SAVE_STATE(vm);
+				return mara_errorf(
+					ctx, mara_str_from_literal("core/stack-overflow"),
+					"Stack overflow",
+					mara_nil()
+				);
+			}
+		} else {
+			MARA_VM_SAVE_STATE(vm);
+			return mara_errorf(
+				ctx, mara_str_from_literal("core/wrong-arity"),
+				"Function expects %d arguments, got %d",
+				mara_nil(),
+				next_closure->fn->num_args, operands
+			);
+		}
+	MARA_END_SUBROUTINE()
+
+	MARA_BEGIN_SUBROUTINE(handle_native_call)
+		mara_native_closure_t* native_closure = (mara_native_closure_t*)top_obj->body;
+
+		sp -= operands;
+		mara_zone_t* return_zone = ctx->current_zone;
+		mara_vm_state_t frame_state;
+		MARA_VM_SAVE_STATE(&frame_state);
+		mara_stack_frame_t* stack_frame = mara_vm_alloc_stack_frame(
+			ctx, &frame_state, NULL, return_zone
+		);
+
+		if (MARA_EXPECT(stack_frame != NULL)) {
+			ctx->native_debug_info[stack_frame - ctx->stack_frames_begin] = NULL;
+
+			args = sp;
+			fp = stack_frame;
+			sp = NULL;
+			ip = NULL;
+			MARA_VM_SAVE_STATE(vm);
+
+			mara_zone_t* call_zone = NULL;
+			if (!native_closure->no_alloc) {
+				call_zone = mara_zone_enter(
+					ctx,
+					(mara_zone_options_t){
+						.argc = operands,
+						.argv = args,
+						.return_zone = return_zone,
+					}
+				);
+				mara_assert(call_zone != NULL, "Cannot alloc call zone");
+			}
+
+			mara_value_t call_result = mara_nil();
+			error = native_closure->fn(
+				ctx,
+				operands, args,
+				native_closure->userdata,
+				&call_result
+			);
+			if (MARA_EXPECT(error == NULL)) {
+				mara_value_t result_copy = mara_copy(ctx, return_zone, call_result);
+
+				if (call_zone != NULL) {
+					mara_zone_exit(ctx, call_zone);
+				}
+
+				mara_vm_pop_stack_frame(ctx, stack_frame);
+				MARA_VM_LOAD_STATE(vm);
+				*sp = stack_top = result_copy;
+			} else {
+				if (call_zone != NULL) {
+					mara_zone_exit(ctx, call_zone);
+				}
+
+				// VM state is already saved before calling the
+				// native function
+				return error;
+			}
+		} else {
+			MARA_VM_SAVE_STATE(vm);
+			return mara_errorf(
+				ctx, mara_str_from_literal("core/stack-overflow"),
+				"Stack overflow",
+				mara_nil()
+			);
+		}
+	MARA_END_SUBROUTINE()
 
 invalid_call_type:
 	MARA_VM_SAVE_STATE(vm);

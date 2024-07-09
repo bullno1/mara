@@ -21,4 +21,15 @@ mara_encode_instruction(
 	return (((uint32_t)opcode & 0xff) << 24) | (operands & 0x00ffffff);
 }
 
+MARA_PRIVATE const char*
+mara_opcode_to_str(mara_opcode_t opcode) {
+#define MARA_OPCODE_TO_STR(OP) case MARA_OP_##OP: return #OP;
+
+	switch (opcode) {
+		MARA_OPCODE(MARA_OPCODE_TO_STR);
+		default:
+			return "INVALID";
+	}
+}
+
 #endif

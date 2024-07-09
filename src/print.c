@@ -144,7 +144,22 @@ mara_print_vm_function(
 					case MARA_OP_GET_CAPTURE:
 						mara_print_indented(output, body_options.indent, "(GET_CAPTURE %d)", operands);
 						break;
+					case MARA_OP_LT:
+					case MARA_OP_LTE:
+					case MARA_OP_GT:
+					case MARA_OP_GTE:
+					case MARA_OP_PLUS:
+					case MARA_OP_MINUS:
+					case MARA_OP_MAKE_LIST:
+					case MARA_OP_LIST_NEW:
+					case MARA_OP_LIST_LEN:
+					case MARA_OP_LIST_PUSH:
+					case MARA_OP_LIST_SET:
+					case MARA_OP_LIST_GET:
 					case MARA_OP_CALL:
+					case MARA_OP_CALL_NATIVE:
+					case MARA_OP_CALL_VM:
+					case MARA_OP_CALL_GENERIC:
 						mara_print_indented(output, body_options.indent, "(CALL %d)", operands);
 						break;
 					case MARA_OP_RETURN:
@@ -161,36 +176,6 @@ mara_print_vm_function(
 							(uint8_t)(operands >> 16) & 0xff,
 							operands & 0xffff
 						);
-						break;
-					case MARA_OP_LT:
-						mara_print_indented(output, body_options.indent, "(LT)");
-						break;
-					case MARA_OP_LTE:
-						mara_print_indented(output, body_options.indent, "(LTE)");
-						break;
-					case MARA_OP_GT:
-						mara_print_indented(output, body_options.indent, "(GT)");
-						break;
-					case MARA_OP_GTE:
-						mara_print_indented(output, body_options.indent, "(GTE)");
-						break;
-					case MARA_OP_PLUS:
-						mara_print_indented(output, body_options.indent, "(PLUS %d)", operands);
-						break;
-					case MARA_OP_SUB:
-						mara_print_indented(output, body_options.indent, "(SUB %d)", operands);
-						break;
-					case MARA_OP_MAKE_LIST:
-						mara_print_indented(output, body_options.indent, "(MAKE_LIST %d)", operands);
-						break;
-					case MARA_OP_PUT:
-						mara_print_indented(output, body_options.indent, "(PUT)");
-						break;
-					case MARA_OP_GET:
-						mara_print_indented(output, body_options.indent, "(GET)");
-						break;
-					case MARA_OP_NEG:
-						mara_print_indented(output, body_options.indent, "(NEG)");
 						break;
 				}
 

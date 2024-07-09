@@ -436,6 +436,17 @@ mara_new_fn(
 	mara_native_fn_t fn,
 	mara_native_fn_options_t options
 ) {
+	return mara_new_fn_ex(ctx, zone, fn, options, MARA_OP_CALL_NATIVE);
+}
+
+mara_fn_t*
+mara_new_fn_ex(
+	mara_exec_ctx_t* ctx,
+	mara_zone_t* zone,
+	mara_native_fn_t fn,
+	mara_native_fn_options_t options,
+	mara_opcode_t quickened_opcode
+) {
 	// TODO: Implement light native function like Lua
 	// if userdata == NULL, use a light representation.
 	// Intern the function pointer in the permanent zone.
@@ -445,6 +456,8 @@ mara_new_fn(
 	mara_native_closure_t* closure = (mara_native_closure_t*)obj->body;
 	closure->fn = fn;
 	closure->no_alloc = options.no_alloc;
+	closure->quickened_opcode = quickened_opcode;
+
 	if (options.userdata != NULL) {
 		mara_value_t userdata = mara_copy(ctx, zone, *options.userdata);
 		closure->userdata = userdata;
