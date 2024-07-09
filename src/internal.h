@@ -281,6 +281,7 @@ typedef struct mara_vm_state_s {
 
 struct mara_stack_frame_s {
 	mara_vm_state_t previous_vm_state;
+	mara_index_t size;
 	mara_zone_t* return_zone;
 	mara_value_t* stack;
 	mara_vm_closure_t* vm_closure;

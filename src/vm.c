@@ -16,9 +16,7 @@ mara_vm_alloc_stack_frame(
 	mara_stack_frame_t* current_stack_frame = vm_state->fp;
 	mara_stack_frame_t* new_stack_frame = current_stack_frame + 1;
 	if (MARA_EXPECT(new_stack_frame < ctx->stack_frames_end)) {
-		mara_index_t current_frame_size = current_stack_frame->vm_closure != NULL
-			? current_stack_frame->vm_closure->fn->stack_size + 1  // For sentinel
-			: 0;
+		mara_index_t current_frame_size = current_stack_frame->size;
 		mara_index_t new_frame_size = vm_closure != NULL
 			? vm_closure->fn->stack_size + 1  // For sentinel
 			: 0;
@@ -29,6 +27,7 @@ mara_vm_alloc_stack_frame(
 				.return_zone = return_zone,
 				.stack = stack,
 				.vm_closure = vm_closure,
+				.size = new_frame_size,
 			};
 
 			return new_stack_frame;
