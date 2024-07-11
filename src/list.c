@@ -46,7 +46,6 @@ MARA_PRIVATE mara_value_t
 mara_list_do_set(mara_exec_ctx_t* ctx, mara_list_t* list, mara_index_t index, mara_value_t value) {
 	mara_obj_t* header = mara_header_of(list);
 	mara_value_t copy = mara_copy(ctx, header->zone, value);
-	mara_obj_add_arena_mask(header, copy);
 	mara_value_t old_value = list->elems[index];
 	list->elems[index] = copy;
 	return old_value;
@@ -120,7 +119,6 @@ mara_list_push(mara_exec_ctx_t* ctx, mara_list_t* list, mara_value_t value) {
 	}
 
 	list->elems[list->len++] = copy;
-	mara_obj_add_arena_mask(header, copy);
 }
 
 mara_value_t

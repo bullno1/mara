@@ -36,8 +36,6 @@ mara_alloc_obj(mara_exec_ctx_t* ctx, mara_zone_t* zone, size_t size) {
 	mara_assert(obj != NULL, "Out of memory");
 
 	obj->zone = zone;
-	// zone->arena_mask is guaranteed to be set since we just alloc'ed
-	obj->arena_mask = zone->arena_mask;
 
 	return obj;
 }
@@ -448,7 +446,6 @@ mara_new_fn(
 	if (options.userdata != NULL) {
 		mara_value_t userdata = mara_copy(ctx, zone, *options.userdata);
 		closure->userdata = userdata;
-		mara_obj_add_arena_mask(obj, userdata);
 	} else {
 		closure->userdata = mara_nil();
 	}
@@ -486,12 +483,4 @@ mara_new_sym(mara_exec_ctx_t* ctx, mara_str_t name) {
 		.as_bits = { .payload = id, .tag = NANBOX_MIN_AUX_TAG },
 	};
 	return mara_nanbox_to_value(nanbox);
-}
-
-void
-mara_obj_add_arena_mask(mara_obj_t* parent, mara_value_t child) {
-	if (mara_value_is_obj(child)) {
-		mara_obj_t* child_obj = mara_value_to_obj(child);
-		parent->arena_mask |= child_obj->arena_mask;
-	}
 }

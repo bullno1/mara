@@ -39,10 +39,8 @@ mara_create_env(mara_env_options_t options) {
 		.permanent_zone.level = -1,
 		.dummy_chunk = dummy_chunk,
 	};
-	mara_arena_init(env, &env->permanent_arena);
+	mara_arena_init(env, &env->permanent_zone.arena);
 
-	env->permanent_zone.arena = &env->permanent_arena;
-	env->permanent_zone.arena_snapshot = mara_arena_snapshot(env, &env->permanent_arena);
 	mara_symtab_init(env, &env->symtab);
 
 	return env;
@@ -104,7 +102,7 @@ mara_begin(mara_env_t* env, mara_exec_options_t options) {
 		env->free_contexts = ctx->next;
 		ctx_size = ctx->size;
 	} else {
-		ctx = mara_arena_alloc(env, &env->permanent_arena, ctx_size);
+		ctx = mara_arena_alloc(env, &env->permanent_zone.arena, ctx_size);
 	}
 
 	mara_zone_t* current_zone = mem_layout_locate(ctx, zones_offset);
@@ -122,18 +120,12 @@ mara_begin(mara_env_t* env, mara_exec_options_t options) {
 		.stack_frames_end = current_stack_frame + options.max_stack_frames,
 		.native_debug_info = mem_layout_locate(ctx, debug_info_offset),
 		.error_zone = {
-			.arena = &ctx->error_arena,
 			.level = options.max_stack_frames,
 		},
 	};
 
-	mara_arena_init(env, &ctx->error_arena);
-	ctx->error_zone.arena_snapshot = mara_arena_snapshot(env, &ctx->error_arena);
-
+	mara_arena_init(env, &ctx->error_zone.arena);
 	mara_arena_init(env, &ctx->debug_info_arena);
-	for (mara_index_t i = 0; i < (mara_index_t)MARA_NUM_ARENAS; ++i) {
-		mara_arena_init(env, &ctx->arenas[i]);
-	}
 
 	*current_zone = (mara_zone_t){ 0 };
 	*current_stack_frame = (mara_stack_frame_t){
@@ -141,6 +133,7 @@ mara_begin(mara_env_t* env, mara_exec_options_t options) {
 		.stack = stack_base,
 	};
 	ctx->native_debug_info[0] = NULL;
+	mara_arena_init(env, &current_zone->arena);
 
 	env->ref_count += 1;
 	return ctx;
@@ -169,6 +162,7 @@ mara_reset(mara_env_t* env) {
 	if (env->ref_count == 0) {
 		mara_symtab_cleanup(env, &env->symtab);
 		mara_zone_cleanup(env, &env->permanent_zone);
+		env->free_contexts = NULL;
 		return true;
 	} else {
 		return false;

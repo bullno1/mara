@@ -500,7 +500,7 @@ mara_compiler_end_function(mara_compile_ctx_t* ctx) {
 		if (source_info != NULL) {
 			source_info[i] = tagged_instruction.source_info;
 			source_info[i].filename = mara_strpool_intern(
-				exec_ctx->env, &exec_ctx->env->permanent_arena,
+				exec_ctx->env, &exec_ctx->env->permanent_zone.arena,
 				&env->permanent_strpool, tagged_instruction.source_info.filename
 			);
 		}
@@ -1263,9 +1263,7 @@ mara_compile(
 	mara_fn_t** result
 ) {
 	mara_error_t* error;
-	mara_zone_t* compiler_zone = mara_zone_enter(ctx, (mara_zone_options_t){
-		.return_zone = zone,
-	});
+	mara_zone_t* compiler_zone = mara_zone_enter(ctx);
 	if (compiler_zone == NULL) {
 		return mara_errorf(
 			ctx,

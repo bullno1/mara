@@ -101,12 +101,7 @@ mara_deep_copy(
 				new_closure->fn = closure->fn;
 				new_closure->no_alloc = closure->no_alloc;
 
-				mara_value_t userdata_copy = mara_deep_copy(
-					ctx, target_zone, copied_objs, closure->userdata
-				);
-				new_closure->userdata = userdata_copy;
-				mara_obj_add_arena_mask(new_closure_header, userdata_copy);
-
+				new_closure->userdata = mara_deep_copy(ctx, target_zone, copied_objs, closure->userdata);
 				return mara_obj_to_value(new_closure_header);
 			}
 		case MARA_OBJ_TYPE_LIST:
@@ -122,12 +117,9 @@ mara_deep_copy(
 				mara_value_t* old_elems = old_list->elems;
 				mara_value_t* new_elems = new_list->elems;
 				for (mara_index_t i = 0; i < len; ++i) {
-					mara_value_t elem_copy = mara_deep_copy(
+					new_elems[i] = mara_deep_copy(
 						ctx, target_zone, copied_objs, old_elems[i]
 					);
-
-					new_elems[i] = elem_copy;
-					mara_obj_add_arena_mask(new_list_header, elem_copy);
 				}
 
 				return mara_value_from_list(new_list);
@@ -169,12 +161,10 @@ mara_deep_copy(
 				mara_vm_closure_t* new_closure = (mara_vm_closure_t*)new_closure_header->body;
 				new_closure->fn = old_closure->fn;
 				for (mara_index_t i = 0; i < num_captures; ++i) {
-					mara_value_t capture_copy = mara_deep_copy(
+					new_closure->captures[i] = mara_deep_copy(
 						ctx, target_zone, copied_objs,
 						old_closure->captures[i]
 					);
-					new_closure->captures[i] = capture_copy;
-					mara_obj_add_arena_mask(new_closure_header, capture_copy);
 				}
 
 				return mara_obj_to_value(new_closure_header);
@@ -187,9 +177,7 @@ mara_deep_copy(
 MARA_PRIVATE mara_value_t
 mara_start_deep_copy(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_value_t value) {
 	// value is not included because we are not modifying it
-	mara_zone_t* copy_zone = mara_zone_enter(ctx, (mara_zone_options_t){
-		.return_zone = zone,
-	});
+	mara_zone_t* copy_zone = mara_zone_enter(ctx);
 
 	if (MARA_EXPECT(copy_zone != NULL)) {
 		mara_ptr_map_t copied_objs = { .root = NULL };

@@ -103,16 +103,12 @@ mara_map_set(mara_exec_ctx_t* ctx, mara_map_t* map, mara_value_t key, mara_value
 		}
 
 		map->len += 1;
-		mara_value_t key_copy = mara_copy(ctx, map_zone, key);
-		node->key = key_copy;
-		mara_obj_add_arena_mask(header, key_copy);
+		node->key = mara_copy(ctx, map_zone, key);
 	} else {
 		old_value = node->value;
 	}
 
-	mara_value_t value_copy = mara_copy(ctx, map_zone, value);
-	node->value = value_copy;
-	mara_obj_add_arena_mask(header, value_copy);
+	node->value = mara_copy(ctx, map_zone, value);
 	return old_value;
 }
 

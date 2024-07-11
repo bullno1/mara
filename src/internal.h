@@ -4,12 +4,9 @@
 #include <mara.h>
 #include <mara/utils.h>
 #include <assert.h>
-#include <limits.h>
 #define BHAMT_HASH_TYPE uint64_t
 #include "hamt.h"
 
-#define MARA_ARENA_MASK_TYPE uint8_t
-#define MARA_NUM_ARENAS (sizeof(MARA_ARENA_MASK_TYPE) * CHAR_BIT)
 #define MARA_DEBUG_INFO_SELF ((mara_index_t)-1)
 
 #ifdef _MSC_VER
@@ -60,8 +57,6 @@
 
 // Common types
 
-typedef MARA_ARENA_MASK_TYPE mara_arena_mask_t;
-
 typedef struct {
 	void (*fn)(mara_env_t* env, void* userdata);
 	void* userdata;
@@ -99,7 +94,6 @@ typedef enum mara_obj_type_e {
 
 typedef struct {
 	mara_obj_type_t type;
-	mara_arena_mask_t arena_mask;
 	mara_zone_t* zone;
 	_Alignas(MARA_ALIGN_TYPE) char body[];
 } mara_obj_t;
@@ -169,13 +163,6 @@ typedef struct {
 	mara_arena_snapshot_t arena_snapshot;
 	mara_finalizer_t* finalizers;
 } mara_zone_snapshot_t;
-
-typedef struct {
-	mara_zone_t* return_zone;
-	mara_index_t argc;
-	const mara_value_t* argv;
-	struct mara_vm_closure_s* vm_closure;
-} mara_zone_options_t;
 
 typedef struct mara_zone_bookmark_s {
 	mara_zone_t* previous_zone;
@@ -284,13 +271,8 @@ struct mara_stack_frame_s {
 
 struct mara_zone_s {
 	mara_index_t level;
-	mara_arena_mask_t arena_mask;
-
-	mara_arena_t* arena;
+	mara_arena_t arena;
 	mara_finalizer_t* finalizers;
-	mara_arena_snapshot_t arena_snapshot;
-
-	mara_zone_options_t options;
 };
 
 struct mara_env_s {
@@ -299,7 +281,6 @@ struct mara_env_s {
 	mara_exec_ctx_t* free_contexts;
 	mara_map_t* module_cache;
 	mara_zone_t permanent_zone;
-	mara_arena_t permanent_arena;
 	mara_strpool_t permanent_strpool;
 	mara_symtab_t symtab;
 	mara_index_t ref_count;
@@ -315,7 +296,6 @@ struct mara_exec_ctx_s {
 	size_t size;
 
 	mara_zone_t* current_zone;
-	mara_arena_t arenas[MARA_NUM_ARENAS];
 
 	mara_zone_t* zones_end;
 	mara_value_t* stack_end;
@@ -327,7 +307,6 @@ struct mara_exec_ctx_s {
 	mara_map_t* current_module;
 	mara_module_options_t current_module_options;
 
-	mara_arena_t error_arena;
 	mara_error_t last_error;
 	mara_zone_t error_zone;
 
@@ -370,7 +349,7 @@ mara_arena_reset(mara_env_t* env, mara_arena_t* arena);
 // Zone
 
 mara_zone_t*
-mara_zone_enter(mara_exec_ctx_t* ctx, mara_zone_options_t options);
+mara_zone_enter(mara_exec_ctx_t* ctx);
 
 void
 mara_zone_exit(mara_exec_ctx_t* ctx, mara_zone_t* zone);
@@ -386,9 +365,6 @@ mara_zone_snapshot(mara_exec_ctx_t* ctx);
 
 void
 mara_zone_restore(mara_exec_ctx_t* ctx, mara_zone_snapshot_t snapshot);
-
-mara_arena_t*
-mara_zone_get_arena(mara_exec_ctx_t* ctx, mara_zone_t* zone);
 
 // Value
 
@@ -420,9 +396,6 @@ mara_tombstone(void);
 
 bool
 mara_value_is_tombstone(mara_value_t value);
-
-void
-mara_obj_add_arena_mask(mara_obj_t* parent, mara_value_t child);
 
 MARA_PRIVATE const char*
 mara_value_type_name(mara_value_type_t type) {

@@ -80,11 +80,7 @@ mara_call(
 		mara_native_closure_t* closure = (mara_native_closure_t*)obj->body;
 		mara_zone_t* call_zone = NULL;
 		if (!closure->no_alloc) {
-			call_zone = mara_zone_enter(ctx, (mara_zone_options_t){
-				.argc = argc,
-				.argv = argv,
-				.return_zone = zone,
-			});
+			call_zone = mara_zone_enter(ctx);
 			if (call_zone == NULL) {
 				return mara_errorf(
 					ctx,
@@ -120,12 +116,7 @@ mara_call(
 				vm_state->sp = stack_frame->stack + mara_fn->num_locals;
 				vm_state->ip = mara_fn->instructions;
 
-				mara_zone_t* call_zone = mara_zone_enter(ctx, (mara_zone_options_t){
-					.argc = argc,
-					.argv = argv,
-					.return_zone = zone,
-					.vm_closure = closure,
-				});
+				mara_zone_t* call_zone = mara_zone_enter(ctx);
 				// There are as many zones as stack frames
 				(void)call_zone;
 				mara_assert(call_zone != NULL, "Cannot alloc call zone");
@@ -319,9 +310,7 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 			*(++sp) = stack_top = args[operands];
 		MARA_END_OP()
 		MARA_BEGIN_OP(SET_CAPTURE)
-			mara_value_t value_copy = mara_copy(ctx, closure_header->zone, stack_top);
-			closure->captures[operands] = value_copy;
-			mara_obj_add_arena_mask(closure_header, value_copy);
+			closure->captures[operands] = mara_copy(ctx, closure_header->zone, stack_top);
 		MARA_END_OP()
 		MARA_BEGIN_OP(GET_CAPTURE)
 			*(++sp) = stack_top = closure->captures[operands];
@@ -341,15 +330,7 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 						);
 						if (MARA_EXPECT(stack_frame != NULL)) {
 							stack_frame->stack[0] = mara_tombstone();
-							mara_zone_t* call_zone = mara_zone_enter(
-								ctx,
-								(mara_zone_options_t){
-									.argc = operands,
-									.argv = sp,
-									.return_zone = ctx->current_zone,
-									.vm_closure = next_closure,
-								}
-							);
+							mara_zone_t* call_zone = mara_zone_enter(ctx);
 							(void)call_zone;
 							mara_assert(call_zone != NULL, "Cannot alloc call zone");
 
@@ -394,14 +375,7 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 
 						mara_zone_t* call_zone = NULL;
 						if (!native_closure->no_alloc) {
-							call_zone = mara_zone_enter(
-								ctx,
-								(mara_zone_options_t){
-									.argc = operands,
-									.argv = args,
-									.return_zone = return_zone,
-								}
-							);
+							call_zone = mara_zone_enter(ctx);
 							mara_assert(call_zone != NULL, "Cannot alloc call zone");
 						}
 
@@ -448,11 +422,7 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 		MARA_END_OP()
 		MARA_BEGIN_OP(RETURN)
 			mara_stack_frame_t* stack_frame = fp;
-			mara_value_t result_copy = mara_copy(
-				ctx,
-				stack_frame->return_zone,
-				stack_top
-			);
+			mara_value_t result_copy = mara_copy(ctx, stack_frame->return_zone, stack_top);
 
 			// Load previous state
 			mara_vm_state_t* saved_state = &stack_frame->previous_vm_state;
@@ -514,7 +484,6 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 						mara_assert(false, "Illegal closure pseudo instruction");
 						break;
 				}
-				mara_obj_add_arena_mask(new_obj, captured_value);
 				new_closure->captures[i] = captured_value;
 			}
 

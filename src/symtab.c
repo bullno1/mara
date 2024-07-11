@@ -62,7 +62,7 @@ mara_symtab_intern(mara_env_t* env, mara_symtab_t* symtab, mara_str_t string) {
 
 		memset(new_node->children, 0, sizeof(new_node->children));
 		char* chars = mara_arena_alloc_ex(
-			env, &env->permanent_arena,
+			env, &env->permanent_zone.arena,
 			string.len, _Alignof(char)
 		);
 		mara_assert(chars != NULL, "Out of memory");
