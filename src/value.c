@@ -110,8 +110,8 @@ bool
 mara_value_is_fn(mara_value_t value) {
 	if (mara_value_is_obj(value)) {
 		mara_obj_t* obj = mara_value_to_obj(value);
-		return obj->type == MARA_OBJ_TYPE_VM_CLOSURE
-			|| obj->type == MARA_OBJ_TYPE_NATIVE_CLOSURE;
+		return obj->type == MARA_OBJ_TYPE_VM_FN
+			|| obj->type == MARA_OBJ_TYPE_NATIVE_FN;
 	} else {
 		return false;
 	}
@@ -163,8 +163,8 @@ mara_value_type(mara_value_t value, void** tag) {
 					*tag = ((mara_ref_t*)obj->body)->tag;
 				}
 				return MARA_VAL_REF;
-			case MARA_OBJ_TYPE_VM_CLOSURE:
-			case MARA_OBJ_TYPE_NATIVE_CLOSURE:
+			case MARA_OBJ_TYPE_VM_FN:
+			case MARA_OBJ_TYPE_NATIVE_FN:
 				return MARA_VAL_FN;
 			case MARA_OBJ_TYPE_LIST:
 				return MARA_VAL_LIST;
@@ -299,7 +299,7 @@ mara_error_t*
 mara_value_to_fn(mara_exec_ctx_t* ctx, mara_value_t value, mara_fn_t** result) {
 	if (MARA_EXPECT(mara_value_is_fn(value))) {
 		mara_obj_t* obj = mara_value_to_obj(value);
-		*result = (mara_fn_t*)obj;
+		*result = (mara_fn_t*)obj->body;
 		return NULL;
 	} else {
 		return mara_errorf(
@@ -336,21 +336,21 @@ mara_value_from_real(mara_real_t value) {
 mara_value_t
 mara_value_from_list(mara_list_t* list) {
 	return list != NULL
-		? mara_obj_to_value(mara_container_of(list, mara_obj_t, body))
+		? mara_obj_to_value(mara_header_of(list))
 		: mara_nil();
 }
 
 mara_value_t
 mara_value_from_map(mara_map_t* map) {
 	return map != NULL
-		? mara_obj_to_value(mara_container_of(map, mara_obj_t, body))
+		? mara_obj_to_value(mara_header_of(map))
 		: mara_nil();
 }
 
 mara_value_t
 mara_value_from_fn(mara_fn_t* fn) {
 	return fn != NULL
-		? mara_obj_to_value((mara_obj_t*)fn)
+		? mara_obj_to_value(mara_header_of(fn))
 		: mara_nil();
 }
 
@@ -437,15 +437,14 @@ mara_new_fn(
 	// TODO: Implement light native function like Lua
 	// if userdata == NULL, use a light representation.
 	// Intern the function pointer in the permanent zone.
-	mara_obj_t* obj = mara_alloc_obj(ctx, zone, sizeof(mara_native_closure_t));
-	obj->type = MARA_OBJ_TYPE_NATIVE_CLOSURE;
+	mara_obj_t* obj = mara_alloc_obj(ctx, zone, sizeof(mara_fn_t) + sizeof(mara_value_t));
+	obj->type = MARA_OBJ_TYPE_NATIVE_FN;
 
-	mara_native_closure_t* closure = (mara_native_closure_t*)obj->body;
-	closure->userdata = mara_copy(ctx, zone, userdata);
-	closure->fn = fn;
+	mara_fn_t* closure = (mara_fn_t*)obj->body;
+	closure->captures[0] = mara_copy(ctx, zone, userdata);
+	closure->prototype.native = fn;
 
-	// Point to the header so we can differentiate between mara and native closures
-	return (mara_fn_t*)obj;
+	return closure;
 }
 
 mara_value_t

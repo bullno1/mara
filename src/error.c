@@ -60,8 +60,9 @@ mara_build_stacktrace(mara_exec_ctx_t* ctx) {
 		itr = itr->previous_vm_state.fp, ++frame_index
 	) {
 		mara_source_info_t* frame = &stacktrace->frames[frame_index];
-		mara_vm_closure_t* closure = itr->vm_closure;
-		if (closure == NULL) {
+		mara_fn_t* closure = itr->fn;
+		mara_obj_t* header = mara_header_of(closure);
+		if (header->type == MARA_OBJ_TYPE_NATIVE_FN) {
 			const mara_source_info_t* native_debug_info = ctx->native_debug_info[itr - ctx->stack_frames_begin];
 			if (native_debug_info != NULL) {
 				*frame = *native_debug_info;
@@ -70,14 +71,17 @@ mara_build_stacktrace(mara_exec_ctx_t* ctx) {
 					.filename = mara_str_from_literal("<native>"),
 				};
 			}
-		} else if (closure->fn->source_info != NULL) {
-			mara_source_info_t* debug_info = closure->fn->source_info;
-			mara_index_t instruction_offset = (mara_index_t)(vm_state.ip - closure->fn->instructions - 1);
-			*frame = debug_info[instruction_offset];
 		} else {
-			*frame = (mara_source_info_t){
-				.filename = itr->vm_closure->fn->filename,
-			};
+			mara_vm_function_t* prototype = closure->prototype.vm;
+			if (prototype->source_info != NULL) {
+				mara_source_info_t* debug_info = prototype->source_info;
+				mara_index_t instruction_offset = (mara_index_t)(vm_state.ip - prototype->instructions - 1);
+				*frame = debug_info[instruction_offset];
+			} else {
+				*frame = (mara_source_info_t){
+					.filename = prototype->filename,
+				};
+			}
 		}
 
 		vm_state = itr->previous_vm_state;

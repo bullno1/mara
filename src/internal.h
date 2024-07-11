@@ -88,8 +88,8 @@ typedef enum mara_obj_type_e {
 	MARA_OBJ_TYPE_REF,
 	MARA_OBJ_TYPE_LIST,
 	MARA_OBJ_TYPE_MAP,
-	MARA_OBJ_TYPE_VM_CLOSURE,
-	MARA_OBJ_TYPE_NATIVE_CLOSURE,
+	MARA_OBJ_TYPE_VM_FN,
+	MARA_OBJ_TYPE_NATIVE_FN,
 } mara_obj_type_t;
 
 typedef struct {
@@ -240,19 +240,17 @@ typedef struct mara_function_s {
 	struct mara_function_s** functions;
 } mara_vm_function_t;
 
-typedef struct mara_vm_closure_s {
-	mara_vm_function_t* fn;
+struct mara_fn_s {
+	union {
+		mara_vm_function_t* vm;
+		mara_native_fn_t native;
+	} prototype;
 	mara_value_t captures[];
-} mara_vm_closure_t;
-
-typedef struct {
-	mara_native_fn_t fn;
-	mara_value_t userdata;
-} mara_native_closure_t;
+};
 
 typedef struct mara_stack_frame_s mara_stack_frame_t;
 
-typedef struct mara_vm_state_s {
+typedef struct {
 	mara_stack_frame_t* fp;
 	mara_instruction_t* ip;
 	mara_value_t* sp;
@@ -263,7 +261,8 @@ struct mara_stack_frame_s {
 	mara_vm_state_t previous_vm_state;
 	mara_zone_t* return_zone;
 	mara_value_t* stack;
-	mara_vm_closure_t* vm_closure;
+	mara_fn_t* fn;
+	mara_index_t size;
 };
 
 // Public types

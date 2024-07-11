@@ -1245,12 +1245,12 @@ mara_do_compile(
 
 	mara_vm_function_t* function = mara_compiler_end_function(ctx);
 
-	mara_obj_t* obj = mara_alloc_obj(ctx->exec_ctx, zone, sizeof(mara_vm_closure_t));
-	obj->type = MARA_OBJ_TYPE_VM_CLOSURE;
-	mara_vm_closure_t* closure = (mara_vm_closure_t*)obj->body;
-	closure->fn = function;
+	mara_obj_t* obj = mara_alloc_obj(ctx->exec_ctx, zone, sizeof(mara_fn_t));
+	obj->type = MARA_OBJ_TYPE_VM_FN;
+	mara_fn_t* closure = (mara_fn_t*)obj->body;
+	closure->prototype.vm = function;
 
-	*result = (mara_fn_t*)obj;
+	*result = closure;
 	return NULL;
 }
 

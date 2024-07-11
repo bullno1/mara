@@ -363,62 +363,52 @@ mara_do_print_value(
 		}
 	} else if (mara_value_is_fn(value)) {
 		mara_obj_t* obj = mara_value_to_obj(value);
-		if (obj->type == MARA_OBJ_TYPE_NATIVE_CLOSURE) {
-			mara_native_closure_t* closure = (mara_native_closure_t*)obj->body;
-			mara_print_indented(output, options.indent, "(native-fn\n");
-			{
-				mara_print_options_t children_options = options;
-				children_options.max_depth -= 1;
-				children_options.indent += 1;
-
-				mara_print_indented(output, options.indent + 1, "%p\n", (void*)closure->fn);
-				mara_do_print_value(ctx, closure->userdata, children_options, dummy_key, output);
-			}
-			mara_print_indented(output, options.indent, ")");
+		mara_fn_t* closure = (mara_fn_t*)obj->body;
+		if (options.max_depth <= 0) {
+			mara_print_indented(
+				output, options.indent,
+				"(fn %p %p)",
+				(void*)closure, (void*)closure->prototype.vm
+			);
 		} else {
-			mara_vm_closure_t* closure = (mara_vm_closure_t*)obj->body;
-			if (options.max_depth <= 0) {
-				mara_print_indented(
-					output, options.indent,
-					"(fn (closure %p %p))",
-					(void*)closure, (void*)closure->fn
-				);
-			} else {
-				mara_print_indented(output, options.indent, "(fn\n");
+			mara_print_indented(output, options.indent, "(fn\n");
+			{
+				mara_print_indented(output, options.indent + 1, "(captures\n");
 				{
-					mara_print_indented(output, options.indent + 1, "(captures\n");
-					{
-						mara_print_options_t capture_print_options = options;
-						capture_print_options.indent += 2;
-						capture_print_options.max_depth -= 1;
+					mara_print_options_t capture_print_options = options;
+					capture_print_options.indent += 2;
+					capture_print_options.max_depth -= 1;
 
-						mara_index_t num_captures = closure->fn->num_captures;
-						mara_index_t print_len = mara_min(num_captures, options.max_length);
-						for (mara_index_t i = 0; i < print_len; ++i) {
-							mara_do_print_value(
-								ctx, closure->captures[i], capture_print_options,
-								dummy_key,
-								output
-							);
-						}
-						mara_print_omitted_ellipsis(
-							output,
-							capture_print_options.indent,
-							num_captures - print_len
+					mara_index_t num_captures = obj->type == MARA_OBJ_TYPE_NATIVE_FN
+						? 1
+						: closure->prototype.vm->num_captures;
+					mara_index_t print_len = mara_min(num_captures, options.max_length);
+					for (mara_index_t i = 0; i < print_len; ++i) {
+						mara_do_print_value(
+							ctx, closure->captures[i], capture_print_options,
+							dummy_key,
+							output
 						);
 					}
-					mara_print_indented(output, options.indent + 1, ")\n");
-
-					{
-						mara_print_options_t code_print_options = options;
-						code_print_options.indent += 1;
-						code_print_options.max_depth -= 1;
-
-						mara_print_vm_function(ctx, closure->fn, code_print_options, output);
-					}
+					mara_print_omitted_ellipsis(
+						output,
+						capture_print_options.indent,
+						num_captures - print_len
+					);
 				}
-				mara_print_indented(output, options.indent, ")");
+				mara_print_indented(output, options.indent + 1, ")\n");
+
+				if (obj->type == MARA_OBJ_TYPE_NATIVE_FN) {
+					mara_print_indented(output, options.indent + 1, "(native %p)", (void*)closure->prototype.native);
+				} else {
+					mara_print_options_t code_print_options = options;
+					code_print_options.indent += 1;
+					code_print_options.max_depth -= 1;
+
+					mara_print_vm_function(ctx, closure->prototype.vm, code_print_options, output);
+				}
 			}
+			mara_print_indented(output, options.indent, ")");
 		}
 	} else {
 		// TODO: rename ref->handle and handle tag should be meaningful

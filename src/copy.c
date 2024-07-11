@@ -86,23 +86,6 @@ mara_deep_copy(
 				mara_ptr_map_put(ctx, local_zone, copied_objs, obj, mara_value_to_obj(result));
 				return result;
 			}
-		case MARA_OBJ_TYPE_NATIVE_CLOSURE:
-			{
-				// TODO: Light native representation can skip copying
-				mara_native_closure_t* closure = (mara_native_closure_t*)obj->body;
-
-				mara_obj_t* new_closure_header = mara_alloc_obj(
-					ctx, target_zone, sizeof(mara_native_closure_t)
-				);
-				new_closure_header->type = MARA_OBJ_TYPE_NATIVE_CLOSURE;
-				mara_ptr_map_put(ctx, local_zone, copied_objs, obj, new_closure_header);
-
-				mara_native_closure_t* new_closure = (mara_native_closure_t*)new_closure_header->body;
-				new_closure->fn = closure->fn;
-
-				new_closure->userdata = mara_deep_copy(ctx, target_zone, copied_objs, closure->userdata);
-				return mara_obj_to_value(new_closure_header);
-			}
 		case MARA_OBJ_TYPE_LIST:
 			{
 				mara_list_t* old_list;
@@ -146,19 +129,22 @@ mara_deep_copy(
 
 				return mara_value_from_map(new_map);
 			}
-		case MARA_OBJ_TYPE_VM_CLOSURE:
+		case MARA_OBJ_TYPE_NATIVE_FN:
+		case MARA_OBJ_TYPE_VM_FN:
 			{
-				mara_vm_closure_t* old_closure = (mara_vm_closure_t*)obj->body;
-				mara_index_t num_captures = old_closure->fn->num_captures;
+				mara_fn_t* old_closure = (mara_fn_t*)obj->body;
+				mara_index_t num_captures = obj->type == MARA_OBJ_TYPE_NATIVE_FN
+					? 1
+					: old_closure->prototype.vm->num_captures;
 				mara_obj_t* new_closure_header = mara_alloc_obj(
 					ctx, target_zone,
-					sizeof(mara_vm_closure_t) + sizeof(mara_value_t) * num_captures
+					sizeof(mara_fn_t) + sizeof(mara_value_t) * num_captures
 				);
-				new_closure_header->type = MARA_OBJ_TYPE_VM_CLOSURE;
+				new_closure_header->type = obj->type;
 				mara_ptr_map_put(ctx, local_zone, copied_objs, obj, new_closure_header);
 
-				mara_vm_closure_t* new_closure = (mara_vm_closure_t*)new_closure_header->body;
-				new_closure->fn = old_closure->fn;
+				mara_fn_t* new_closure = (mara_fn_t*)new_closure_header->body;
+				new_closure->prototype = old_closure->prototype;
 				for (mara_index_t i = 0; i < num_captures; ++i) {
 					new_closure->captures[i] = mara_deep_copy(
 						ctx, target_zone, copied_objs,
@@ -212,20 +198,10 @@ mara_copy(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_value_t value) {
 				mara_ref_t* ref = (mara_ref_t*)obj->body;
 				return mara_new_ref(ctx, zone, ref->tag, ref->value);
 			}
-		case MARA_OBJ_TYPE_NATIVE_CLOSURE:
-			{
-				mara_native_closure_t* closure = (mara_native_closure_t*)obj->body;
-				if (mara_value_is_obj(closure->userdata)) {
-					return mara_start_deep_copy(ctx, zone, value);
-				} else {
-					return mara_value_from_fn(
-						mara_new_fn(ctx, zone, closure->fn, closure->userdata)
-					);
-				}
-			}
 		case MARA_OBJ_TYPE_LIST:
 		case MARA_OBJ_TYPE_MAP:
-		case MARA_OBJ_TYPE_VM_CLOSURE:
+		case MARA_OBJ_TYPE_NATIVE_FN:
+		case MARA_OBJ_TYPE_VM_FN:
 			return mara_start_deep_copy(ctx, zone, value);
 		default:
 			mara_assert(false, "Invalid object type");

@@ -10,17 +10,15 @@ MARA_PRIVATE mara_stack_frame_t*
 mara_vm_alloc_stack_frame(
 	const mara_exec_ctx_t* ctx,
 	const mara_vm_state_t* vm_state,
-	mara_vm_closure_t* vm_closure,
+	mara_fn_t* fn,
 	mara_zone_t* return_zone
 ) {
 	mara_stack_frame_t* current_stack_frame = vm_state->fp;
 	mara_stack_frame_t* new_stack_frame = current_stack_frame + 1;
 	if (MARA_EXPECT(new_stack_frame < ctx->stack_frames_end)) {
-		mara_index_t current_frame_size = current_stack_frame->vm_closure != NULL
-			? current_stack_frame->vm_closure->fn->stack_size + 1  // For sentinel
-			: 0;
-		mara_index_t new_frame_size = vm_closure != NULL
-			? vm_closure->fn->stack_size + 1  // For sentinel
+		mara_index_t current_frame_size = current_stack_frame->size;
+		mara_index_t new_frame_size = mara_header_of(fn)->type == MARA_OBJ_TYPE_VM_FN
+			? fn->prototype.vm->stack_size + 1  // For sentinel
 			: 0;
 		mara_value_t* stack = current_stack_frame->stack + current_frame_size;
 		if (MARA_EXPECT(stack + new_frame_size <= ctx->stack_end)) {
@@ -28,7 +26,8 @@ mara_vm_alloc_stack_frame(
 				.previous_vm_state = *vm_state,
 				.return_zone = return_zone,
 				.stack = stack,
-				.vm_closure = vm_closure,
+				.fn = fn,
+				.size = new_frame_size,
 			};
 
 			return new_stack_frame;
@@ -67,17 +66,17 @@ mara_call(
 	mara_value_t* argv,
 	mara_value_t* result
 ) {
-	mara_obj_t* obj = (mara_obj_t*)fn;
+	mara_obj_t* obj = mara_header_of(fn);
 	mara_assert(
-		obj->type == MARA_OBJ_TYPE_VM_CLOSURE
-		|| obj->type == MARA_OBJ_TYPE_NATIVE_CLOSURE,
+		obj->type == MARA_OBJ_TYPE_VM_FN
+		|| obj->type == MARA_OBJ_TYPE_NATIVE_FN,
 		"Invalid object type"
 	);
 	mara_error_t* error = NULL;
 	mara_vm_state_t* vm_state = &ctx->vm_state;
 
-	if (obj->type == MARA_OBJ_TYPE_NATIVE_CLOSURE) {
-		mara_native_closure_t* closure = (mara_native_closure_t*)obj->body;
+	if (obj->type == MARA_OBJ_TYPE_NATIVE_FN) {
+		mara_fn_t* closure = (mara_fn_t*)obj->body;
 		mara_zone_t* call_zone = mara_zone_enter(ctx);
 		if (call_zone == NULL) {
 			return mara_errorf(
@@ -91,7 +90,7 @@ mara_call(
 		mara_value_t return_value = mara_nil();
 		mara_zone_t* previous_return_zone = vm_state->fp->return_zone;
 		vm_state->fp->return_zone = zone;
-		error = closure->fn(ctx, argc, argv, closure->userdata, &return_value);
+		error = closure->prototype.native(ctx, argc, argv, closure->captures[0], &return_value);
 		vm_state->fp->return_zone = previous_return_zone;
 		if (MARA_EXPECT(error == NULL)) {
 			// Copy in case the function allocates in its local zone
@@ -102,8 +101,8 @@ mara_call(
 			mara_zone_exit(ctx, call_zone);
 		}
 	} else {
-		mara_vm_closure_t* closure = (mara_vm_closure_t*)obj->body;
-		mara_vm_function_t* mara_fn = closure->fn;
+		mara_fn_t* closure = (mara_fn_t*)obj->body;
+		mara_vm_function_t* mara_fn = closure->prototype.vm;
 		if (MARA_EXPECT(mara_fn->num_args <= argc)) {
 			mara_stack_frame_t* stack_frame = mara_vm_alloc_stack_frame(ctx, vm_state, closure, zone);
 			if (MARA_EXPECT(stack_frame != NULL)) {
@@ -243,8 +242,8 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 
 #define MARA_VM_DERIVE_STATE() \
 	do { \
-		closure = fp->vm_closure; \
-		function = closure->fn; \
+		closure = fp->fn; \
+		function = closure->prototype.vm; \
 		closure_header = mara_container_of(closure, mara_obj_t, body); \
 	} while (0)
 
@@ -254,7 +253,7 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 	mara_value_t* args;
 	mara_error_t* error;
 
-	mara_vm_closure_t* closure;
+	mara_fn_t* closure;
 	mara_vm_function_t* function;
 	mara_obj_t* closure_header;
 	// Cache the stack top in a local var.
@@ -316,10 +315,10 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 			sp -= operands;
 
 			if (MARA_EXPECT(mara_value_is_obj(stack_top))) {
-				mara_obj_t* fn = mara_value_to_obj(stack_top);
-				if (fn->type == MARA_OBJ_TYPE_VM_CLOSURE) {
-					mara_vm_closure_t* next_closure = (mara_vm_closure_t*)fn->body;
-					if (MARA_EXPECT(next_closure->fn->num_args <= (mara_index_t)operands)) {
+				mara_obj_t* obj = mara_value_to_obj(stack_top);
+				if (obj->type == MARA_OBJ_TYPE_VM_FN) {
+					mara_fn_t* next_closure = (mara_fn_t*)obj->body;
+					if (MARA_EXPECT(next_closure->prototype.vm->num_args <= (mara_index_t)operands)) {
 						mara_vm_state_t frame_state;
 						MARA_VM_SAVE_STATE(&frame_state);
 						mara_stack_frame_t* stack_frame = mara_vm_alloc_stack_frame(
@@ -333,8 +332,8 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 
 							args = sp;
 							fp = stack_frame;
-							sp = stack_frame->stack + next_closure->fn->num_locals;
-							ip = next_closure->fn->instructions;
+							sp = stack_frame->stack + next_closure->prototype.vm->num_locals;
+							ip = next_closure->prototype.vm->instructions;
 							MARA_VM_DERIVE_STATE();
 						} else {
 							MARA_VM_SAVE_STATE(vm);
@@ -350,16 +349,16 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 							ctx, mara_str_from_literal("core/wrong-arity"),
 							"Function expects %d arguments, got %d",
 							mara_nil(),
-							next_closure->fn->num_args, operands
+							next_closure->prototype.vm->num_args, operands
 						);
 					}
-				} else if (fn->type == MARA_OBJ_TYPE_NATIVE_CLOSURE) {
-					mara_native_closure_t* native_closure = (mara_native_closure_t*)fn->body;
+				} else if (obj->type == MARA_OBJ_TYPE_NATIVE_FN) {
+					mara_fn_t* native_closure = (mara_fn_t*)obj->body;
 					mara_zone_t* return_zone = ctx->current_zone;
 					mara_vm_state_t frame_state;
 					MARA_VM_SAVE_STATE(&frame_state);
 					mara_stack_frame_t* stack_frame = mara_vm_alloc_stack_frame(
-						ctx, &frame_state, NULL, return_zone
+						ctx, &frame_state, native_closure, return_zone
 					);
 					ctx->native_debug_info[stack_frame - ctx->stack_frames_begin] = NULL;
 
@@ -373,10 +372,10 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 						mara_zone_t* call_zone = mara_zone_enter(ctx);
 
 						mara_value_t call_result = mara_nil();
-						error = native_closure->fn(
+						error = native_closure->prototype.native(
 							ctx,
 							operands, args,
-							native_closure->userdata,
+							native_closure->captures[0],
 							&call_result
 						);
 						if (MARA_EXPECT(error == NULL)) {
@@ -421,7 +420,7 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 			mara_vm_state_t* saved_state = &stack_frame->previous_vm_state;
 			MARA_VM_LOAD_STATE(saved_state);
 
-			if (fp->vm_closure != NULL) {
+			if (fp->fn != NULL && mara_header_of(fp->fn)->type == MARA_OBJ_TYPE_VM_FN) {
 				mara_zone_exit(ctx, ctx->current_zone);
 				MARA_VM_DERIVE_STATE();
 				*sp = stack_top = result_copy;
@@ -451,11 +450,11 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 			mara_index_t num_captures = (uint16_t)(operands & 0xffff);
 			mara_obj_t* new_obj = mara_alloc_obj(
 				ctx, ctx->current_zone,
-				sizeof(mara_vm_closure_t) + sizeof(mara_value_t) * num_captures
+				sizeof(mara_fn_t) + sizeof(mara_value_t) * num_captures
 			);
-			new_obj->type = MARA_OBJ_TYPE_VM_CLOSURE;
-			mara_vm_closure_t* new_closure = (mara_vm_closure_t*)new_obj->body;
-			new_closure->fn = function->functions[function_index];
+			new_obj->type = MARA_OBJ_TYPE_VM_FN;
+			mara_fn_t* new_closure = (mara_fn_t*)new_obj->body;
+			new_closure->prototype.vm = function->functions[function_index];
 			for (mara_index_t i = 0; i < num_captures; ++i) {
 				mara_instruction_t capture_instruction = ip[i];
 				mara_opcode_t capture_opcode;
