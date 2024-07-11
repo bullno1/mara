@@ -61,23 +61,19 @@ MARA_PRIVATE MARA_FUNCTION(mara_core_module_entry) {
 	(void)userdata;
 	MARA_FN_CHECK_ARITY(3);
 
-	mara_native_fn_options_t core_module_options = {
-		.no_alloc = true,
-	};
+	MARA_EXPORT_FN(<, mara_intrin_lt, mara_nil());
+	MARA_EXPORT_FN(<=, mara_intrin_lte, mara_nil());
+	MARA_EXPORT_FN(>, mara_intrin_gt, mara_nil());
+	MARA_EXPORT_FN(>=, mara_intrin_gte, mara_nil());
 
-	MARA_EXPORT_FN(<, mara_intrin_lt, core_module_options);
-	MARA_EXPORT_FN(<=, mara_intrin_lte, core_module_options);
-	MARA_EXPORT_FN(>, mara_intrin_gt, core_module_options);
-	MARA_EXPORT_FN(>=, mara_intrin_gte, core_module_options);
+	MARA_EXPORT_FN(+, mara_intrin_plus, mara_nil());
+	MARA_EXPORT_FN(-, mara_intrin_minus, mara_nil());
 
-	MARA_EXPORT_FN(+, mara_intrin_plus, core_module_options);
-	MARA_EXPORT_FN(-, mara_intrin_minus, core_module_options);
-
-	MARA_EXPORT_FN(list/new, mara_core_list_new, core_module_options);
-	MARA_EXPORT_FN(list/len, mara_core_list_len, core_module_options);
-	MARA_EXPORT_FN(list/push, mara_core_list_push, core_module_options);
-	MARA_EXPORT_FN(list/set, mara_core_list_set, core_module_options);
-	MARA_EXPORT_FN(list/get, mara_core_list_get, core_module_options);
+	MARA_EXPORT_FN(list/new, mara_core_list_new, mara_nil());
+	MARA_EXPORT_FN(list/len, mara_core_list_len, mara_nil());
+	MARA_EXPORT_FN(list/push, mara_core_list_push, mara_nil());
+	MARA_EXPORT_FN(list/set, mara_core_list_set, mara_nil());
+	MARA_EXPORT_FN(list/get, mara_core_list_get, mara_nil());
 
 	MARA_RETURN(mara_value_from_bool(true));
 }
@@ -92,19 +88,16 @@ MARA_PRIVATE MARA_FUNCTION(mara_load_core_module) {
 		return NULL;
 	}
 
-	mara_native_fn_options_t entry_options = { 0 };
-	MARA_RETURN(mara_new_fn(ctx, mara_get_return_zone(ctx), mara_core_module_entry, entry_options));
+	MARA_RETURN(mara_new_fn(ctx, mara_get_return_zone(ctx), mara_core_module_entry, mara_nil()));
 }
 
 void
 mara_add_core_module(mara_exec_ctx_t* ctx) {
-	mara_value_t userdata = mara_new_sym(ctx, mara_str_from_literal("core"));
+	mara_value_t module_name = mara_new_sym(ctx, mara_str_from_literal("core"));
 	mara_fn_t* loader = mara_new_fn(
 		ctx, ctx->current_zone,
 		mara_load_core_module,
-		(mara_native_fn_options_t) {
-			.userdata = &userdata,
-		}
+		module_name
 	);
 	mara_add_module_loader(ctx, loader);
 	mara_value_t result;

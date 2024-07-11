@@ -106,14 +106,8 @@ mara_internal_init_module(
 		}
 
 		// Userdata cannot be safely used as module code may save these functions
-		mara_fn_t* import_fn = mara_new_fn(
-			ctx, local_zone,
-			mara_internal_import, (mara_native_fn_options_t){ 0 }
-		);
-		mara_fn_t* export_fn = mara_new_fn(
-			ctx, local_zone,
-			mara_internal_export, (mara_native_fn_options_t){ 0 }
-		);
+		mara_fn_t* import_fn = mara_new_fn(ctx, local_zone, mara_internal_import, mara_nil());
+		mara_fn_t* export_fn = mara_new_fn(ctx, local_zone, mara_internal_export, mara_nil());
 		mara_value_t args[] = {
 			mara_value_from_fn(import_fn),
 			mara_value_from_fn(export_fn),

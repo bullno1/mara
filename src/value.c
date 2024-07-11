@@ -432,7 +432,7 @@ mara_new_fn(
 	mara_exec_ctx_t* ctx,
 	mara_zone_t* zone,
 	mara_native_fn_t fn,
-	mara_native_fn_options_t options
+	mara_value_t userdata
 ) {
 	// TODO: Implement light native function like Lua
 	// if userdata == NULL, use a light representation.
@@ -441,14 +441,8 @@ mara_new_fn(
 	obj->type = MARA_OBJ_TYPE_NATIVE_CLOSURE;
 
 	mara_native_closure_t* closure = (mara_native_closure_t*)obj->body;
+	closure->userdata = mara_copy(ctx, zone, userdata);
 	closure->fn = fn;
-	closure->no_alloc = options.no_alloc;
-	if (options.userdata != NULL) {
-		mara_value_t userdata = mara_copy(ctx, zone, *options.userdata);
-		closure->userdata = userdata;
-	} else {
-		closure->userdata = mara_nil();
-	}
 
 	// Point to the header so we can differentiate between mara and native closures
 	return (mara_fn_t*)obj;

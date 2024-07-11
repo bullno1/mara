@@ -220,10 +220,7 @@ mara_copy(mara_exec_ctx_t* ctx, mara_zone_t* zone, mara_value_t value) {
 					return mara_start_deep_copy(ctx, zone, value);
 				} else {
 					return mara_value_from_fn(
-						mara_new_fn(ctx, zone, closure->fn, (mara_native_fn_options_t){
-							.no_alloc = closure->no_alloc,
-							.userdata = &closure->userdata,
-						})
+						mara_new_fn(ctx, zone, closure->fn, closure->userdata)
 					);
 				}
 			}

@@ -91,9 +91,7 @@ TEST(runtime, map) {
 	mara_zone_t* local_zone = mara_get_local_zone(ctx);
 	iterator_state_t iterator_state = { 0 };
 	mara_value_t userdata = mara_new_ref(ctx, local_zone, &fixture, &iterator_state);
-	mara_fn_t* fn = mara_new_fn(ctx, local_zone, iterate_map, (mara_native_fn_options_t){
-		.userdata = &userdata,
-	});
+	mara_fn_t* fn = mara_new_fn(ctx, local_zone, iterate_map, userdata);
 	mara_map_foreach(ctx, map, fn);
 
 	ASSERT_EQ(iterator_state.num_elements, 2);

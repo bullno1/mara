@@ -29,8 +29,7 @@ MARA_FUNCTION(return_bool) {
 TEST(bind, return_bool) {
 	mara_exec_ctx_t* ctx = fixture.ctx;
 
-	mara_native_fn_options_t options = { 0 };
-	mara_fn_t* fn = mara_new_fn(ctx, mara_get_local_zone(ctx), return_bool, options);
+	mara_fn_t* fn = mara_new_fn(ctx, mara_get_local_zone(ctx), return_bool, mara_nil());
 	mara_value_t result;
 	MARA_ASSERT_NO_ERROR(
 		ctx,
