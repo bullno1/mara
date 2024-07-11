@@ -372,7 +372,6 @@ mara_do_print_value(
 				children_options.indent += 1;
 
 				mara_print_indented(output, options.indent + 1, "%p\n", (void*)closure->fn);
-				mara_print_indented(output, options.indent + 1, "%s\n", closure->no_alloc ? "no-alloc" : "alloc");
 				mara_do_print_value(ctx, closure->userdata, children_options, dummy_key, output);
 			}
 			mara_print_indented(output, options.indent, ")");

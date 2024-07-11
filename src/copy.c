@@ -99,7 +99,6 @@ mara_deep_copy(
 
 				mara_native_closure_t* new_closure = (mara_native_closure_t*)new_closure_header->body;
 				new_closure->fn = closure->fn;
-				new_closure->no_alloc = closure->no_alloc;
 
 				new_closure->userdata = mara_deep_copy(ctx, target_zone, copied_objs, closure->userdata);
 				return mara_obj_to_value(new_closure_header);

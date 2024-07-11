@@ -78,17 +78,14 @@ mara_call(
 
 	if (obj->type == MARA_OBJ_TYPE_NATIVE_CLOSURE) {
 		mara_native_closure_t* closure = (mara_native_closure_t*)obj->body;
-		mara_zone_t* call_zone = NULL;
-		if (!closure->no_alloc) {
-			call_zone = mara_zone_enter(ctx);
-			if (call_zone == NULL) {
-				return mara_errorf(
-					ctx,
-					mara_str_from_literal("core/limit-reached/stack-overflow"),
-					"Too many stack frames",
-					mara_nil()
-				);
-			}
+		mara_zone_t* call_zone = mara_zone_enter(ctx);
+		if (call_zone == NULL) {
+			return mara_errorf(
+				ctx,
+				mara_str_from_literal("core/limit-reached/stack-overflow"),
+				"Too many stack frames",
+				mara_nil()
+			);
 		}
 
 		mara_value_t return_value = mara_nil();
@@ -373,11 +370,7 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 						ip = NULL;
 						MARA_VM_SAVE_STATE(vm);
 
-						mara_zone_t* call_zone = NULL;
-						if (!native_closure->no_alloc) {
-							call_zone = mara_zone_enter(ctx);
-							mara_assert(call_zone != NULL, "Cannot alloc call zone");
-						}
+						mara_zone_t* call_zone = mara_zone_enter(ctx);
 
 						mara_value_t call_result = mara_nil();
 						error = native_closure->fn(
@@ -574,19 +567,22 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 		MARA_BEGIN_OP(CALL_CAPTURE)
 			mara_operand_t capture_index = operands & 0xffff;
 			mara_operand_t arity = (operands >> 16) & 0xff;
-			*(++sp) = stack_top = closure->captures[capture_index];
+			stack_top = closure->captures[capture_index];
+			++sp;
 			MARA_DISPATCH_OP(CALL, arity);
 		MARA_END_OP()
 		MARA_BEGIN_OP(CALL_ARG)
 			mara_operand_t arg_index = operands & 0xffff;
 			mara_operand_t arity = (operands >> 16) & 0xff;
-			*(++sp) = stack_top = args[arg_index];
+			stack_top = args[arg_index];
+			++sp;
 			MARA_DISPATCH_OP(CALL, arity);
 		MARA_END_OP()
 		MARA_BEGIN_OP(CALL_LOCAL)
 			mara_operand_t local_index = operands & 0xffff;
 			mara_operand_t arity = (operands >> 16) & 0xff;
-			*(++sp) = stack_top = fp->stack[local_index];
+			stack_top = fp->stack[local_index];
+			++sp;
 			MARA_DISPATCH_OP(CALL, arity);
 		MARA_END_OP()
 	MARA_END_DISPATCH()
