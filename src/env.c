@@ -23,23 +23,13 @@ mara_create_env(mara_env_options_t options) {
 		options.alloc_chunk_size = 4096 * 4;
 	}
 
-	mem_layout_t layout = 0;
-	mem_layout_reserve(&layout, sizeof(mara_env_t), _Alignof(mara_env_t));
-	ptrdiff_t dummy_chunk_offset = mem_layout_reserve(&layout, sizeof(mara_arena_chunk_t), _Alignof(mara_arena_chunk_t));
-
-	mara_env_t* env = mara_malloc(options.allocator, mem_layout_size(&layout));
+	mara_env_t* env = mara_malloc(options.allocator, sizeof(mara_env_t));
 	mara_assert(env != NULL, "Out of memory");
-
-	mara_arena_chunk_t* dummy_chunk = mem_layout_locate(env, dummy_chunk_offset);
-	dummy_chunk->bump_ptr = dummy_chunk->end = dummy_chunk->begin;
-	dummy_chunk->next = NULL;
 
 	*env = (mara_env_t){
 		.options = options,
 		.permanent_zone.level = -1,
-		.dummy_chunk = dummy_chunk,
 	};
-	mara_arena_init(env, &env->permanent_zone.arena);
 
 	mara_symtab_init(env, &env->symtab);
 
@@ -124,16 +114,12 @@ mara_begin(mara_env_t* env, mara_exec_options_t options) {
 		},
 	};
 
-	mara_arena_init(env, &ctx->error_zone.arena);
-	mara_arena_init(env, &ctx->debug_info_arena);
-
 	*current_zone = (mara_zone_t){ 0 };
 	*current_stack_frame = (mara_stack_frame_t){
 		.return_zone = current_zone,
 		.stack = stack_base,
 	};
 	ctx->native_debug_info[0] = NULL;
-	mara_arena_init(env, &current_zone->arena);
 
 	env->ref_count += 1;
 	return ctx;

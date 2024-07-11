@@ -2,7 +2,7 @@
 
 void
 mara_zone_cleanup(mara_env_t* env, mara_zone_t* zone) {
-	if (zone->arena.current_chunk != env->dummy_chunk) {
+	if (zone->arena.current_chunk != NULL) {
 		for (
 			mara_finalizer_t* itr = zone->finalizers;
 			itr != NULL;
@@ -22,7 +22,7 @@ mara_zone_enter(mara_exec_ctx_t* ctx) {
 	if (MARA_EXPECT(new_zone < ctx->zones_end)) {
 		new_zone->level = current_zone->level + 1;
 		new_zone->finalizers = NULL;
-		mara_arena_init(ctx->env, &new_zone->arena);
+		new_zone->arena.current_chunk = NULL;
 
 		if (ctx->last_error.type.len) {
 			mara_zone_cleanup(ctx->env, &ctx->error_zone);

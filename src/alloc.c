@@ -7,11 +7,15 @@ mara_align_ptr(void* ptr, size_t alignment) {
 
 MARA_PRIVATE void*
 mara_alloc_from_chunk(mara_arena_chunk_t* chunk, size_t size, size_t alignment) {
-	char* bump_ptr = mara_align_ptr(chunk->bump_ptr, alignment);
-	char* next_bump_ptr = bump_ptr + size;
-	if (MARA_EXPECT(next_bump_ptr <= chunk->end)) {
-		chunk->bump_ptr = next_bump_ptr;
-		return bump_ptr;
+	if (MARA_EXPECT(chunk != NULL)) {
+		char* bump_ptr = mara_align_ptr(chunk->bump_ptr, alignment);
+		char* next_bump_ptr = bump_ptr + size;
+		if (MARA_EXPECT(next_bump_ptr <= chunk->end)) {
+			chunk->bump_ptr = next_bump_ptr;
+			return bump_ptr;
+		} else {
+			return NULL;
+		}
 	} else {
 		return NULL;
 	}
@@ -65,11 +69,6 @@ mara_arena_alloc_ex(mara_env_t* env, mara_arena_t* arena, size_t size, size_t al
 	}
 }
 
-void
-mara_arena_init(mara_env_t* env, mara_arena_t* arena) {
-	arena->current_chunk = env->dummy_chunk;
-}
-
 void*
 mara_arena_alloc(mara_env_t* env, mara_arena_t* arena, size_t size) {
 	return mara_arena_alloc_ex(env, arena, size, _Alignof(MARA_ALIGN_TYPE));
@@ -99,14 +98,14 @@ mara_arena_restore(mara_env_t* env, mara_arena_t* arena, mara_arena_snapshot_t s
 		}
 	}
 
-	chunk->bump_ptr = snapshot.bump_ptr;
+	if (chunk != NULL) { chunk->bump_ptr = snapshot.bump_ptr; }
 	arena->current_chunk = chunk;
 }
 
 void
 mara_arena_reset(mara_env_t* env, mara_arena_t* arena) {
 	mara_arena_restore(env, arena, (mara_arena_snapshot_t){
-		.chunk = env->dummy_chunk,
-		.bump_ptr = env->dummy_chunk->end,
+		.chunk = NULL,
+		.bump_ptr = NULL,
 	});
 }
