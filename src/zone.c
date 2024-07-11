@@ -2,15 +2,17 @@
 
 void
 mara_zone_cleanup(mara_env_t* env, mara_zone_t* zone) {
-	for (
-		mara_finalizer_t* itr = zone->finalizers;
-		itr != NULL;
-		itr = itr->next
+	if (zone->arena.current_chunk != env->dummy_chunk) {
+		for (
+			mara_finalizer_t* itr = zone->finalizers;
+			itr != NULL;
+			itr = itr->next
 		) {
-		itr->callback.fn(env, itr->callback.userdata);
-	}
+			itr->callback.fn(env, itr->callback.userdata);
+		}
 
-	mara_arena_reset(env, &zone->arena);
+		mara_arena_reset(env, &zone->arena);
+	}
 }
 
 mara_zone_t*
