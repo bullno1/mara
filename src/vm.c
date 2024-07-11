@@ -16,11 +16,10 @@ mara_vm_alloc_stack_frame(
 	mara_stack_frame_t* current_stack_frame = vm_state->fp;
 	mara_stack_frame_t* new_stack_frame = current_stack_frame + 1;
 	if (MARA_EXPECT(new_stack_frame < ctx->stack_frames_end)) {
-		mara_index_t current_frame_size = current_stack_frame->size;
 		mara_index_t new_frame_size = mara_header_of(fn)->type == MARA_OBJ_TYPE_VM_FN
 			? fn->prototype.vm->stack_size + 1  // For sentinel
 			: 0;
-		mara_value_t* stack = current_stack_frame->stack + current_frame_size;
+		mara_value_t* stack = current_stack_frame->stack + current_stack_frame->size;
 		if (MARA_EXPECT(stack + new_frame_size <= ctx->stack_end)) {
 			*new_stack_frame = (mara_stack_frame_t){
 				.previous_vm_state = *vm_state,
@@ -67,50 +66,38 @@ mara_call(
 	mara_value_t* result
 ) {
 	mara_obj_t* obj = mara_header_of(fn);
-	mara_assert(
-		obj->type == MARA_OBJ_TYPE_VM_FN
-		|| obj->type == MARA_OBJ_TYPE_NATIVE_FN,
-		"Invalid object type"
-	);
 	mara_error_t* error = NULL;
 	mara_vm_state_t* vm_state = &ctx->vm_state;
 
-	if (obj->type == MARA_OBJ_TYPE_NATIVE_FN) {
-		mara_fn_t* closure = (mara_fn_t*)obj->body;
-		mara_zone_t* call_zone = mara_zone_enter(ctx);
-		if (call_zone == NULL) {
-			return mara_errorf(
-				ctx,
-				mara_str_from_literal("core/limit-reached/stack-overflow"),
-				"Too many stack frames",
-				mara_nil()
-			);
-		}
+	mara_stack_frame_t* stack_frame = mara_vm_alloc_stack_frame(ctx, vm_state, fn, zone);
+	if (MARA_EXPECT(stack_frame != NULL)) {
+		if (obj->type == MARA_OBJ_TYPE_NATIVE_FN) {
+			mara_zone_t* call_zone = mara_zone_enter(ctx);
+			mara_assert(call_zone != NULL, "Could not allocate call zone");
 
-		mara_value_t return_value = mara_nil();
-		mara_zone_t* previous_return_zone = vm_state->fp->return_zone;
-		vm_state->fp->return_zone = zone;
-		error = closure->prototype.native(ctx, argc, argv, closure->captures[0], &return_value);
-		vm_state->fp->return_zone = previous_return_zone;
-		if (MARA_EXPECT(error == NULL)) {
-			// Copy in case the function allocates in its local zone
-			*result = mara_copy(ctx, zone, return_value);
-		}
+			vm_state->fp = stack_frame;
+			vm_state->args = argv;
+			vm_state->ip = NULL;
+			vm_state->sp = NULL;
 
-		if (call_zone != NULL) {
+			mara_value_t return_value = mara_nil();
+			error = fn->prototype.native(ctx, argc, argv, fn->captures[0], &return_value);
+
+			if (MARA_EXPECT(error == NULL)) {
+				// Copy in case the function allocates in its local zone
+				*result = mara_copy(ctx, zone, return_value);
+			}
+
 			mara_zone_exit(ctx, call_zone);
-		}
-	} else {
-		mara_fn_t* closure = (mara_fn_t*)obj->body;
-		mara_vm_function_t* mara_fn = closure->prototype.vm;
-		if (MARA_EXPECT(mara_fn->num_args <= argc)) {
-			mara_stack_frame_t* stack_frame = mara_vm_alloc_stack_frame(ctx, vm_state, closure, zone);
-			if (MARA_EXPECT(stack_frame != NULL)) {
+			mara_vm_pop_stack_frame(ctx, stack_frame);
+		} else {
+			mara_vm_function_t* prototype = fn->prototype.vm;
+			if (MARA_EXPECT(prototype->num_args <= argc)) {
 				stack_frame->stack[0] = mara_tombstone();
 				vm_state->fp = stack_frame;
 				vm_state->args = argv;
-				vm_state->sp = stack_frame->stack + mara_fn->num_locals;
-				vm_state->ip = mara_fn->instructions;
+				vm_state->sp = stack_frame->stack + prototype->num_locals;
+				vm_state->ip = prototype->instructions;
 
 				mara_zone_t* call_zone = mara_zone_enter(ctx);
 				// There are as many zones as stack frames
@@ -122,19 +109,20 @@ mara_call(
 				// call_zone will be cleaned up by the VM
 			} else {
 				error = mara_errorf(
-					ctx, mara_str_from_literal("core/stack-overflow"),
-					"Stack overflow",
-					mara_nil()
+					ctx, mara_str_from_literal("core/wrong-arity"),
+					"Function expects %d arguments, got %d",
+					mara_nil(),
+					prototype->num_args, argc
 				);
 			}
-		} else {
-			error = mara_errorf(
-				ctx, mara_str_from_literal("core/wrong-arity"),
-				"Function expects %d arguments, got %d",
-				mara_nil(),
-				mara_fn->num_args, argc
-			);
 		}
+	} else {
+		error = mara_errorf(
+			ctx,
+			mara_str_from_literal("core/limit-reached/stack-overflow"),
+			"Too many stack frames",
+			mara_nil()
+		);
 	}
 
 	return error;
@@ -381,17 +369,13 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 						if (MARA_EXPECT(error == NULL)) {
 							mara_value_t result_copy = mara_copy(ctx, return_zone, call_result);
 
-							if (call_zone != NULL) {
-								mara_zone_exit(ctx, call_zone);
-							}
+							mara_zone_exit(ctx, call_zone);
 
 							mara_vm_pop_stack_frame(ctx, stack_frame);
 							MARA_VM_LOAD_STATE(vm);
 							*sp = stack_top = result_copy;
 						} else {
-							if (call_zone != NULL) {
-								mara_zone_exit(ctx, call_zone);
-							}
+							mara_zone_exit(ctx, call_zone);
 
 							// VM state is already saved before calling the
 							// native function
@@ -420,15 +404,14 @@ mara_vm_execute(mara_exec_ctx_t* ctx, mara_value_t* result) {
 			mara_vm_state_t* saved_state = &stack_frame->previous_vm_state;
 			MARA_VM_LOAD_STATE(saved_state);
 
-			if (fp->fn != NULL && mara_header_of(fp->fn)->type == MARA_OBJ_TYPE_VM_FN) {
-				mara_zone_exit(ctx, ctx->current_zone);
-				MARA_VM_DERIVE_STATE();
-				*sp = stack_top = result_copy;
-			} else {
-				// Native stack frame
+			if (fp->fn == NULL || mara_header_of(fp->fn)->type == MARA_OBJ_TYPE_NATIVE_FN) {
 				MARA_VM_SAVE_STATE(vm);
 				*result = result_copy;
 				return NULL;
+			} else {
+				mara_zone_exit(ctx, ctx->current_zone);
+				MARA_VM_DERIVE_STATE();
+				*sp = stack_top = result_copy;
 			}
 		MARA_END_OP()
 		MARA_BEGIN_OP(JUMP)

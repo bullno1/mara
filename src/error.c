@@ -61,8 +61,7 @@ mara_build_stacktrace(mara_exec_ctx_t* ctx) {
 	) {
 		mara_source_info_t* frame = &stacktrace->frames[frame_index];
 		mara_fn_t* closure = itr->fn;
-		mara_obj_t* header = mara_header_of(closure);
-		if (header->type == MARA_OBJ_TYPE_NATIVE_FN) {
+		if (closure == NULL || mara_header_of(closure)->type == MARA_OBJ_TYPE_NATIVE_FN) {
 			const mara_source_info_t* native_debug_info = ctx->native_debug_info[itr - ctx->stack_frames_begin];
 			if (native_debug_info != NULL) {
 				*frame = *native_debug_info;
